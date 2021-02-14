@@ -369,15 +369,19 @@ fn local_testnet_genesis() -> GenesisConfig {
 
 /// Local testnet config (multivalidator Alice + Bob)
 pub fn local_testnet_config() -> ChainSpec {
+	let mut prop = sc_service::Properties::new();
+	prop.insert("tokenDecimals".to_string(), 12.into());
+	prop.insert("tokenSymbol".to_string(), "FEI".into());
 	ChainSpec::from_genesis(
-		"Local Testnet",
-		"local_testnet",
+		"Guapfei Testnet",
+		"guapfei_testnet",
 		ChainType::Local,
 		local_testnet_genesis,
 		vec![],
-		None,
-		None,
-		None,
+		Some(TelemetryEndpoints::new(vec![(STAGING_TELEMETRY_URL.to_string(), 0)])
+			.expect("Local Testnet telemetry url is valid; qed")),
+		Some("guapfei"),
+		Some(prop),
 		Default::default(),
 	)
 }
