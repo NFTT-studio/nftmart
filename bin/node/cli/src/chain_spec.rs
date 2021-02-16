@@ -342,15 +342,18 @@ fn development_config_genesis() -> GenesisConfig {
 
 /// Development config (single validator Alice)
 pub fn development_config() -> ChainSpec {
+	let mut prop = sc_service::Properties::new();
+	prop.insert("tokenDecimals".to_string(), 12.into());
+	prop.insert("tokenSymbol".to_string(), "FEI".into());
 	ChainSpec::from_genesis(
-		"Development",
-		"dev",
+		"Guapfei Testnet",
+		"guapfei_testnet",
 		ChainType::Development,
 		development_config_genesis,
 		vec![],
 		None,
-		None,
-		None,
+		Some("guapfei"),
+		Some(prop),
 		Default::default(),
 	)
 }

@@ -1,14 +1,15 @@
 // Creating mock runtime here
 
 use crate::{Config};
-use crate as pallet_usetech_nft;
-
-use sp_core::H256;
+use crate as pallet_w3f_nft;
 use frame_support::{ parameter_types};
-use sp_runtime::{
-	traits::{BlakeTwo256, IdentityLookup}, testing::Header,
-};
+
 use frame_system as system;
+use sp_core::H256;
+use sp_runtime::{
+    testing::Header,
+    traits::{BlakeTwo256, IdentityLookup},
+};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -21,7 +22,7 @@ frame_support::construct_runtime!(
 	{
 		System: frame_system::{Module, Call, Config, Storage, Event<T>},
 		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
-		TemplateModule: pallet_usetech_nft::{Module, Call, Storage, Event<T>},
+		TemplateModule: pallet_w3f_nft::{Module, Call, Storage, Event<T>},
 	}
 );
 

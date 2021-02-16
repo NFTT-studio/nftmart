@@ -85,6 +85,7 @@ pallet-vesting = { version = "3.0.0", default-features = false, path = "../../..
 
 # pallets dependencies
 pallet-usetech-nft = { version = "3.0.0", default-features = false, path = "../../../pallets/usetech-nft" }
+pallet-w3f-nft = { version = "3.0.0", default-features = false, path = "../../../pallets/w3f-nft" }
 
 [build-dependencies]
 substrate-wasm-builder = { version = "4.0.0", path = "../../../utils/wasm-builder" }
@@ -155,6 +156,7 @@ std = [
 	"pallet-recovery/std",
 	"pallet-vesting/std",
 	"pallet-usetech-nft/std",
+	"pallet-w3f-nft/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",

@@ -1008,6 +1008,10 @@ impl pallet_usetech_nft::Config for Runtime {
 	type Event = Event;
 }
 
+impl pallet_w3f_nft::Config for Runtime {
+	type Event = Event;
+}
+
 construct_runtime!(
 	pub enum Runtime where
 		Block = Block,
@@ -1051,6 +1055,7 @@ construct_runtime!(
 		Mmr: pallet_mmr::{Module, Storage},
 		Lottery: pallet_lottery::{Module, Call, Storage, Event<T>},
 		UsetechNFT: pallet_usetech_nft::{Module, Call, Storage, Event<T>},
+		W3FNFT: pallet_w3f_nft::{Module, Call, Storage, Event<T>},
 	}
 );
 
