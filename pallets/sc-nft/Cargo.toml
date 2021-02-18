@@ -3,8 +3,11 @@ name = "pallet-sc-nft"
 version = "0.1.0"
 authors = ["ShadowCat"]
 edition = "2018"
-linux = "Apache-2.0"
+license = "Apache-2.0"
+homepage = "https://substrate.dev"
+repository = "https://github.com/paritytech/substrate/"
 description = "ShadowCat nft pallet"
+readme = "README.md"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
