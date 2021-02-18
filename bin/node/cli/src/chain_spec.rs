@@ -344,7 +344,7 @@ fn development_config_genesis() -> GenesisConfig {
 pub fn development_config() -> ChainSpec {
 	let mut prop = sc_service::Properties::new();
 	prop.insert("tokenDecimals".to_string(), 12.into());
-	prop.insert("tokenSymbol".to_string(), "FEI".into());
+	prop.insert("tokenSymbol".to_string(), "NMT".into()); // NFT Mart Token
 	ChainSpec::from_genesis(
 		"Nftmart Testnet",
 		"nftmart_testnet",
@@ -374,7 +374,7 @@ fn local_testnet_genesis() -> GenesisConfig {
 pub fn local_testnet_config() -> ChainSpec {
 	let mut prop = sc_service::Properties::new();
 	prop.insert("tokenDecimals".to_string(), 12.into());
-	prop.insert("tokenSymbol".to_string(), "FEI".into());
+	prop.insert("tokenSymbol".to_string(), "NMT".into()); // NFT Mart Token
 	ChainSpec::from_genesis(
 		"Nftmart Testnet",
 		"nftmart_testnet",
