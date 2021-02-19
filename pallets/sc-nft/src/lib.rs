@@ -177,14 +177,12 @@ decl_module! {
         #[weight=0]
         pub fn transfer_collection(origin, to: T::AccountId, collection_id: u64) -> DispatchResult {
             let sender = ensure_signed(origin)?;
-            ensure!(<Collection<T>>::contains_key(collection_id), Error::<T>::CollectionNotExists);
+            let mut collection = Self::collection_list(collection_id).ok_or( Error::<T>::CollectionNotExists )?;
             
-            let collection = <Collections<T>>::get(collection_id);
-
             ensure!( sender == collection.owner, Error::<T>::NotOwnerOfCollection );
 
             collection.owner = sender;
-            <Collections<T>>::insert(collection_id, collection);
+            <CollectionList<T>>::insert(collection_id, collection);
 
             Ok(())
         }
