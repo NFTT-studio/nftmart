@@ -4099,6 +4099,7 @@ dependencies = [
  "pallet-proxy",
  "pallet-randomness-collective-flip",
  "pallet-recovery",
+ "pallet-sc-nft",
  "pallet-scheduler",
  "pallet-session",
  "pallet-session-benchmarking",
