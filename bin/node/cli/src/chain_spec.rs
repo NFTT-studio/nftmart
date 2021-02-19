@@ -344,15 +344,15 @@ fn development_config_genesis() -> GenesisConfig {
 pub fn development_config() -> ChainSpec {
 	let mut prop = sc_service::Properties::new();
 	prop.insert("tokenDecimals".to_string(), 12.into());
-	prop.insert("tokenSymbol".to_string(), "FEI".into());
+	prop.insert("tokenSymbol".to_string(), "NMT".into()); // NFT Mart Token
 	ChainSpec::from_genesis(
-		"Guapfei Testnet",
-		"guapfei_testnet",
+		"Nftmart Testnet",
+		"nftmart_testnet",
 		ChainType::Development,
 		development_config_genesis,
 		vec![],
 		None,
-		Some("guapfei"),
+		Some("nftmart"),
 		Some(prop),
 		Default::default(),
 	)
@@ -374,16 +374,16 @@ fn local_testnet_genesis() -> GenesisConfig {
 pub fn local_testnet_config() -> ChainSpec {
 	let mut prop = sc_service::Properties::new();
 	prop.insert("tokenDecimals".to_string(), 12.into());
-	prop.insert("tokenSymbol".to_string(), "FEI".into());
+	prop.insert("tokenSymbol".to_string(), "NMT".into()); // NFT Mart Token
 	ChainSpec::from_genesis(
-		"Guapfei Testnet",
-		"guapfei_testnet",
+		"Nftmart Testnet",
+		"nftmart_testnet",
 		ChainType::Local,
 		local_testnet_genesis,
 		vec![],
 		Some(TelemetryEndpoints::new(vec![(STAGING_TELEMETRY_URL.to_string(), 0)])
 			.expect("Local Testnet telemetry url is valid; qed")),
-		Some("guapfei"),
+		Some("nftmart"),
 		Some(prop),
 		Default::default(),
 	)
