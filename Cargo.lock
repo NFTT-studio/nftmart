@@ -4112,6 +4112,7 @@ dependencies = [
  "pallet-proxy",
  "pallet-randomness-collective-flip",
  "pallet-recovery",
+ "pallet-sc-nft",
  "pallet-scheduler",
  "pallet-session",
  "pallet-session-benchmarking",
@@ -5034,6 +5035,21 @@ name = "pallet-recovery"
 version = "3.0.0"
 dependencies = [
  "enumflags2",
+ "frame-support",
+ "frame-system",
+ "pallet-balances",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-sc-nft"
+version = "0.1.0"
+dependencies = [
  "frame-support",
  "frame-system",
  "pallet-balances",
