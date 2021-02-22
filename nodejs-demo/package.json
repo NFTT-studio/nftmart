@@ -1,0 +1,7 @@
+{
+	"dependencies": {
+		"commander": "^7.1.0",
+		"@polkadot/api": "^3.9.4-4",
+		"@polkadot/util": "^5.7.1"
+	}
+}

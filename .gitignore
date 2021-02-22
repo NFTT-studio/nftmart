@@ -25,3 +25,5 @@ rls*.log
 .cargo-remote.toml
 *.bin
 /target
+node_modules/
+
