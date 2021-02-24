@@ -39,10 +39,10 @@ pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::Account
 pub type AccountIndex = u32;
 
 /// Balance of an account.
-pub type Balance = u128;
+pub type Balance = sp_core::constants_types::Balance;
 
 /// Type used for expressing timestamp.
-pub type Moment = u64;
+pub type Moment = sp_core::constants_types::Moment;
 
 /// Index of a transaction in the chain.
 pub type Index = u32;

@@ -25,7 +25,7 @@ use node_runtime::{
 	AuthorityDiscoveryConfig, BabeConfig, BalancesConfig, ContractsConfig, CouncilConfig,
 	DemocracyConfig,GrandpaConfig, ImOnlineConfig, SessionConfig, SessionKeys, StakerStatus,
 	StakingConfig, ElectionsConfig, IndicesConfig, SocietyConfig, SudoConfig, SystemConfig,
-	TechnicalCommitteeConfig, wasm_binary_unwrap,
+	TechnicalCommitteeConfig, wasm_binary_unwrap, TokensConfig,
 };
 use node_runtime::Block;
 use node_runtime::constants::currency::*;
@@ -326,6 +326,16 @@ pub fn testnet_genesis(
 			max_members: 999,
 		}),
 		pallet_vesting: Some(Default::default()),
+		orml_tokens: Some(TokensConfig {
+			endowed_accounts: endowed_accounts.iter()
+				.flat_map(|x|{
+					vec![
+						(x.clone(), 2, 100 * sp_core::constants_types::ACCURACY),
+						(x.clone(), 3, 100 * sp_core::constants_types::ACCURACY),
+						(x.clone(), 4, 100 * sp_core::constants_types::ACCURACY),
+					]
+				}).collect(),
+		}),
 	}
 }
 

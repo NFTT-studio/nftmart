@@ -36,14 +36,11 @@ use frame_support::{
 		U128CurrencyToVote,
 	},
 };
-use frame_system::{
-	EnsureRoot, EnsureOneOf,
-	limits::{BlockWeights, BlockLength}
-};
+use frame_system::{EnsureRoot, EnsureOneOf, limits::{BlockWeights, BlockLength}};
 use frame_support::traits::InstanceFilter;
 use codec::{Encode, Decode};
-#[cfg(feature = "std")]
-use serde::{Deserialize, Serialize};
+// #[cfg(feature = "std")]
+// use serde::{Deserialize, Serialize};
 use orml_currencies::BasicCurrencyAdapter;
 use sp_core::{
 	crypto::KeyTypeId,
@@ -363,7 +360,7 @@ impl pallet_indices::Config for Runtime {
 }
 
 parameter_types! {
-	pub const ExistentialDeposit: Balance = 1 * DOLLARS;
+	pub const ExistentialDeposit: Balance = sp_core::constants_types::ACCURACY;
 	// For weight estimation, we assume that the most locks on an individual account will be 50.
 	// This number may need to be adjusted in the future if this assumption no longer holds true.
 	pub const MaxLocks: u32 = 50;
@@ -1056,6 +1053,40 @@ impl pallet_w3f_nft::Config for Runtime {
 	type Event = Event;
 }
 
+orml_traits::parameter_type_with_key! {
+	pub ExistentialDeposits: |currency_id: sp_core::constants_types::CurrencyIdType| -> Balance {
+		if currency_id == &sp_core::constants_types::NATIVE_CURRENCY_ID {
+			ExistentialDeposit::get()
+		} else  {
+			Default::default()
+		}
+	};
+}
+
+impl orml_tokens::Config for Runtime {
+	type Event = Event;
+	type Balance = Balance;
+	type Amount = sp_core::constants_types::Amount;
+	type CurrencyId = sp_core::constants_types::CurrencyIdType;
+	type WeightInfo = ();
+	type ExistentialDeposits = ExistentialDeposits;
+	type OnDust = ();
+}
+
+parameter_types! {
+	pub const GetNativeCurrencyId: sp_core::constants_types::CurrencyIdType = sp_core::constants_types::NATIVE_CURRENCY_ID;
+}
+
+pub type AdaptedBasicCurrency = BasicCurrencyAdapter<Runtime, Balances, sp_core::constants_types::Amount, sp_core::constants_types::Moment>;
+
+impl orml_currencies::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Tokens;
+	type NativeCurrency = AdaptedBasicCurrency;
+	type GetNativeCurrencyId = GetNativeCurrencyId;
+	type WeightInfo = ();
+}
+
 construct_runtime!(
 	pub enum Runtime where
 		Block = Block,
@@ -1101,6 +1132,8 @@ construct_runtime!(
 		Lottery: pallet_lottery::{Module, Call, Storage, Event<T>},
 		UsetechNFT: pallet_usetech_nft::{Module, Call, Storage, Event<T>},
 		W3FNFT: pallet_w3f_nft::{Module, Call, Storage, Event<T>},
+		Tokens: orml_tokens::{Module, Storage, Event<T>, Config<T>},
+		Currencies: orml_currencies::{Module, Call, Event<T>},
 	}
 );
 

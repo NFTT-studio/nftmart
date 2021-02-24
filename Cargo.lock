@@ -4113,6 +4113,7 @@ dependencies = [
  "node-primitives",
  "orml-currencies",
  "orml-tokens",
+ "orml-traits",
  "pallet-assets",
  "pallet-authority-discovery",
  "pallet-authorship",

@@ -63,6 +63,7 @@ pub mod ed25519;
 pub mod sr25519;
 pub mod ecdsa;
 pub mod hash;
+pub mod constants_types;
 #[cfg(feature = "std")]
 mod hasher;
 pub mod offchain;
