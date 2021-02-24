@@ -48,7 +48,10 @@ async function getApi(dest = 'ws://8.136.111.191:9944') {
 	const provider = new WsProvider(dest);
 
 	const types = {
-
+		"CurrencyId" : "u32",
+		"CurrencyIdOf" : "CurrencyId",
+		"Amount" : "i128",
+		"AmountOf" : "Amount",
 	};
 
 	const api = await ApiPromise.create({ provider, types });
