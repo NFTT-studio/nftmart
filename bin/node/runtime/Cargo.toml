@@ -88,7 +88,8 @@ pallet-vesting = { version = "3.0.0", default-features = false, path = "../../..
 # pallets dependencies
 pallet-usetech-nft = { version = "3.0.0", default-features = false, path = "../../../pallets/usetech-nft" }
 pallet-w3f-nft = { version = "3.0.0", default-features = false, path = "../../../pallets/w3f-nft" }
-pallet-sc-nft = { version = "0.1.0", default-features = false, path = "../../../pallets/sc-nft" }
+orml-currencies = { version = "0.4.1-dev", default-features = false, path = "../../../pallets/orml-currencies" }
+orml-tokens = { version = "0.4.1-dev", default-features = false, path = "../../../pallets/orml-tokens" }
 
 [build-dependencies]
 substrate-wasm-builder = { version = "4.0.0", path = "../../../utils/wasm-builder" }
@@ -161,7 +162,8 @@ std = [
 	"pallet-vesting/std",
 	"pallet-usetech-nft/std",
 	"pallet-w3f-nft/std",
-	"pallet-sc-nft/std",
+	"orml-currencies/std",
+	"orml-tokens/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",

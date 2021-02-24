@@ -42,6 +42,9 @@ use frame_system::{
 };
 use frame_support::traits::InstanceFilter;
 use codec::{Encode, Decode};
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
+use orml_currencies::BasicCurrencyAdapter;
 use sp_core::{
 	crypto::KeyTypeId,
 	u32_trait::{_1, _2, _3, _4, _5},
@@ -1053,32 +1056,6 @@ impl pallet_w3f_nft::Config for Runtime {
 	type Event = Event;
 }
 
-parameter_types! {
-	pub const MaxCollectionNameLength: u32 = 32;
-	pub const MaxCollectionIconLength: u32 = 80;
-	pub const MaxCollectionDescriptionLength: u32 = 200;
-	pub const MaxCollectionCustomDataSize: u32 = 50;
-	pub const MaxCollectionDecimalDigits: u32 = 6;
-
-	pub const MaxItemNameLength: u32 = 32;
-	pub const MaxItemImageLength: u32 = 80;
-	pub const MaxItemExtLinkLength: u32 = 80;
-	pub const MaxItemDescriptionLength: u32 = 200;
-
-}
-impl pallet_sc_nft::Config for Runtime{
-	type Event = Event;
-	 type MaxCollectionNameLength = MaxCollectionNameLength;
-    type MaxCollectionIconLength = MaxCollectionDescriptionLength;
-    type MaxCollectionDescriptionLength = MaxCollectionDescriptionLength;
-    type MaxCollectionCustomDataSize = MaxCollectionCustomDataSize;
-    type MaxCollectionDecimalDigits = MaxCollectionDecimalDigits;
-
-    type MaxItemNameLength = MaxItemNameLength;
-    type MaxItemImageLength = MaxItemImageLength;
-    type MaxItemExtLinkLength = MaxItemExtLinkLength;
-    type MaxItemDescriptionLength = MaxItemDescriptionLength;
-}
 construct_runtime!(
 	pub enum Runtime where
 		Block = Block,
@@ -1124,7 +1101,6 @@ construct_runtime!(
 		Lottery: pallet_lottery::{Module, Call, Storage, Event<T>},
 		UsetechNFT: pallet_usetech_nft::{Module, Call, Storage, Event<T>},
 		W3FNFT: pallet_w3f_nft::{Module, Call, Storage, Event<T>},
-		SCNFT: pallet_sc_nft::{Module, Call, Storage, Event<T>},
 	}
 );
 
