@@ -1459,6 +1459,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "83c8d82922337cd23a15f88b70d8e4ef5f11da38dd7cdb55e84dd5de99695da0"
 dependencies = [
  "enumflags2_derive",
+ "serde",
 ]
 
 [[package]]
@@ -3844,6 +3845,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "nftmart-nft"
+version = "2.0.0"
+dependencies = [
+ "enumflags2",
+ "frame-support",
+ "frame-system",
+ "orml-nft",
+ "orml-traits",
+ "pallet-balances",
+ "pallet-proxy",
+ "pallet-timestamp",
+ "pallet-utility",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "nix"
 version = "0.19.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4110,8 +4132,10 @@ dependencies = [
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
  "hex-literal",
+ "nftmart-nft",
  "node-primitives",
  "orml-currencies",
+ "orml-nft",
  "orml-tokens",
  "orml-traits",
  "pallet-assets",

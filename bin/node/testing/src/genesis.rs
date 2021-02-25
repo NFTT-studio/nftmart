@@ -120,5 +120,6 @@ pub fn config_endowed(
 		}),
 		pallet_vesting: Some(Default::default()),
 		orml_tokens: Some(Default::default()),
+		orml_nft: Some(Default::default()),
 	}
 }

@@ -91,6 +91,8 @@ pallet-w3f-nft = { version = "3.0.0", default-features = false, path = "../../..
 orml-currencies = { version = "0.4.1-dev", default-features = false, path = "../../../pallets/orml-currencies" }
 orml-tokens = { version = "0.4.1-dev", default-features = false, path = "../../../pallets/orml-tokens" }
 orml-traits = { path = "../../../pallets/orml-traits", default-features = false }
+orml-nft = { path = "../../../pallets/orml-nft", default-features = false }
+nftmart-nft = { path = "../../../pallets/nftmart-nft", default-features = false }
 
 [build-dependencies]
 substrate-wasm-builder = { version = "4.0.0", path = "../../../utils/wasm-builder" }
@@ -166,6 +168,8 @@ std = [
 	"orml-currencies/std",
 	"orml-tokens/std",
 	"orml-traits/std",
+	"orml-nft/std",
+	"nftmart-nft/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",

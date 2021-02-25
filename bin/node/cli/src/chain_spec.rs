@@ -25,7 +25,7 @@ use node_runtime::{
 	AuthorityDiscoveryConfig, BabeConfig, BalancesConfig, ContractsConfig, CouncilConfig,
 	DemocracyConfig,GrandpaConfig, ImOnlineConfig, SessionConfig, SessionKeys, StakerStatus,
 	StakingConfig, ElectionsConfig, IndicesConfig, SocietyConfig, SudoConfig, SystemConfig,
-	TechnicalCommitteeConfig, wasm_binary_unwrap, TokensConfig,
+	TechnicalCommitteeConfig, wasm_binary_unwrap, TokensConfig, OrmlNFTConfig,
 };
 use node_runtime::Block;
 use node_runtime::constants::currency::*;
@@ -336,6 +336,7 @@ pub fn testnet_genesis(
 					]
 				}).collect(),
 		}),
+		orml_nft: Some(OrmlNFTConfig { tokens: vec![] }),
 	}
 }
 

@@ -1087,6 +1087,30 @@ impl orml_currencies::Config for Runtime {
 	type WeightInfo = ();
 }
 
+impl orml_nft::Config for Runtime {
+	type ClassId = u32;
+	type TokenId = u64;
+	type ClassData = nftmart_nft::ClassData;
+	type TokenData = nftmart_nft::TokenData;
+}
+
+parameter_types! {
+	pub const CreateClassDeposit: Balance = 0;
+	pub const CreateTokenDeposit: Balance = 0;
+	pub const MetaDataByteDeposit: Balance = 0;
+	pub const NftModuleId: ModuleId = ModuleId(*b"nftmart*");
+}
+
+impl nftmart_nft::Config for Runtime {
+	type Event = Event;
+	type CreateClassDeposit = CreateClassDeposit;
+	type MetaDataByteDeposit = MetaDataByteDeposit;
+	type CreateTokenDeposit = CreateTokenDeposit;
+	type ModuleId = NftModuleId;
+	type Currency = Balances;
+	type MultiCurrency = Currencies;
+}
+
 construct_runtime!(
 	pub enum Runtime where
 		Block = Block,
@@ -1134,6 +1158,8 @@ construct_runtime!(
 		W3FNFT: pallet_w3f_nft::{Module, Call, Storage, Event<T>},
 		Tokens: orml_tokens::{Module, Storage, Event<T>, Config<T>},
 		Currencies: orml_currencies::{Module, Call, Event<T>},
+		OrmlNFT: orml_nft::{Module, Storage, Config<T>},
+		NFTMart: nftmart_nft::{Module, Call, Event<T>},
 	}
 );
 
