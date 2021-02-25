@@ -580,6 +580,8 @@ ss58_address_format!(
 		(47, "reserved47", "Reserved for future use (47).")
 	NeatcoinAccount =>
 		(48, "neatcoin", "Neatcoin mainnet, standard account (*25519).")
+	HydraDXAccount =>
+		(63, "hydradx", "HydraDX standard account (*25519).")
 	AventusAccount =>
 		(65, "aventus", "Aventus Chain mainnet, standard account (*25519).")
 	CrustAccount =>
@@ -587,6 +589,7 @@ ss58_address_format!(
 	// Note: 16384 and above are reserved.
 	NftmartAccount =>
 		(50, "nftmart", "Nftmart Network, standard account (*25519).")
+
 );
 
 /// Set the default "version" (actually, this is a bit of a misnomer and the version byte is
