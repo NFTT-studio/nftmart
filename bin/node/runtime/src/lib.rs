@@ -1149,7 +1149,7 @@ construct_runtime!(
 		Tokens: orml_tokens::{Module, Storage, Event<T>, Config<T>},
 		Currencies: orml_currencies::{Module, Call, Event<T>},
 		OrmlNFT: orml_nft::{Module, Storage, Config<T>},
-		NFTMart: nftmart_nft::{Module, Call, Event<T>},
+		Nftmart: nftmart_nft::{Module, Call, Event<T>},
 	}
 );
 

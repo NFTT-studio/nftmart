@@ -45,13 +45,24 @@ function waitTx(moduleMetadata) {
 }
 
 async function getApi(dest = 'ws://8.136.111.191:9944') {
+	console.log("dial %s", dest);
 	const provider = new WsProvider(dest);
 
 	const types = {
-		"CurrencyId" : "u32",
-		"CurrencyIdOf" : "CurrencyId",
-		"Amount" : "i128",
-		"AmountOf" : "Amount",
+		ClassId: 'u32',
+		TokenId: 'u64',
+		CurrencyId: 'u32',
+		CurrencyIdOf: 'CurrencyId',
+		Amount: 'i128',
+		AmountOf: 'Amount',
+		Metadata: 'Vec<u8>',
+		ClassIdOf: 'ClassId',
+		TokenIdOf: 'TokenId',
+		ClassInfoOf: { metadata: 'Metadata', totalIssuance: 'TokenId', owner: 'AccountId', data: 'ClassData' },
+		TokenInfoOf: { metadata: 'Metadata', owner: 'AccountId', data: 'TokenData' },
+		ClassData: { deposit: 'Balance', properties: 'Properties', name: 'Vec<u8>', description: 'Vec<u8>' },
+		TokenData: { deposit: 'Balance' },
+		Properties: 'u8'
 	};
 
 	const api = await ApiPromise.create({ provider, types });

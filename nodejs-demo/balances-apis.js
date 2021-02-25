@@ -15,12 +15,12 @@ function main() {
 	program
 		.command('show-all')
 		.action(async () => {
-			await demo_show_all(keyring);
+			await demo_show_all();
 		});
 	program.parse();
 }
 
-async function demo_show_all(keyring) {
+async function demo_show_all() {
 	let api = await Utils.getApi();
 	const all = await api.query.system.account.entries();
 	for (const account of all) {
