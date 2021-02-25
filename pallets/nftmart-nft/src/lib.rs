@@ -162,8 +162,8 @@ pub mod module {
 
 			let next_id = orml_nft::Module::<T>::next_class_id();
 			let owner: T::AccountId = T::ModuleId::get().into_sub_account(next_id);
-			let total_bytes = metadata.len() + name.len() + description.len();
-			let deposit: Balance = T::CreateClassDeposit::get() + (total_bytes as Balance).saturating_mul(T::MetaDataByteDeposit::get());
+			let total_bytes = metadata.len().saturating_add(name.len()).saturating_add(description.len());
+			let deposit: Balance = T::CreateClassDeposit::get().saturating_add((total_bytes as Balance).saturating_mul(T::MetaDataByteDeposit::get()));
 
 			<T as Config>::Currency::transfer(&who, &owner, deposit.saturated_into(), KeepAlive)?;
 			<T as Config>::Currency::reserve(&owner, deposit.saturated_into())?;
