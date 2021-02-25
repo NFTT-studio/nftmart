@@ -86,8 +86,6 @@ pallet-transaction-payment-rpc-runtime-api = { version = "3.0.0", default-featur
 pallet-vesting = { version = "3.0.0", default-features = false, path = "../../../frame/vesting" }
 
 # pallets dependencies
-pallet-usetech-nft = { version = "3.0.0", default-features = false, path = "../../../pallets/usetech-nft" }
-pallet-w3f-nft = { version = "3.0.0", default-features = false, path = "../../../pallets/w3f-nft" }
 orml-currencies = { version = "0.4.1-dev", default-features = false, path = "../../../pallets/orml-currencies" }
 orml-tokens = { version = "0.4.1-dev", default-features = false, path = "../../../pallets/orml-tokens" }
 orml-traits = { path = "../../../pallets/orml-traits", default-features = false }
@@ -164,8 +162,6 @@ std = [
 	"pallet-recovery/std",
 	"pallet-vesting/std",
 	"frame-try-runtime/std",
-	"pallet-usetech-nft/std",
-	"pallet-w3f-nft/std",
 	"orml-currencies/std",
 	"orml-tokens/std",
 	"orml-traits/std",

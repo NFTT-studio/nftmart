@@ -1045,14 +1045,6 @@ impl pallet_assets::Config for Runtime {
 	type WeightInfo = pallet_assets::weights::SubstrateWeight<Runtime>;
 }
 
-impl pallet_usetech_nft::Config for Runtime {
-	type Event = Event;
-}
-
-impl pallet_w3f_nft::Config for Runtime {
-	type Event = Event;
-}
-
 orml_traits::parameter_type_with_key! {
 	pub ExistentialDeposits: |currency_id: sp_core::constants_types::CurrencyIdType| -> Balance {
 		if currency_id == &sp_core::constants_types::NATIVE_CURRENCY_ID {
@@ -1154,8 +1146,6 @@ construct_runtime!(
 		Assets: pallet_assets::{Module, Call, Storage, Event<T>},
 		Mmr: pallet_mmr::{Module, Storage},
 		Lottery: pallet_lottery::{Module, Call, Storage, Event<T>},
-		UsetechNFT: pallet_usetech_nft::{Module, Call, Storage, Event<T>},
-		W3FNFT: pallet_w3f_nft::{Module, Call, Storage, Event<T>},
 		Tokens: orml_tokens::{Module, Storage, Event<T>, Config<T>},
 		Currencies: orml_currencies::{Module, Call, Event<T>},
 		OrmlNFT: orml_nft::{Module, Storage, Config<T>},
