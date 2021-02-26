@@ -1,6 +1,7 @@
 const Utils = require('./utils')
 const {Keyring} = require('@polkadot/api');
-const unit = 1000000000000;
+const { bnToBn } = require('@polkadot/util');
+const unit = bnToBn('1000000000000');
 
 function main() {
 	const ss58Format = 50;
@@ -36,7 +37,7 @@ async function demo_transfer(keyring) {
 	const alice = keyring.addFromUri("//Alice");
 	const bob = keyring.addFromUri("//Bob");
 	let [a, b] = Utils.waitTx(moduleMetadata);
-	await api.tx.balances.transfer(bob.address, 2 * unit).signAndSend(alice, a);
+	await api.tx.balances.transfer(bob.address, bnToBn(2) * unit).signAndSend(alice, a);
 	await b();
 	process.exit();
 }

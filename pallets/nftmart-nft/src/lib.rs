@@ -16,6 +16,9 @@ use sp_runtime::{
 	traits::{AccountIdConversion, StaticLookup, Zero},
 	DispatchResult, ModuleId, RuntimeDebug,
 };
+
+mod mock;
+
 pub use module::*;
 
 #[repr(u8)]
