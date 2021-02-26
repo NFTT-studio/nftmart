@@ -37,7 +37,7 @@ async function demo_transfer(keyring) {
 	const alice = keyring.addFromUri("//Alice");
 	const bob = keyring.addFromUri("//Bob");
 	let [a, b] = Utils.waitTx(moduleMetadata);
-	await api.tx.balances.transfer(bob.address, bnToBn(2) * unit).signAndSend(alice, a);
+	await api.tx.balances.transfer(bob.address, bnToBn(2).mul(unit)).signAndSend(alice, a);
 	await b();
 	process.exit();
 }

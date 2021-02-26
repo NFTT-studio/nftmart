@@ -48,7 +48,7 @@ async function deposit(num_proxies) {
 	if (num_proxies === 0) {
 		return bnToBn(0);
 	} else {
-		return proxyDepositBase + proxyDepositFactor * bnToBn(num_proxies);
+		return proxyDepositBase.add(proxyDepositFactor).mul(bnToBn(num_proxies));
 	}
 }
 
@@ -62,7 +62,7 @@ async function demo_add_class_admin() {
 	const ownerOfClass0 = '62qUEaQwPx7g4vDz88bN4zMBTFmcwLPYbPsvbBhH2QiqWhfB'
 
 	// make sure `ownerOfClass0` has sufficient balances.
-	const balancesNeeded = await deposit(2) - await deposit(1);
+	const balancesNeeded = (await deposit(2)).sub(await deposit(1));
 	if (balancesNeeded > 0) {
 		await api.tx.balances.transfer(ownerOfClass0, balancesNeeded).signAndSend(alice, a);
 		await b();
@@ -97,12 +97,12 @@ async function demo_show_class_info() {
 	// [
 	// 	[
 	// 		{
-	// 			delegate: 63b4iSPL2bXW7Z1ByBgf65is99LMDLvePLzF4Vd7S96zPYnw, <-- Bob
+	// 			delegate: 63b4iSPL2bXW7Z1ByBgf65is99LMDLvePLzF4Vd7S96zPYnw,
 	// 			proxyType: Any,
 	// 			delay: 0
 	// 		},
 	// 		{
-	// 			delegate: 65ADzWZUAKXQGZVhQ7ebqRdqEzMEftKytB8a7rknW82EASXB, <-- Alice
+	// 			delegate: 65ADzWZUAKXQGZVhQ7ebqRdqEzMEftKytB8a7rknW82EASXB,
 	// 			proxyType: Any,
 	// 			delay: 0
 	// 		}

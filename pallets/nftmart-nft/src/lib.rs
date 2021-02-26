@@ -13,11 +13,12 @@ use sp_core::constants_types::Balance;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::{
-	traits::{AccountIdConversion, StaticLookup, Zero},
+	traits::{AccountIdConversion, Zero},
 	DispatchResult, ModuleId, RuntimeDebug,
 };
 
 mod mock;
+mod tests;
 
 pub use module::*;
 
@@ -72,13 +73,12 @@ pub struct TokenData {
 pub type TokenIdOf<T> = <T as orml_nft::Config>::TokenId;
 pub type ClassIdOf<T> = <T as orml_nft::Config>::ClassId;
 pub type BalanceOf<T> = <<T as module::Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
-pub type Metadata = sp_std::vec::Vec<u8>;
+pub type NFTMetadata = Vec<u8>;
 
 #[frame_support::pallet]
 pub mod module {
 	use super::*;
 	use sp_runtime::SaturatedConversion;
-	use sp_runtime::traits::Saturating;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config + orml_nft::Config<ClassData = ClassData, TokenData = TokenData> + pallet_proxy::Config {
@@ -155,7 +155,7 @@ pub mod module {
 		/// - `properties`: class property, include `Transferable` `Burnable`
 		#[pallet::weight(1000)]
 		#[transactional]
-		pub fn create_class(origin: OriginFor<T>, metadata: Metadata, name: Vec<u8>, description: Vec<u8>, properties: Properties) -> DispatchResultWithPostInfo {
+		pub fn create_class(origin: OriginFor<T>, metadata: NFTMetadata, name: Vec<u8>, description: Vec<u8>, properties: Properties) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
 			// TODO: pass constants from runtime configuration.
@@ -190,6 +190,7 @@ pub mod module {
 	}
 }
 
+#[allow(unused_variables)]
 impl<T: Config> NFT<T::AccountId> for Pallet<T> {
 	type ClassId = ClassIdOf<T>;
 	type TokenId = TokenIdOf<T>;
