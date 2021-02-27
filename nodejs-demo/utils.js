@@ -13,12 +13,12 @@ function waitTx(moduleMetadata) {
 	return [
 		({ events = [], status }) => {
 			// console.log(JSON.stringify(status));
-			// if (status.isFinalized) { // 交易敲定
-			if (status.isInBlock) { // 交易入块
+			// if (status.isFinalized) {
+			if (status.isInBlock) {
 				// console.log('%s BlockHash(%s)', status.type, status.asFinalized.toHex());
 				console.log('%s BlockHash(%s)', status.type, status.asInBlock.toHex());
 				events.forEach(({ phase, event: { data, method, section } }) => {
-					if ("system.ExtrinsicFailed" === section + '.' + method) { // 错误
+					if ("system.ExtrinsicFailed" === section + '.' + method) {
 						for (let d of data) {
 							if (d.isModule) {
 								let mErr = d.asModule;
@@ -28,7 +28,18 @@ function waitTx(moduleMetadata) {
 						}
 					} else if ("system.ExtrinsicSuccess" === section + '.' + method) {
 						// ignore
-					} else { // 事件
+					} else if ("proxy.ProxyExecuted" === section + '.' + method) {
+						// console.log(data.toString());
+						for (let d of data) {
+							d = d.toJSON();
+							if (d.Err && d.Err.Module && d.Err.Module.index && d.Err.Module.error) {
+								let module = moduleMetadata[d.Err.Module.index];
+								console.log("proxy.ProxyExecuted: %s.%s", module.name, module.errors[d.Err.Module.error].name);
+							} else {
+								console.log("event: " + phase.toString() + ' ' + section + '.' + method + ' ' + data.toString());
+							}
+						}
+					} else {
 						console.log("event: " + phase.toString() + ' ' + section + '.' + method + ' ' + data.toString());
 					}
 				});
@@ -94,10 +105,10 @@ module.exports = {
 	async getModules(api) {
 		let metadata = await api.rpc.state.getMetadata();
 		metadata = metadata.asLatest.modules;
-		// 建立索引
 		metadata.index = {};
 		for (const a of metadata) {
 			metadata.index[a.index] = a;
+			// console.log(a.index.toString());
 		}
 		return metadata;
 	},
