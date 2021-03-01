@@ -326,6 +326,7 @@ pub fn testnet_genesis(
 			max_members: 999,
 		}),
 		pallet_vesting: Some(Default::default()),
+		pallet_gilt: Some(Default::default()),
 		orml_tokens: Some(TokensConfig {
 			endowed_accounts: endowed_accounts.iter()
 				.flat_map(|x|{
