@@ -8,13 +8,13 @@ use frame_support::{
 };
 use sp_std::vec::Vec;
 use frame_system::pallet_prelude::*;
-use orml_traits::{MultiReservableCurrency, NFT};
+use orml_traits::{MultiReservableCurrency};
 use sp_core::constants_types::Balance;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::{
-	traits::{AccountIdConversion, Zero},
-	DispatchResult, ModuleId, RuntimeDebug,
+	traits::{AccountIdConversion, StaticLookup, Zero},
+	ModuleId, RuntimeDebug,
 };
 
 mod mock;
@@ -153,28 +153,35 @@ pub mod module {
 		///
 		/// - `metadata`: external metadata
 		/// - `properties`: class property, include `Transferable` `Burnable`
-		#[pallet::weight(1000)]
+		/// - `name`: class name, with len limitation.
+		/// - `description`: class description, with len limitation.
+		#[pallet::weight(100_000)]
 		#[transactional]
 		pub fn create_class(origin: OriginFor<T>, metadata: NFTMetadata, name: Vec<u8>, description: Vec<u8>, properties: Properties) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
 			// TODO: pass constants from runtime configuration.
-			// ensure!(metadata.len() < ?, "xx");
-			ensure!(name.len() < 20, "xx");
-			ensure!(description.len() < 256, "xx");
+			ensure!(name.len() <= 20, "Name too long.");
+			ensure!(description.len() <= 256, "Description too long.");
 
 			let next_id = orml_nft::Module::<T>::next_class_id();
 			let owner: T::AccountId = T::ModuleId::get().into_sub_account(next_id);
-			let total_bytes = metadata.len().saturating_add(name.len()).saturating_add(description.len());
-			let deposit: Balance = T::CreateClassDeposit::get().saturating_add((total_bytes as Balance).saturating_mul(T::MetaDataByteDeposit::get()));
+			let deposit: Balance = {
+				let total_bytes = metadata.len().saturating_add(name.len()).saturating_add(description.len());
+				T::CreateClassDeposit::get().saturating_add(
+					(total_bytes as Balance).saturating_mul(T::MetaDataByteDeposit::get())
+				)
+			};
 
 			<T as Config>::Currency::transfer(&who, &owner, deposit.saturated_into(), KeepAlive)?;
 			<T as Config>::Currency::reserve(&owner, deposit.saturated_into())?;
 
-			// owner add proxy delegate to origin
-			let proxy_deposit = <pallet_proxy::Module<T>>::deposit(1);
-			<T as pallet_proxy::Config>::Currency::transfer(&who, &owner, proxy_deposit, KeepAlive)?;
-			<pallet_proxy::Module<T>>::add_proxy_delegate(&owner, who, Default::default(), Zero::zero())?;
+			{
+				// owner add proxy delegate to origin
+				let proxy_deposit = <pallet_proxy::Module<T>>::deposit(1);
+				<T as pallet_proxy::Config>::Currency::transfer(&who, &owner, proxy_deposit, KeepAlive)?;
+				<pallet_proxy::Module<T>>::add_proxy_delegate(&owner, who, Default::default(), Zero::zero())?;
+			}
 
 			let data = ClassData {
 				deposit,
@@ -187,29 +194,72 @@ pub mod module {
 			Self::deposit_event(Event::CreatedClass(owner, next_id));
 			Ok(().into())
 		}
+
+		/// Mint NFT token
+		///
+		/// - `to`: the token owner's account
+		/// - `class_id`: token belong to the class id
+		/// - `metadata`: external metadata
+		/// - `quantity`: token quantity
+		#[pallet::weight(100_000)]
+		#[transactional]
+		pub fn mint(
+			origin: OriginFor<T>,
+			to: <T::Lookup as StaticLookup>::Source,
+			class_id: ClassIdOf<T>,
+			metadata: NFTMetadata,
+			quantity: u32,
+		) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+			let to = T::Lookup::lookup(to)?;
+			ensure!(quantity >= 1, Error::<T>::InvalidQuantity);
+			let class_info = orml_nft::Module::<T>::classes(class_id).ok_or(Error::<T>::ClassIdNotFound)?;
+			ensure!(who == class_info.owner, Error::<T>::NoPermission);
+			let deposit: Balance = {
+				let total_bytes = metadata.len();
+				T::CreateTokenDeposit::get().saturating_add(
+					(total_bytes as Balance).saturating_mul(T::MetaDataByteDeposit::get())
+				)
+			};
+			{
+				let total_deposit: Balance = deposit.saturating_mul(quantity as Balance);
+				<T as Config>::Currency::reserve(&class_info.owner, total_deposit.saturated_into())?;
+			}
+			let data = TokenData { deposit };
+			for _ in 0..quantity {
+				orml_nft::Module::<T>::mint(&to, class_id, metadata.clone(), data.clone())?;
+			}
+
+			Self::deposit_event(Event::MintedToken(who, to, class_id, quantity));
+			Ok(().into())
+		}
 	}
 }
 
-#[allow(unused_variables)]
-impl<T: Config> NFT<T::AccountId> for Pallet<T> {
-	type ClassId = ClassIdOf<T>;
-	type TokenId = TokenIdOf<T>;
-	type Balance = Balance;
+impl<T: Config> Pallet<T> {
 
-	fn balance(who: &T::AccountId) -> Self::Balance {
-		// orml_nft::TokensByOwner::<T>::iter_prefix(who).count() as u128
-		todo!()
-	}
-
-	fn owner(token: (Self::ClassId, Self::TokenId)) -> Option<T::AccountId> {
-		// orml_nft::Module::<T>::tokens(token.0, token.1).map(|t| t.owner)
-		todo!()
-	}
-
-	fn transfer(from: &T::AccountId, to: &T::AccountId, token: (Self::ClassId, Self::TokenId)) -> DispatchResult {
-		// Self::do_transfer(from, to, token)
-		todo!()
-	}
 }
+
+// #[allow(unused_variables)]
+// impl<T: Config> NFT<T::AccountId> for Pallet<T> {
+// 	type ClassId = ClassIdOf<T>;
+// 	type TokenId = TokenIdOf<T>;
+// 	type Balance = Balance;
+//
+// 	fn balance(who: &T::AccountId) -> Self::Balance {
+// 		// orml_nft::TokensByOwner::<T>::iter_prefix(who).count() as u128
+// 		todo!()
+// 	}
+//
+// 	fn owner(token: (Self::ClassId, Self::TokenId)) -> Option<T::AccountId> {
+// 		// orml_nft::Module::<T>::tokens(token.0, token.1).map(|t| t.owner)
+// 		todo!()
+// 	}
+//
+// 	fn transfer(from: &T::AccountId, to: &T::AccountId, token: (Self::ClassId, Self::TokenId)) -> DispatchResult {
+// 		// Self::do_transfer(from, to, token)
+// 		todo!()
+// 	}
+// }
 
 

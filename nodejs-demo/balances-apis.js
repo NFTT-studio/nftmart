@@ -8,16 +8,12 @@ function main() {
 	const keyring = new Keyring({type: 'sr25519', ss58Format});
 	const {Command} = require('commander');
 	const program = new Command();
-	program
-		.command('transfer')
-		.action(async () => {
-			await demo_transfer(keyring);
-		});
-	program
-		.command('show-all')
-		.action(async () => {
-			await demo_show_all(keyring);
-		});
+	program.command('transfer').action(async () => {
+		await demo_transfer(keyring);
+	});
+	program.command('show-all').action(async () => {
+		await demo_show_all(keyring);
+	});
 	program.parse();
 }
 
@@ -40,9 +36,9 @@ async function demo_transfer(keyring) {
 	let api = await Utils.getApi();
 	let moduleMetadata = await Utils.getModules(api);
 	const bob = keyring.addFromUri("//Bob");
-	const alice = keyring.addFromUri("//Alice");
+	const alice = keyring.addFromUri("//Bob2");
 	let [a, b] = Utils.waitTx(moduleMetadata);
-	await api.tx.balances.transfer(alice.address, bnToBn(2).mul(unit)).signAndSend(bob, a);
+	await api.tx.balances.transfer(alice.address, bnToBn(1000).mul(unit)).signAndSend(bob, a);
 	await b();
 	process.exit();
 }
