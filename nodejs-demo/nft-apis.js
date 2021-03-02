@@ -52,8 +52,8 @@ async function main() {
 	program.command('mint-nft <account> <classID>').action(async (account, classID) => {
 		await demo_mint_nft(keyring, account, classID);
 	});
-	program.command('show-nft <classID>').action(async (classID) => {
-		await demo_show_nft(classID);
+	program.command('show-all-nfts <classID>').action(async (classID) => {
+		await demo_show_all_nfts(classID);
 	});
 	program.command('query-nft <account>').action(async (account) => {
 		await demo_query_nft(keyring, account);
@@ -113,7 +113,7 @@ async function demo_query_nft(keyring, account) {
 	process.exit();
 }
 
-async function demo_show_nft(classID) {
+async function demo_show_all_nfts(classID) {
 	let api = await Utils.getApi();
 	const tokenCount = await api.query.ormlNft.nextTokenId(classID);
 	console.log(`The token count of class ${classID} is ${tokenCount}.`);
