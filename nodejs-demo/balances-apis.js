@@ -8,13 +8,24 @@ function main() {
 	const keyring = new Keyring({type: 'sr25519', ss58Format});
 	const {Command} = require('commander');
 	const program = new Command();
-	program.command('transfer').action(async () => {
-		await demo_transfer(keyring);
+	program.command('transfer <from> <to>').action(async (from, to) => {
+		await demo_transfer(keyring, from, to);
 	});
 	program.command('show-all').action(async () => {
 		await demo_show_all(keyring);
 	});
+	program.command('show <account>').action(async (account) => {
+		await demo_show(keyring, account);
+	});
 	program.parse();
+}
+
+async function demo_show(keyring, account) {
+	let api = await Utils.getApi();
+	const addr = keyring.addFromUri(account).address;
+	account = await api.query.system.account(addr)
+	console.log(addr, account.toHuman());
+	process.exit();
 }
 
 async function demo_show_all(keyring) {
@@ -32,13 +43,13 @@ async function demo_show_all(keyring) {
 	process.exit();
 }
 
-async function demo_transfer(keyring) {
+async function demo_transfer(keyring, from, to) {
 	let api = await Utils.getApi();
 	let moduleMetadata = await Utils.getModules(api);
-	const bob = keyring.addFromUri("//Bob");
-	const alice = keyring.addFromUri("//Bob2");
+	from = keyring.addFromUri(from);
+	to = keyring.addFromUri(to).address;
 	let [a, b] = Utils.waitTx(moduleMetadata);
-	await api.tx.balances.transfer(alice.address, bnToBn(1000).mul(unit)).signAndSend(bob, a);
+	await api.tx.balances.transfer(to, bnToBn(10000).mul(unit)).signAndSend(from, a);
 	await b();
 	process.exit();
 }

@@ -116,7 +116,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	// and set impl_version to 0. If only runtime
 	// implementation changes and behavior does not, then leave spec_version as
 	// is and increment impl_version.
-	spec_version: 270,
+	spec_version: 272,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 2,
@@ -1116,9 +1116,9 @@ impl orml_nft::Config for Runtime {
 }
 
 parameter_types! {
-	pub const CreateClassDeposit: Balance = 500 * MILLICENTS;
-	pub const CreateTokenDeposit: Balance = 100 * MILLICENTS;
-	pub const MetaDataByteDeposit: Balance = 1 * MILLICENTS;
+	pub const CreateClassDeposit: Balance = 2 * CENTS;
+	pub const CreateTokenDeposit: Balance = 1 * CENTS;
+	pub const MetaDataByteDeposit: Balance = 10 * MILLICENTS;
 	pub const NftModuleId: ModuleId = ModuleId(*b"nftmart*");
 }
 

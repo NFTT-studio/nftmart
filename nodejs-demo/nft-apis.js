@@ -3,6 +3,14 @@ const {Keyring} = require('@polkadot/api');
 const {bnToBn} = require('@polkadot/util');
 const unit = bnToBn('1000000000000');
 
+async function showNft(api, classID, tokenID) {
+	let nft = await api.query.ormlNft.tokens(classID, tokenID);
+	if (nft.isSome) {
+		nft = nft.unwrap();
+		console.log(nft.toString());
+	}
+}
+
 async function nftDeposit(api, metadata, nft_quantity) {
 	const createTokenDeposit = bnToBn((await api.consts.nftmart.createTokenDeposit).toString());
 	const metaDataByteDeposit = bnToBn((await api.consts.nftmart.metaDataByteDeposit).toString());
@@ -32,8 +40,8 @@ async function main() {
 	const keyring = new Keyring({type: 'sr25519', ss58Format});
 	const {Command} = require('commander');
 	const program = new Command();
-	program.command('create-class').action(async () => {
-		await demo_create_class(keyring);
+	program.command('create-class <account>').action(async (account) => {
+		await demo_create_class(keyring, account);
 	});
 	program.command('show-class-info').action(async () => {
 		await demo_show_class_info();
@@ -41,13 +49,68 @@ async function main() {
 	program.command('add-class-admin').action(async () => {
 		await demo_add_class_admin(keyring);
 	});
-	program.command('mint-nft <classID>').action(async (classID) => {
-		await demo_mint_nft(keyring, classID);
+	program.command('mint-nft <account> <classID>').action(async (account, classID) => {
+		await demo_mint_nft(keyring, account, classID);
 	});
 	program.command('show-nft <classID>').action(async (classID) => {
 		await demo_show_nft(classID);
 	});
+	program.command('query-nft <account>').action(async (account) => {
+		await demo_query_nft(keyring, account);
+	});
+	program.command('transfer-nft <classID> <tokenID> <from> <to>').action(async (classID, tokenID, from, to) => {
+		await demo_transfer_nft(keyring, classID, tokenID, from, to);
+	});
 	program.parse();
+}
+
+async function demo_transfer_nft(keyring, classID, tokenID, from, to) {
+	let api = await Utils.getApi();
+	await showNft(api, classID, tokenID);
+
+	let moduleMetadata = await Utils.getModules(api);
+	from = keyring.addFromUri(from);
+	to = keyring.addFromUri(to).address;
+
+	const call = api.tx.nftmart.transfer(to, [classID, tokenID]);
+	const feeInfo = await call.paymentInfo(from);
+	console.log("The fee of the call: %s.", feeInfo.partialFee / unit);
+
+	let [a, b] = Utils.waitTx(moduleMetadata);
+	await call.signAndSend(from, a);
+	await b();
+
+	await showNft(api, classID, tokenID);
+	process.exit();
+}
+
+async function demo_query_nft(keyring, account) {
+	function U32ToU64(tokenIDLow32, tokenIDHigh32) {
+		// TODO: convert [tokenIDLow32, tokenIDHigh32] into Uint64.
+		return tokenIDLow32;
+	}
+
+	let api = await Utils.getApi();
+	const address = keyring.addFromUri(account).address;
+	const nfts = await api.query.ormlNft.tokensByOwner.entries(address);
+	for (let clzToken of nfts) {
+		clzToken = clzToken[0];
+		const len = clzToken.length;
+
+		const classID = new Uint32Array(clzToken.slice(len - 4 - 8, len - 8))[0];
+		const tokenIDRaw = new Uint32Array(clzToken.slice(len - 8, len));
+
+		const tokenIDLow32 = tokenIDRaw[0];
+		const tokenIDHigh32 = tokenIDRaw[1];
+		const tokenID = U32ToU64(tokenIDLow32, tokenIDHigh32);
+
+		let nft = await api.query.ormlNft.tokens(classID, tokenID);
+		if (nft.isSome) {
+			nft = nft.unwrap();
+			console.log(`${classID} ${tokenID} ${nft.toString()}`);
+		}
+	}
+	process.exit();
 }
 
 async function demo_show_nft(classID) {
@@ -71,10 +134,10 @@ async function demo_show_nft(classID) {
 	process.exit();
 }
 
-async function demo_mint_nft(keyring, classID) {
+async function demo_mint_nft(keyring, account, classID) {
 	let api = await Utils.getApi();
 	let moduleMetadata = await Utils.getModules(api);
-	const alice = keyring.addFromUri("//Alice");
+	account = keyring.addFromUri(account);
 	const classInfo = await api.query.ormlNft.classes(classID);
 	if (classInfo.isSome) {
 		const ownerOfClass = classInfo.unwrap().owner.toString();
@@ -85,14 +148,14 @@ async function demo_mint_nft(keyring, classID) {
 			// make sure `ownerOfClass0` has sufficient balances to mint nft.
 			api.tx.balances.transfer(ownerOfClass, balancesNeeded),
 			// mint nft.
-			api.tx.proxy.proxy(ownerOfClass, null, api.tx.nftmart.mint(alice.address, classID, nftMetadata, quantity)),
+			api.tx.proxy.proxy(ownerOfClass, null, api.tx.nftmart.mint(account.address, classID, nftMetadata, quantity)),
 		];
 		const batchExtrinsic = api.tx.utility.batchAll(txs);
-		const feeInfo = await batchExtrinsic.paymentInfo(alice);
+		const feeInfo = await batchExtrinsic.paymentInfo(account);
 		console.log("fee of batchExtrinsic: %s", feeInfo.partialFee / unit);
 
 		let [a, b] = Utils.waitTx(moduleMetadata);
-		await batchExtrinsic.signAndSend(alice, a);
+		await batchExtrinsic.signAndSend(account, a);
 		await b();
 	}
 	process.exit();
@@ -143,10 +206,10 @@ async function demo_show_class_info() {
 	process.exit();
 }
 
-async function demo_create_class(keyring) {
+async function demo_create_class(keyring, account) {
 	let api = await Utils.getApi();
 	let moduleMetadata = await Utils.getModules(api);
-	const alice = keyring.addFromUri("//Alice");
+	account = keyring.addFromUri(account);
 	let [a, b] = Utils.waitTx(moduleMetadata);
 	// pub enum ClassProperty {
 	// 	/// Token can be transferred
@@ -154,7 +217,7 @@ async function demo_create_class(keyring) {
 	// 	/// Token can be burned
 	// 	Burnable = 0b00000010,
 	// }
-	await api.tx.nftmart.createClass("https://xx.com/aa.jpg", "aaa", "bbbb", 1 & 2).signAndSend(alice, a);
+	await api.tx.nftmart.createClass("https://xx.com/aa.jpg", "aaa", "bbbb", 1 | 2).signAndSend(account, a);
 	await b();
 	process.exit();
 }

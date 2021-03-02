@@ -138,96 +138,84 @@ fn mint_should_fail() {
 	});
 }
 
-// #[test]
-// fn transfer_should_work() {
-// 	ExtBuilder::default().build().execute_with(|| {
-// 		assert_ok!(NFTModule::create_class(
-// 			Origin::signed(ALICE),
-// 			vec![1],
-// 			Properties(ClassProperty::Transferable | ClassProperty::Burnable)
-// 		));
-// 		assert_eq!(
-// 			Balances::deposit_into_existing(&class_id_account(), 2 * <Runtime as Config>::CreateTokenDeposit::get())
-// 				.is_ok(),
-// 			true
-// 		);
-// 		assert_ok!(NFTModule::mint(
-// 			Origin::signed(class_id_account()),
-// 			BOB,
-// 			CLASS_ID,
-// 			vec![1],
-// 			2
-// 		));
-//
-// 		assert_ok!(NFTModule::transfer(Origin::signed(BOB), ALICE, (CLASS_ID, TOKEN_ID)));
-// 		let event = Event::nft(crate::Event::TransferredToken(BOB, ALICE, CLASS_ID, TOKEN_ID));
-// 		assert_eq!(last_event(), event);
-//
-// 		assert_ok!(NFTModule::transfer(Origin::signed(ALICE), BOB, (CLASS_ID, TOKEN_ID)));
-// 		let event = Event::nft(crate::Event::TransferredToken(ALICE, BOB, CLASS_ID, TOKEN_ID));
-// 		assert_eq!(last_event(), event);
-// 	});
-// }
-//
-// #[test]
-// fn transfer_should_fail() {
-// 	ExtBuilder::default().build().execute_with(|| {
-// 		assert_ok!(NFTModule::create_class(
-// 			Origin::signed(ALICE),
-// 			vec![1],
-// 			Properties(ClassProperty::Transferable | ClassProperty::Burnable)
-// 		));
-// 		assert_eq!(
-// 			Balances::deposit_into_existing(&class_id_account(), 1 * <Runtime as Config>::CreateTokenDeposit::get())
-// 				.is_ok(),
-// 			true
-// 		);
-// 		assert_ok!(NFTModule::mint(
-// 			Origin::signed(class_id_account()),
-// 			BOB,
-// 			CLASS_ID,
-// 			vec![1],
-// 			1
-// 		));
-// 		assert_noop!(
-// 			NFTModule::transfer(Origin::signed(BOB), ALICE, (CLASS_ID_NOT_EXIST, TOKEN_ID)),
-// 			Error::<Runtime>::ClassIdNotFound
-// 		);
-// 		assert_noop!(
-// 			NFTModule::transfer(Origin::signed(BOB), ALICE, (CLASS_ID, TOKEN_ID_NOT_EXIST)),
-// 			Error::<Runtime>::TokenIdNotFound
-// 		);
-// 		assert_noop!(
-// 			NFTModule::transfer(Origin::signed(ALICE), BOB, (CLASS_ID, TOKEN_ID)),
-// 			Error::<Runtime>::NoPermission
-// 		);
-// 	});
-//
-// 	ExtBuilder::default().build().execute_with(|| {
-// 		assert_ok!(NFTModule::create_class(
-// 			Origin::signed(ALICE),
-// 			vec![1],
-// 			Default::default()
-// 		));
-// 		assert_eq!(
-// 			Balances::deposit_into_existing(&class_id_account(), 1 * <Runtime as Config>::CreateTokenDeposit::get())
-// 				.is_ok(),
-// 			true
-// 		);
-// 		assert_ok!(NFTModule::mint(
-// 			Origin::signed(class_id_account()),
-// 			BOB,
-// 			CLASS_ID,
-// 			vec![1],
-// 			1
-// 		));
-// 		assert_noop!(
-// 			NFTModule::transfer(Origin::signed(BOB), ALICE, (CLASS_ID, TOKEN_ID)),
-// 			Error::<Runtime>::NonTransferable
-// 		);
-// 	});
-// }
-//
+#[test]
+fn transfer_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		assert_ok!(Nftmart::create_class(
+			Origin::signed(ALICE),
+			vec![1], vec![1], vec![1],
+			Properties(ClassProperty::Transferable | ClassProperty::Burnable)
+		));
+		assert_eq!(Balances::deposit_into_existing(&class_id_account(), 1000).is_ok(), true);
+		assert_ok!(Nftmart::mint(
+			Origin::signed(class_id_account()),
+			BOB,
+			CLASS_ID,
+			vec![1],
+			2
+		));
+
+		assert_ok!(Nftmart::transfer(Origin::signed(BOB), ALICE, (CLASS_ID, TOKEN_ID)));
+		let event = Event::nftmart_nft(crate::Event::TransferredToken(BOB, ALICE, CLASS_ID, TOKEN_ID));
+		assert_eq!(last_event(), event);
+
+		assert_ok!(Nftmart::transfer(Origin::signed(ALICE), BOB, (CLASS_ID, TOKEN_ID)));
+		let event = Event::nftmart_nft(crate::Event::TransferredToken(ALICE, BOB, CLASS_ID, TOKEN_ID));
+		assert_eq!(last_event(), event);
+	});
+}
+
+#[test]
+fn transfer_should_fail() {
+	ExtBuilder::default().build().execute_with(|| {
+		assert_ok!(Nftmart::create_class(
+			Origin::signed(ALICE),
+			vec![1], vec![1], vec![1],
+			Properties(ClassProperty::Transferable | ClassProperty::Burnable)
+		));
+		assert_eq!(Balances::deposit_into_existing(&class_id_account(), 1000).is_ok(), true);
+		assert_ok!(Nftmart::mint(
+			Origin::signed(class_id_account()),
+			BOB,
+			CLASS_ID,
+			vec![1],
+			1
+		));
+		assert_noop!(
+			Nftmart::transfer(Origin::signed(BOB), ALICE, (CLASS_ID_NOT_EXIST, TOKEN_ID)),
+			Error::<Runtime>::ClassIdNotFound
+		);
+		assert_noop!(
+			Nftmart::transfer(Origin::signed(BOB), ALICE, (CLASS_ID, TOKEN_ID_NOT_EXIST)),
+			Error::<Runtime>::TokenIdNotFound
+		);
+		assert_noop!(
+			Nftmart::transfer(Origin::signed(ALICE), BOB, (CLASS_ID, TOKEN_ID)),
+			Error::<Runtime>::NoPermission
+		);
+	});
+
+	ExtBuilder::default().build().execute_with(|| {
+		assert_ok!(Nftmart::create_class(
+			Origin::signed(ALICE),
+			vec![1], vec![1], vec![1],
+			Default::default()
+		));
+		assert_eq!(Balances::deposit_into_existing(&class_id_account(), 1000).is_ok(), true);
+		assert_ok!(Nftmart::mint(
+			Origin::signed(class_id_account()),
+			BOB,
+			CLASS_ID,
+			vec![1],
+			1
+		));
+		assert_noop!(
+			Nftmart::transfer(Origin::signed(BOB), ALICE, (CLASS_ID, TOKEN_ID)),
+			Error::<Runtime>::NonTransferable
+		);
+	});
+}
+
 // #[test]
 // fn burn_should_work() {
 // 	ExtBuilder::default().build().execute_with(|| {

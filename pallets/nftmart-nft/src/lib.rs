@@ -4,7 +4,7 @@ use enumflags2::BitFlags;
 use frame_support::{
 	pallet_prelude::*,
 	traits::{Currency, ReservableCurrency, ExistenceRequirement::KeepAlive},
-	transactional,
+	transactional, dispatch::DispatchResult
 };
 use sp_std::vec::Vec;
 use frame_system::pallet_prelude::*;
@@ -233,33 +233,43 @@ pub mod module {
 			Self::deposit_event(Event::MintedToken(who, to, class_id, quantity));
 			Ok(().into())
 		}
+
+		/// Transfer NFT token to another account
+		///
+		/// - `to`: the token owner's account
+		/// - `token`: (class_id, token_id)
+		#[pallet::weight(100_000)]
+		#[transactional]
+		pub fn transfer(
+			origin: OriginFor<T>,
+			to: <T::Lookup as StaticLookup>::Source,
+			token: (ClassIdOf<T>, TokenIdOf<T>),
+		) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+			let to = T::Lookup::lookup(to)?;
+			Self::do_transfer(&who, &to, token)?;
+			Ok(().into())
+		}
 	}
 }
 
 impl<T: Config> Pallet<T> {
+	/// Ensured atomic.
+	#[transactional]
+	fn do_transfer(from: &T::AccountId, to: &T::AccountId, token: (ClassIdOf<T>, TokenIdOf<T>)) -> DispatchResult {
+		let class_info = orml_nft::Module::<T>::classes(token.0).ok_or(Error::<T>::ClassIdNotFound)?;
+		let data = class_info.data;
+		ensure!(
+			data.properties.0.contains(ClassProperty::Transferable),
+			Error::<T>::NonTransferable
+		);
 
+		let token_info = orml_nft::Module::<T>::tokens(token.0, token.1).ok_or(Error::<T>::TokenIdNotFound)?;
+		ensure!(*from == token_info.owner, Error::<T>::NoPermission);
+
+		orml_nft::Module::<T>::transfer(from, to, token)?;
+
+		Self::deposit_event(Event::TransferredToken(from.clone(), to.clone(), token.0, token.1));
+		Ok(())
+	}
 }
-
-// #[allow(unused_variables)]
-// impl<T: Config> NFT<T::AccountId> for Pallet<T> {
-// 	type ClassId = ClassIdOf<T>;
-// 	type TokenId = TokenIdOf<T>;
-// 	type Balance = Balance;
-//
-// 	fn balance(who: &T::AccountId) -> Self::Balance {
-// 		// orml_nft::TokensByOwner::<T>::iter_prefix(who).count() as u128
-// 		todo!()
-// 	}
-//
-// 	fn owner(token: (Self::ClassId, Self::TokenId)) -> Option<T::AccountId> {
-// 		// orml_nft::Module::<T>::tokens(token.0, token.1).map(|t| t.owner)
-// 		todo!()
-// 	}
-//
-// 	fn transfer(from: &T::AccountId, to: &T::AccountId, token: (Self::ClassId, Self::TokenId)) -> DispatchResult {
-// 		// Self::do_transfer(from, to, token)
-// 		todo!()
-// 	}
-// }
-
-
