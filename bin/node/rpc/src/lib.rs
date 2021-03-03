@@ -117,6 +117,7 @@ pub fn create_full<C, P, SC, B>(
 	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Index>,
 	C::Api: pallet_contracts_rpc::ContractsRuntimeApi<Block, AccountId, Balance, BlockNumber>,
 	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
+	C::Api: nftmart_rpc::NFTMartRuntimeApi<Block>,
 	C::Api: BabeApi<Block>,
 	C::Api: BlockBuilder<Block>,
 	P: TransactionPool + 'static,
@@ -127,6 +128,7 @@ pub fn create_full<C, P, SC, B>(
 	use substrate_frame_rpc_system::{FullSystem, SystemApi};
 	use pallet_contracts_rpc::{Contracts, ContractsApi};
 	use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
+	use nftmart_rpc::{NFTMart, NFTMartApi};
 
 	let mut io = jsonrpc_core::IoHandler::default();
 	let FullDeps {
@@ -163,6 +165,9 @@ pub fn create_full<C, P, SC, B>(
 	);
 	io.extend_with(
 		TransactionPaymentApi::to_delegate(TransactionPayment::new(client.clone()))
+	);
+	io.extend_with(
+		NFTMartApi::to_delegate(NFTMart::new(client.clone()))
 	);
 	io.extend_with(
 		sc_consensus_babe_rpc::BabeApi::to_delegate(

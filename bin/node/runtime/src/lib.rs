@@ -116,7 +116,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	// and set impl_version to 0. If only runtime
 	// implementation changes and behavior does not, then leave spec_version as
 	// is and increment impl_version.
-	spec_version: 274,
+	spec_version: 276,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 2,
@@ -1392,12 +1392,6 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl nftmart_rpc_runtime_api::AccountNonceApi1<Block, AccountId, Index> for Runtime {
-		fn account_nonce1(_account: AccountId) -> Index {
-			889977
-		}
-	}
-
 	impl pallet_contracts_rpc_runtime_api::ContractsApi<Block, AccountId, Balance, BlockNumber>
 		for Runtime
 	{
@@ -1434,6 +1428,18 @@ impl_runtime_apis! {
 		}
 		fn query_fee_details(uxt: <Block as BlockT>::Extrinsic, len: u32) -> FeeDetails<Balance> {
 			TransactionPayment::query_fee_details(uxt, len)
+		}
+	}
+
+	impl nftmart_rpc_runtime_api::NFTMartApi<Block> for Runtime {
+		fn mint_token_deposit(metadata_len: u32, quantity: u32) -> (Balance, Balance) {
+			Nftmart::mint_token_deposit(metadata_len, quantity)
+		}
+		fn add_class_admin_deposit(admin_count: u32) -> Balance {
+			Nftmart::add_class_admin_deposit(admin_count)
+		}
+		fn create_class_deposit(metadata_len: u32, name_len: u32, description_len: u32) -> (Balance, Balance) {
+			Nftmart::create_class_deposit(metadata_len, name_len, description_len)
 		}
 	}
 

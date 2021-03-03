@@ -22,7 +22,12 @@ function main() {
 
 async function demo_show(keyring, account) {
 	let api = await Utils.getApi();
-	const addr = keyring.addFromUri(account).address;
+	let addr = '';
+	if (account.length === '62qUEaQwPx7g4vDz88cT36XXuEUQmYo3Y5dxnxScsiDkb8wy'.length) {
+		addr = account;
+	} else {
+		addr = keyring.addFromUri(account).address;
+	}
 	account = await api.query.system.account(addr)
 	console.log(addr, account.toHuman());
 	process.exit();

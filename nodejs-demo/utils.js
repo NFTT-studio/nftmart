@@ -1,4 +1,5 @@
-const { ApiPromise, WsProvider } = require('@polkadot/api');
+const {ApiPromise, WsProvider} = require('@polkadot/api');
+const WebSocket = require('rpc-websockets').Client
 
 const convert = (from, to) => str => Buffer.from(str, from).toString(to)
 const utf8ToHex = convert('utf8', 'hex')
@@ -11,13 +12,13 @@ function sleep(milliseconds) {
 function waitTx(moduleMetadata) {
 	let signal = false;
 	return [
-		({ events = [], status }) => {
+		({events = [], status}) => {
 			// console.log(JSON.stringify(status));
 			// if (status.isFinalized) {
 			if (status.isInBlock) {
 				// console.log('%s BlockHash(%s)', status.type, status.asFinalized.toHex());
 				console.log('%s BlockHash(%s)', status.type, status.asInBlock.toHex());
-				events.forEach(({ phase, event: { data, method, section } }) => {
+				events.forEach(({phase, event: {data, method, section}}) => {
 					if ("system.ExtrinsicFailed" === section + '.' + method) {
 						for (let d of data) {
 							if (d.isModule) {
@@ -56,7 +57,15 @@ function waitTx(moduleMetadata) {
 }
 
 async function getApi(dest = 'ws://8.136.111.191:9944') {
-	console.log("dial %s", dest);
+	// https://github.com/elpheria/rpc-websockets/blob/master/API.md#new-websocketaddress-options---client
+	const ws = new WebSocket(dest, {max_reconnects: 0});
+	let connected = false;
+	ws.on('open', function () {
+		process.on('unhandledRejection', error => {
+			console.log('global error handle: ', error.message);
+		});
+		connected = true;
+	});
 	const provider = new WsProvider(dest);
 
 	const types = {
@@ -69,20 +78,35 @@ async function getApi(dest = 'ws://8.136.111.191:9944') {
 		NFTMetadata: 'Vec<u8>',
 		ClassIdOf: 'ClassId',
 		TokenIdOf: 'TokenId',
-		ClassInfoOf: { metadata: 'NFTMetadata', totalIssuance: 'TokenId', owner: 'AccountId', data: 'ClassData' },
-		TokenInfoOf: { metadata: 'NFTMetadata', owner: 'AccountId', data: 'TokenData' },
-		ClassData: { deposit: 'Balance', properties: 'Properties', name: 'Vec<u8>', description: 'Vec<u8>' },
-		TokenData: { deposit: 'Balance' },
+		ClassInfoOf: {
+			metadata: 'NFTMetadata',
+			totalIssuance: 'TokenId',
+			owner: 'AccountId',
+			data: 'ClassData'
+		},
+		TokenInfoOf: {metadata: 'NFTMetadata', owner: 'AccountId', data: 'TokenData'},
+		ClassData: {
+			deposit: 'Balance',
+			properties: 'Properties',
+			name: 'Vec<u8>',
+			description: 'Vec<u8>'
+		},
+		TokenData: {deposit: 'Balance'},
 		Properties: 'u8'
 	};
 
-	const api = await ApiPromise.create({ provider, types });
+	const api = await ApiPromise.create({provider, types});
 	const [chain, nodeName, nodeVersion] = await Promise.all([
 		api.rpc.system.chain(),
 		api.rpc.system.name(),
 		api.rpc.system.version()
 	]);
 	console.log(`You are connected to chain ${chain} using ${nodeName} v${nodeVersion}`);
+	api.ws = ws;
+	while (!connected) {
+		await sleep(300);
+	}
+	console.log("ws client has connected to %s", dest);
 	return api;
 }
 

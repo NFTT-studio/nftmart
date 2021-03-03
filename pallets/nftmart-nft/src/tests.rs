@@ -27,7 +27,7 @@ fn create_class_should_work() {
 		let event = Event::nftmart_nft(crate::Event::CreatedClass(class_id_account(), CLASS_ID));
 		assert_eq!(last_event(), event);
 
-		let reserved = Nftmart::create_class_deposit(&metadata, &name, &description).1;
+		let reserved = Nftmart::create_class_deposit(metadata.len() as u32, name.len() as u32, description.len() as u32).1;
 		assert_eq!(reserved_balance(&class_id_account()), reserved);
 	});
 }
@@ -61,13 +61,13 @@ fn mint_should_work() {
 			let event = Event::nftmart_nft(crate::Event::CreatedClass(class_id_account(), CLASS_ID));
 			assert_eq!(last_event(), event);
 
-			let deposit = Nftmart::create_class_deposit(&metadata, &name, &description).1;
+			let deposit = Nftmart::create_class_deposit(metadata.len() as u32, name.len() as u32, description.len() as u32).1;
 			(metadata, deposit)
 		};
 
 		let count: Balance = 2;
 		let reserved = {
-			let deposit = Nftmart::create_token_deposit(&metadata, count as u32).1;
+			let deposit = Nftmart::mint_token_deposit(metadata.len() as u32, count as u32).1;
 			assert_eq!(Balances::deposit_into_existing(&class_id_account(), deposit as Balance).is_ok(), true);
 			deposit.saturating_add(reserved)
 		};
@@ -114,7 +114,7 @@ fn mint_should_fail() {
 			*id = <Runtime as orml_nft::Config>::TokenId::max_value()
 		});
 		{
-			let deposit = Nftmart::create_token_deposit(&metadata, 2).1;
+			let deposit = Nftmart::mint_token_deposit(metadata.len() as u32, 2).1;
 			assert_eq!(Balances::deposit_into_existing(&class_id_account(), deposit).is_ok(), true);
 		}
 		assert_noop!(
@@ -133,7 +133,7 @@ fn transfer_should_work() {
 			metadata.clone(), vec![1], vec![1],
 			Properties(ClassProperty::Transferable | ClassProperty::Burnable)
 		));
-		let deposit = Nftmart::create_token_deposit(&metadata, 2).1;
+		let deposit = Nftmart::mint_token_deposit(metadata.len() as u32, 2).1;
 		assert_eq!(Balances::deposit_into_existing(&class_id_account(), deposit).is_ok(), true);
 		assert_ok!(Nftmart::mint(
 			Origin::signed(class_id_account()),
@@ -156,7 +156,7 @@ fn transfer_should_work() {
 #[test]
 fn transfer_should_fail() {
 	let metadata = vec![1];
-	let deposit = Nftmart::create_token_deposit(&metadata, 1).1;
+	let deposit = Nftmart::mint_token_deposit(metadata.len() as u32, 1).1;
 	ExtBuilder::default().build().execute_with(|| {
 		assert_ok!(Nftmart::create_class(
 			Origin::signed(ALICE),
@@ -211,8 +211,8 @@ fn burn_should_work() {
 	let metadata = vec![1];
 	let name = vec![1];
 	let description = vec![1];
-	let deposit_token = Nftmart::create_token_deposit(&metadata, 1).1;
-	let deposit_class = Nftmart::create_class_deposit(&metadata, &name, &description).1;
+	let deposit_token = Nftmart::mint_token_deposit(metadata.len() as u32, 1).1;
+	let deposit_class = Nftmart::create_class_deposit(metadata.len() as u32, name.len() as u32, description.len() as u32).1;
 	ExtBuilder::default().build().execute_with(|| {
 		assert_ok!(Nftmart::create_class(
 			Origin::signed(ALICE),
@@ -247,7 +247,7 @@ fn burn_should_fail() {
 	let metadata = vec![1];
 	let name = vec![1];
 	let description = vec![1];
-	let deposit_token = Nftmart::create_token_deposit(&metadata, 1).1;
+	let deposit_token = Nftmart::mint_token_deposit(metadata.len() as u32, 1).1;
 	ExtBuilder::default().build().execute_with(|| {
 		assert_ok!(Nftmart::create_class(
 			Origin::signed(ALICE),
@@ -307,8 +307,8 @@ fn destroy_class_should_work() {
 	let metadata = vec![1];
 	let name = vec![1];
 	let description = vec![1];
-	let deposit_token = Nftmart::create_token_deposit(&metadata, 1).1;
-	let deposit_class = Nftmart::create_class_deposit(&metadata, &name, &description).1;
+	let deposit_token = Nftmart::mint_token_deposit(metadata.len() as u32, 1).1;
+	let deposit_class = Nftmart::create_class_deposit(metadata.len() as u32, name.len() as u32, description.len() as u32).1;
 	ExtBuilder::default().build().execute_with(|| {
 		assert_eq!(reserved_balance(&class_id_account()), 0);
 		assert_eq!(free_balance(&class_id_account()), 0);
@@ -357,7 +357,7 @@ fn destroy_class_should_fail() {
 	let metadata = vec![1];
 	let name = vec![1];
 	let description = vec![1];
-	let deposit_token = Nftmart::create_token_deposit(&metadata, 1).1;
+	let deposit_token = Nftmart::mint_token_deposit(metadata.len() as u32, 1).1;
 	ExtBuilder::default().build().execute_with(|| {
 		assert_ok!(Nftmart::create_class(
 			Origin::signed(ALICE),

@@ -3846,7 +3846,7 @@ dependencies = [
 
 [[package]]
 name = "nftmart-nft"
-version = "2.0.0"
+version = "3.0.0"
 dependencies = [
  "enumflags2",
  "frame-support",
@@ -3868,11 +3868,26 @@ dependencies = [
 ]
 
 [[package]]
-name = "nftmart-rpc-runtime-api"
-version = "2.0.0"
+name = "nftmart-rpc"
+version = "3.0.0"
 dependencies = [
- "parity-scale-codec",
+ "jsonrpc-core",
+ "jsonrpc-core-client",
+ "jsonrpc-derive",
+ "nftmart-rpc-runtime-api",
  "sp-api",
+ "sp-blockchain",
+ "sp-runtime",
+]
+
+[[package]]
+name = "nftmart-rpc-runtime-api"
+version = "3.0.0"
+dependencies = [
+ "nftmart-nft",
+ "sp-api",
+ "sp-core",
+ "sp-std",
 ]
 
 [[package]]
@@ -4091,6 +4106,7 @@ name = "node-rpc"
 version = "2.0.0"
 dependencies = [
  "jsonrpc-core",
+ "nftmart-rpc",
  "node-primitives",
  "node-runtime",
  "pallet-contracts-rpc",

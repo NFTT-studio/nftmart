@@ -166,7 +166,7 @@ pub mod module {
 
 			let next_id = orml_nft::Module::<T>::next_class_id();
 			let owner: T::AccountId = T::ModuleId::get().into_sub_account(next_id);
-			let (deposit, all_deposit) = Self::create_class_deposit(&metadata, &name, &description);
+			let (deposit, all_deposit) = Self::create_class_deposit(metadata.len() as u32, name.len() as u32, description.len() as u32);
 
 			<T as Config>::Currency::transfer(&who, &owner, all_deposit.saturated_into(), KeepAlive)?;
 			<T as Config>::Currency::reserve(&owner, deposit.saturated_into())?;
@@ -205,7 +205,7 @@ pub mod module {
 			ensure!(quantity >= 1, Error::<T>::InvalidQuantity);
 			let class_info = orml_nft::Module::<T>::classes(class_id).ok_or(Error::<T>::ClassIdNotFound)?;
 			ensure!(who == class_info.owner, Error::<T>::NoPermission);
-			let (deposit, total_deposit) = Self::create_token_deposit(&metadata, quantity);
+			let (deposit, total_deposit) = Self::mint_token_deposit(metadata.len().saturated_into(), quantity);
 
 			<T as Config>::Currency::reserve(&class_info.owner, total_deposit.saturated_into())?;
 			let data = TokenData { deposit };
@@ -326,9 +326,9 @@ impl<T: Config> Pallet<T> {
 		proxy_deposit_after.saturating_sub(proxy_deposit_before)
 	}
 
-	pub fn create_token_deposit(metadata: &[u8], quantity: u32) -> (Balance, Balance) {
+	pub fn mint_token_deposit(metadata_len: u32, quantity: u32) -> (Balance, Balance) {
 		let deposit: Balance = {
-			let total_bytes = metadata.len();
+			let total_bytes = metadata_len;
 			T::CreateTokenDeposit::get().saturating_add(
 				(total_bytes as Balance).saturating_mul(T::MetaDataByteDeposit::get())
 			)
@@ -337,9 +337,9 @@ impl<T: Config> Pallet<T> {
 		(deposit, total_deposit)
 	}
 
-	pub fn create_class_deposit(metadata: &[u8], name: &[u8], description: &[u8]) -> (Balance, Balance) {
+	pub fn create_class_deposit(metadata_len: u32, name_len: u32, description_len: u32) -> (Balance, Balance) {
 		let deposit: Balance = {
-			let total_bytes = metadata.len().saturating_add(name.len()).saturating_add(description.len());
+			let total_bytes = metadata_len.saturating_add(name_len).saturating_add(description_len);
 			T::CreateClassDeposit::get().saturating_add(
 				(total_bytes as Balance).saturating_mul(T::MetaDataByteDeposit::get())
 			)

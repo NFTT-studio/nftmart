@@ -36,3 +36,4 @@ sp-consensus-babe = { version = "0.9.0", path = "../../../primitives/consensus/b
 sp-runtime = { version = "3.0.0", path = "../../../primitives/runtime" }
 sp-transaction-pool = { version = "3.0.0", path = "../../../primitives/transaction-pool" }
 substrate-frame-rpc-system = { version = "3.0.0", path = "../../../utils/frame/rpc/system" }
+nftmart-rpc = { version = "3.0.0", path = "../../../pallets/nftmart-nft/rpc/" }
