@@ -16,6 +16,7 @@ use sp_runtime::{
 	traits::{AccountIdConversion, StaticLookup, Zero},
 	ModuleId, RuntimeDebug,
 };
+use sp_runtime::SaturatedConversion;
 
 mod mock;
 mod tests;
@@ -78,7 +79,6 @@ pub type NFTMetadata = Vec<u8>;
 #[frame_support::pallet]
 pub mod module {
 	use super::*;
-	use sp_runtime::SaturatedConversion;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config + orml_nft::Config<ClassData = ClassData, TokenData = TokenData> + pallet_proxy::Config {
@@ -166,22 +166,12 @@ pub mod module {
 
 			let next_id = orml_nft::Module::<T>::next_class_id();
 			let owner: T::AccountId = T::ModuleId::get().into_sub_account(next_id);
-			let deposit: Balance = {
-				let total_bytes = metadata.len().saturating_add(name.len()).saturating_add(description.len());
-				T::CreateClassDeposit::get().saturating_add(
-					(total_bytes as Balance).saturating_mul(T::MetaDataByteDeposit::get())
-				)
-			};
+			let (deposit, all_deposit) = Self::create_class_deposit(&metadata, &name, &description);
 
-			<T as Config>::Currency::transfer(&who, &owner, deposit.saturated_into(), KeepAlive)?;
+			<T as Config>::Currency::transfer(&who, &owner, all_deposit.saturated_into(), KeepAlive)?;
 			<T as Config>::Currency::reserve(&owner, deposit.saturated_into())?;
-
-			{
-				// owner add proxy delegate to origin
-				let proxy_deposit = <pallet_proxy::Module<T>>::deposit(1);
-				<T as pallet_proxy::Config>::Currency::transfer(&who, &owner, proxy_deposit, KeepAlive)?;
-				<pallet_proxy::Module<T>>::add_proxy_delegate(&owner, who, Default::default(), Zero::zero())?;
-			}
+			// owner add proxy delegate to origin
+			<pallet_proxy::Module<T>>::add_proxy_delegate(&owner, who, Default::default(), Zero::zero())?;
 
 			let data = ClassData {
 				deposit,
@@ -215,16 +205,9 @@ pub mod module {
 			ensure!(quantity >= 1, Error::<T>::InvalidQuantity);
 			let class_info = orml_nft::Module::<T>::classes(class_id).ok_or(Error::<T>::ClassIdNotFound)?;
 			ensure!(who == class_info.owner, Error::<T>::NoPermission);
-			let deposit: Balance = {
-				let total_bytes = metadata.len();
-				T::CreateTokenDeposit::get().saturating_add(
-					(total_bytes as Balance).saturating_mul(T::MetaDataByteDeposit::get())
-				)
-			};
-			{
-				let total_deposit: Balance = deposit.saturating_mul(quantity as Balance);
-				<T as Config>::Currency::reserve(&class_info.owner, total_deposit.saturated_into())?;
-			}
+			let (deposit, total_deposit) = Self::create_token_deposit(&metadata, quantity);
+
+			<T as Config>::Currency::reserve(&class_info.owner, total_deposit.saturated_into())?;
 			let data = TokenData { deposit };
 			for _ in 0..quantity {
 				orml_nft::Module::<T>::mint(&to, class_id, metadata.clone(), data.clone())?;
@@ -250,6 +233,70 @@ pub mod module {
 			Self::do_transfer(&who, &to, token)?;
 			Ok(().into())
 		}
+
+		/// Burn NFT token
+		///
+		/// - `token`: (class_id, token_id)
+		#[pallet::weight(100_000)]
+		#[transactional]
+		pub fn burn(origin: OriginFor<T>, token: (ClassIdOf<T>, TokenIdOf<T>)) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+			let class_info = orml_nft::Module::<T>::classes(token.0).ok_or(Error::<T>::ClassIdNotFound)?;
+			let data = class_info.data;
+			ensure!(
+				data.properties.0.contains(ClassProperty::Burnable),
+				Error::<T>::NonBurnable
+			);
+
+			let token_info = orml_nft::Module::<T>::tokens(token.0, token.1).ok_or(Error::<T>::TokenIdNotFound)?;
+			ensure!(who == token_info.owner, Error::<T>::NoPermission);
+
+			orml_nft::Module::<T>::burn(&who, token)?;
+			let owner: T::AccountId = T::ModuleId::get().into_sub_account(token.0);
+			let data = token_info.data;
+			// `repatriate_reserved` will check `to` account exist and return `DeadAccount`.
+			// `transfer` not do this check.
+			<T as Config>::Currency::unreserve(&owner, data.deposit.saturated_into());
+			<T as Config>::Currency::transfer(&owner, &who, data.deposit.saturated_into(), KeepAlive)?;
+
+			Self::deposit_event(Event::BurnedToken(who, token.0, token.1));
+			Ok(().into())
+		}
+
+		/// Destroy NFT class
+		///
+		/// - `class_id`: destroy class id
+		/// - `dest`: transfer reserve balance from sub_account to dest
+		#[pallet::weight(100_000)]
+		#[transactional]
+		pub fn destroy_class(
+			origin: OriginFor<T>,
+			class_id: ClassIdOf<T>,
+			dest: <T::Lookup as StaticLookup>::Source,
+		) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+			let dest = T::Lookup::lookup(dest)?;
+			let class_info = orml_nft::Module::<T>::classes(class_id).ok_or(Error::<T>::ClassIdNotFound)?;
+			ensure!(who == class_info.owner, Error::<T>::NoPermission);
+			ensure!(
+				class_info.total_issuance == Zero::zero(),
+				Error::<T>::CannotDestroyClass
+			);
+
+			let owner: T::AccountId = T::ModuleId::get().into_sub_account(class_id);
+			let data = class_info.data;
+			// `repatriate_reserved` will check `to` account exist and return `DeadAccount`.
+			// `transfer` not do this check.
+			<T as Config>::Currency::unreserve(&owner, data.deposit.saturated_into());
+			// At least there is one admin at this point.
+			<T as Config>::Currency::transfer(&owner, &dest, data.deposit.saturated_into(), KeepAlive)?;
+
+			// transfer all free from origin to dest
+			orml_nft::Module::<T>::destroy_class(&who, class_id)?;
+
+			Self::deposit_event(Event::DestroyedClass(who, class_id, dest));
+			Ok(().into())
+		}
 	}
 }
 
@@ -271,5 +318,33 @@ impl<T: Config> Pallet<T> {
 
 		Self::deposit_event(Event::TransferredToken(from.clone(), to.clone(), token.0, token.1));
 		Ok(())
+	}
+
+	pub fn add_class_admin_deposit(admin_count: u32) -> Balance {
+		let proxy_deposit_before: Balance = <pallet_proxy::Module<T>>::deposit(1).saturated_into();
+		let proxy_deposit_after: Balance = <pallet_proxy::Module<T>>::deposit(admin_count.saturating_add(1)).saturated_into();
+		proxy_deposit_after.saturating_sub(proxy_deposit_before)
+	}
+
+	pub fn create_token_deposit(metadata: &[u8], quantity: u32) -> (Balance, Balance) {
+		let deposit: Balance = {
+			let total_bytes = metadata.len();
+			T::CreateTokenDeposit::get().saturating_add(
+				(total_bytes as Balance).saturating_mul(T::MetaDataByteDeposit::get())
+			)
+		};
+		let total_deposit: Balance = deposit.saturating_mul(quantity as Balance);
+		(deposit, total_deposit)
+	}
+
+	pub fn create_class_deposit(metadata: &[u8], name: &[u8], description: &[u8]) -> (Balance, Balance) {
+		let deposit: Balance = {
+			let total_bytes = metadata.len().saturating_add(name.len()).saturating_add(description.len());
+			T::CreateClassDeposit::get().saturating_add(
+				(total_bytes as Balance).saturating_mul(T::MetaDataByteDeposit::get())
+			)
+		};
+		let proxy_deposit: Balance = <pallet_proxy::Module<T>>::deposit(1).saturated_into();
+		(deposit, deposit.saturating_add(proxy_deposit))
 	}
 }

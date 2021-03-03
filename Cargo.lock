@@ -3868,6 +3868,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "nftmart-rpc-runtime-api"
+version = "2.0.0"
+dependencies = [
+ "parity-scale-codec",
+ "sp-api",
+]
+
+[[package]]
 name = "nix"
 version = "0.19.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4136,6 +4144,7 @@ dependencies = [
  "hex-literal",
  "log",
  "nftmart-nft",
+ "nftmart-rpc-runtime-api",
  "node-primitives",
  "orml-currencies",
  "orml-nft",
