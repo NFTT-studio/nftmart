@@ -166,7 +166,11 @@ pub mod module {
 
 			let next_id = orml_nft::Module::<T>::next_class_id();
 			let owner: T::AccountId = T::ModuleId::get().into_sub_account(next_id);
-			let (deposit, all_deposit) = Self::create_class_deposit(metadata.len() as u32, name.len() as u32, description.len() as u32);
+			let (deposit, all_deposit) = Self::create_class_deposit(
+				metadata.len().saturated_into(),
+				name.len().saturated_into(),
+				description.len().saturated_into(),
+			);
 
 			<T as Config>::Currency::transfer(&who, &owner, all_deposit.saturated_into(), KeepAlive)?;
 			<T as Config>::Currency::reserve(&owner, deposit.saturated_into())?;

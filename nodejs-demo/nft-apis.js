@@ -21,10 +21,20 @@ async function nftDeposit(api, metadata, nft_quantity) {
 	}
 }
 
+async function classDeposit(api, metadata, name, description) {
+	try {
+		let [_deposit, depositAll] = await api.ws.call('nftmart_createClassDeposit', [metadata.length, name.length, description.length], 10000);
+		return bnToBn(depositAll);
+	} catch (e) {
+		console.log(e);
+		return bnToBn(0);
+	}
+}
+
 async function proxyDeposit(api, num_proxies) {
 	try {
-		let [_deposit, depositAll] = await api.ws.call('nftmart_addClassAdminDeposit', [num_proxies], 10000);
-		return bnToBn(depositAll);
+		let deposit = await api.ws.call('nftmart_addClassAdminDeposit', [num_proxies], 10000);
+		return bnToBn(deposit);
 	} catch (e) {
 		console.log(e);
 		return bnToBn(0);
@@ -66,7 +76,17 @@ async function main() {
 	program.command('destroy-class <classID> <account>').action(async (classID, account) => {
 		await demo_destroy_class(keyring, classID, account);
 	});
+	program.command('show-create-class-deposit <metadata> <name> <description>').action(async (metadata, name, description) => {
+		await demo_show_create_class_deposit(metadata, name, description);
+	});
 	program.parse();
+}
+
+async function demo_show_create_class_deposit(metadata, name, description) {
+	let api = await Utils.getApi();
+	const deposit = await classDeposit(api, metadata, name, description);
+	console.log(deposit.toString());
+	process.exit(0);
 }
 
 async function demo_destroy_class(keyring, classID, account) {
@@ -234,6 +254,7 @@ async function demo_add_class_admin(keyring, account) {
 
 	const ownerOfClass0 = '62qUEaQwPx7g4vDz88bN4zMBTFmcwLPYbPsvbBhH2QiqWhfB'
 	const balancesNeeded = await proxyDeposit(api, 1);
+	console.log("adding a class admin needs to reserve %s", balancesNeeded);
 	const txs = [
 		// make sure `ownerOfClass0` has sufficient balances.
 		api.tx.balances.transfer(ownerOfClass0, balancesNeeded),
