@@ -41,7 +41,7 @@ async function demo_show_all(keyring) {
 		const len = key.length;
 		key = key.buffer.slice(len - 32, len);
 		const addr = keyring.encodeAddress(new Uint8Array(key));
-		let data = account[1].toJSON();
+		let data = account[1].toHuman();
 		data.address = addr;
 		console.log("%s", JSON.stringify(data));
 	}
