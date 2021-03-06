@@ -79,7 +79,45 @@ async function main() {
 	program.command('show-create-class-deposit <metadata> <name> <description>').action(async (metadata, name, description) => {
 		await demo_show_create_class_deposit(metadata, name, description);
 	});
+	program.command('create-category <metadata> <account>').action(async (metadata, account) => {
+		await demo_create_category(keyring, metadata, account);
+	});
+	program.command('show-categories').action(async () => {
+		await demo_show_categories();
+	});
 	program.parse();
+}
+
+async function demo_show_categories() {
+	let api = await Utils.getApi();
+	let cateCount = 0;
+	const callCategories = await api.query.nftmart.categories.entries();
+	for(let category of callCategories){
+		let key = category[0];
+		const data = category[1].unwrap();
+		const len = key.length;
+		key = key.buffer.slice(len - 4, len);
+		const cateId = new Uint32Array(key)[0];
+		console.log(cateId, data.toHuman());
+		cateCount++;
+	}
+	const nextCategoryId = await api.query.nftmart.nextCategoryId();
+	console.log(`nextCategoryId is ${nextCategoryId}.`);
+	console.log(`cateCount is ${cateCount}.`);
+	process.exit();
+}
+
+async function demo_create_category(keyring, metadata, account) {
+	let api = await Utils.getApi();
+	let moduleMetadata = await Utils.getModules(api);
+	account = keyring.addFromUri(account);
+	const call = api.tx.sudo.sudo(api.tx.nftmart.createCategory(metadata));
+	const feeInfo = await call.paymentInfo(account);
+	console.log("The fee of the call: %s.", feeInfo.partialFee / unit);
+	let [a, b] = Utils.waitTx(moduleMetadata);
+	await call.signAndSend(account, a);
+	await b();
+	process.exit();
 }
 
 async function demo_show_create_class_deposit(metadata, name, description) {

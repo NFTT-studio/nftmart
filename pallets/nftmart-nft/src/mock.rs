@@ -177,6 +177,7 @@ impl nftmart_nft::Config for Runtime {
 	type ModuleId = NftModuleId;
 	type Currency = Balances;
 	type MultiCurrency = Currencies;
+	type CategoryId = u32;
 }
 
 use frame_system::Call as SystemCall;
@@ -204,6 +205,8 @@ construct_runtime!(
 pub const ALICE: AccountId = AccountId::new([1u8; 32]);
 pub const BOB: AccountId = AccountId::new([2u8; 32]);
 pub const CLASS_ID: <Runtime as orml_nft::Config>::ClassId = 0;
+pub const CATEGORY_ID: <Runtime as Config>::CategoryId = 0;
+pub const CATEGORY_ID_NOT_EXIST: <Runtime as Config>::CategoryId = 100;
 pub const CLASS_ID_NOT_EXIST: <Runtime as orml_nft::Config>::ClassId = 1;
 pub const TOKEN_ID: <Runtime as orml_nft::Config>::TokenId = 0;
 pub const TOKEN_ID_NOT_EXIST: <Runtime as orml_nft::Config>::TokenId = 1;

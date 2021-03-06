@@ -17,6 +17,41 @@ fn class_id_account() -> AccountId {
 }
 
 #[test]
+fn create_category_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		assert_eq!({ let id_expect: CategoryIdOf<Runtime> = Zero::zero(); id_expect }, Nftmart::next_category_id());
+		assert_eq!(None, Nftmart::category(CATEGORY_ID));
+
+		let metadata = vec![1];
+		assert_ok!(Nftmart::create_category(Origin::root(), metadata.clone()));
+
+		let event = Event::nftmart_nft(crate::Event::CreatedCategory(CATEGORY_ID));
+		assert_eq!(last_event(), event);
+		assert_eq!({ let id_expect: CategoryIdOf<Runtime> = One::one(); id_expect }, Nftmart::next_category_id());
+		assert_eq!(Some(CategoryData{ metadata, nft_count: 0 }), Nftmart::category(CATEGORY_ID));
+		assert_eq!(None, Nftmart::category(CATEGORY_ID_NOT_EXIST));
+	});
+}
+
+#[test]
+fn create_category_should_fail() {
+	let metadata = vec![1];
+	ExtBuilder::default().build().execute_with(|| {
+		assert_noop!(
+			Nftmart::create_category(Origin::signed(ALICE), metadata.clone()),
+			DispatchError::BadOrigin,
+		);
+	});
+	ExtBuilder::default().build().execute_with(|| {
+		NextCategoryId::<Runtime>::set(<CategoryIdOf<Runtime>>::max_value());
+		assert_noop!(
+			Nftmart::create_category(Origin::root(), metadata.clone()),
+			Error::<Runtime>::NoAvailableCategoryId,
+		);
+	});
+}
+
+#[test]
 fn create_class_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		let metadata = vec![1];

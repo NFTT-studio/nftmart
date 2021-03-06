@@ -20,12 +20,17 @@ function waitTx(moduleMetadata) {
 				console.log('%s BlockHash(%s)', status.type, status.asInBlock.toHex());
 				events.forEach(({phase, event: {data, method, section}}) => {
 					if ("system.ExtrinsicFailed" === section + '.' + method) {
+						let processed = false;
 						for (let d of data) {
 							if (d.isModule) {
 								let mErr = d.asModule;
 								let module = moduleMetadata[mErr.index];
 								console.log("error: %s.%s", module.name, module.errors[mErr.error].name);
+								processed = true;
 							}
+						}
+						if(!processed){
+							console.log("event: " + phase.toString() + ' ' + section + '.' + method + ' ' + data.toString());
 						}
 					} else if ("system.ExtrinsicSuccess" === section + '.' + method) {
 						// ignore
@@ -69,6 +74,12 @@ async function getApi(dest = 'ws://8.136.111.191:9944') {
 	const provider = new WsProvider(dest);
 
 	const types = {
+		CategoryData: {
+			metadata: 'NFTMetadata',
+			nftCount: 'Balance',
+		},
+		CategoryId: 'u32',
+		CategoryIdOf: 'CategoryId',
 		ClassId: 'u32',
 		TokenId: 'u64',
 		CurrencyId: 'u32',

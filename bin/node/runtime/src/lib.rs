@@ -116,7 +116,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	// and set impl_version to 0. If only runtime
 	// implementation changes and behavior does not, then leave spec_version as
 	// is and increment impl_version.
-	spec_version: 278,
+	spec_version: 280,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 2,
@@ -1130,6 +1130,7 @@ impl nftmart_nft::Config for Runtime {
 	type ModuleId = NftModuleId;
 	type Currency = Balances;
 	type MultiCurrency = Currencies;
+	type CategoryId = u32;
 }
 
 construct_runtime!(
@@ -1179,7 +1180,7 @@ construct_runtime!(
 		Tokens: orml_tokens::{Module, Storage, Event<T>, Config<T>},
 		Currencies: orml_currencies::{Module, Call, Event<T>},
 		OrmlNFT: orml_nft::{Module, Storage, Config<T>},
-		Nftmart: nftmart_nft::{Module, Call, Event<T>},
+		Nftmart: nftmart_nft::{Module, Call, Storage, Event<T>},
 	}
 );
 

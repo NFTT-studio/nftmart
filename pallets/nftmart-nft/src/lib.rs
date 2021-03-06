@@ -13,7 +13,8 @@ use sp_core::constants_types::Balance;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::{
-	traits::{AccountIdConversion, StaticLookup, Zero},
+	traits::{CheckedAdd,
+			 AccountIdConversion, StaticLookup, Zero, One, AtLeast32BitUnsigned},
 	ModuleId, RuntimeDebug,
 };
 use sp_runtime::SaturatedConversion;
@@ -71,8 +72,18 @@ pub struct TokenData {
 	pub deposit: Balance,
 }
 
+#[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub struct CategoryData {
+	/// The category metadata.
+	pub metadata: NFTMetadata,
+	/// The number of NFTs in this category.
+	pub nft_count: Balance,
+}
+
 pub type TokenIdOf<T> = <T as orml_nft::Config>::TokenId;
 pub type ClassIdOf<T> = <T as orml_nft::Config>::ClassId;
+pub type CategoryIdOf<T> = <T as Config>::CategoryId;
 pub type BalanceOf<T> = <<T as module::Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 pub type NFTMetadata = Vec<u8>;
 
@@ -105,6 +116,9 @@ pub mod module {
 
 		/// The currency mechanism.
 		type Currency: ReservableCurrency<Self::AccountId>;
+
+		/// The Category ID type
+		type CategoryId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy;
 	}
 
 	#[pallet::error]
@@ -124,6 +138,8 @@ pub mod module {
 		/// Can not destroy class
 		/// Total issuance is not 0
 		CannotDestroyClass,
+		/// No available category ID
+		NoAvailableCategoryId,
 	}
 
 	#[pallet::event]
@@ -139,6 +155,8 @@ pub mod module {
 		BurnedToken(T::AccountId, ClassIdOf<T>, TokenIdOf<T>),
 		/// Destroyed NFT class. \[owner, class_id, dest\]
 		DestroyedClass(T::AccountId, ClassIdOf<T>, T::AccountId),
+		/// Created NFT common category. \[category_id\]
+		CreatedCategory(CategoryIdOf<T>),
 	}
 
 	#[pallet::pallet]
@@ -147,8 +165,43 @@ pub mod module {
 	#[pallet::hooks]
 	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
 
+	/// Next available common category ID.
+	#[pallet::storage]
+	#[pallet::getter(fn next_category_id)]
+	pub type NextCategoryId<T: Config> = StorageValue<_, T::CategoryId, ValueQuery>;
+
+	/// Next available common category ID.
+	#[pallet::storage]
+	#[pallet::getter(fn category)]
+	pub type Categories<T: Config> = StorageMap<_, Identity, T::CategoryId, CategoryData>;
+
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		/// Create a common category for trading NFT.
+		/// A Selling NFT should belong to a category.
+		///
+		/// - `name`: class name, with len limitation.
+		#[pallet::weight(100_000)]
+		#[transactional]
+		pub fn create_category(origin: OriginFor<T>, metadata: NFTMetadata) -> DispatchResultWithPostInfo {
+			let _ = ensure_root(origin)?;
+
+			let category_id = NextCategoryId::<T>::try_mutate(|id| -> Result<T::CategoryId, DispatchError> {
+				let current_id = *id;
+				*id = id.checked_add(&One::one()).ok_or(Error::<T>::NoAvailableCategoryId)?;
+				Ok(current_id)
+			})?;
+
+			let info = CategoryData {
+				metadata,
+				nft_count: Default::default(),
+			};
+			Categories::<T>::insert(category_id, info);
+
+			Self::deposit_event(Event::CreatedCategory(category_id));
+			Ok(().into())
+		}
+
 		/// Create NFT class, tokens belong to the class.
 		///
 		/// - `metadata`: external metadata
