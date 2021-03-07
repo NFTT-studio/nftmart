@@ -1,4 +1,11 @@
-const Utils = require("./utils");
+import {
+	getApi,
+	getModules,
+	waitTx,
+	getEventsByNumber,
+	getExtrinsicByNumber,
+	sleep
+} from "./utils.mjs";
 
 async function getFinalizedHeadNumber(api) {
 	return api.rpc.chain.getFinalizedHead()
@@ -7,8 +14,8 @@ async function getFinalizedHeadNumber(api) {
 }
 
 async function handleEvents(api, num, moduleMetadata) {
-	const [blockHash, events] = await Utils.getEventsByNumber(api, num);
-	const signedBlock = await Utils.getExtrinsicByNumber(api, num);
+	const [blockHash, events] = await getEventsByNumber(api, num);
+	const signedBlock = await getExtrinsicByNumber(api, num);
 
 	let extrinsicArray = [];
 	signedBlock.block.extrinsics.forEach((ex, index) => {
@@ -80,9 +87,9 @@ async function handleEvents(api, num, moduleMetadata) {
 }
 
 async function main() {
-	const api = await Utils.getApi();
+	const api = await getApi();
 
-	let moduleMetadata = await Utils.getModules(api);
+	let moduleMetadata = await getModules(api);
 	let startBlockNumber = await getFinalizedHeadNumber(api);
 
 	// startBlockNumber = 32339;
@@ -98,11 +105,11 @@ async function main() {
 				await handleEvents(api, startBlockNumber, moduleMetadata);
 				startBlockNumber++;
 			} else {
-				await Utils.sleep(200);
+				await sleep(200);
 			}
 		} catch (e) {
 			console.log(e);
-			await Utils.sleep(2000)
+			await sleep(2000)
 		}
 	}
 }

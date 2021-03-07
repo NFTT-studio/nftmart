@@ -1,12 +1,14 @@
-const Utils = require('./utils')
-const {Keyring} = require('@polkadot/api');
-const {bnToBn} = require('@polkadot/util');
+import {getApi, getModules, waitTx} from "./utils.mjs";
+import {Keyring} from "@polkadot/api";
+import {bnToBn} from "@polkadot/util";
+import {Command} from "commander";
+
 const unit = bnToBn('1000000000000');
+
 
 function main() {
 	const ss58Format = 50;
 	const keyring = new Keyring({type: 'sr25519', ss58Format});
-	const {Command} = require('commander');
 	const program = new Command();
 	program.command('transfer <from> <to>').action(async (from, to) => {
 		await demo_transfer(keyring, from, to);
@@ -21,7 +23,7 @@ function main() {
 }
 
 async function demo_show(keyring, account) {
-	let api = await Utils.getApi();
+	let api = await getApi();
 	let addr = '';
 	if (account.length === '62qUEaQwPx7g4vDz88cT36XXuEUQmYo3Y5dxnxScsiDkb8wy'.length) {
 		addr = account;
@@ -34,7 +36,7 @@ async function demo_show(keyring, account) {
 }
 
 async function demo_show_all(keyring) {
-	let api = await Utils.getApi();
+	let api = await getApi();
 	const all = await api.query.system.account.entries();
 	for (const account of all) {
 		let key = account[0];
@@ -49,11 +51,11 @@ async function demo_show_all(keyring) {
 }
 
 async function demo_transfer(keyring, from, to) {
-	let api = await Utils.getApi();
-	let moduleMetadata = await Utils.getModules(api);
+	let api = await getApi();
+	let moduleMetadata = await getModules(api);
 	from = keyring.addFromUri(from);
 	to = keyring.addFromUri(to).address;
-	let [a, b] = Utils.waitTx(moduleMetadata);
+	let [a, b] = waitTx(moduleMetadata);
 	await api.tx.balances.transfer(to, bnToBn(10000).mul(unit)).signAndSend(from, a);
 	await b();
 	process.exit();

@@ -1,6 +1,8 @@
-const Utils = require('./utils')
-const {Keyring} = require('@polkadot/api');
-const {bnToBn} = require('@polkadot/util');
+import {getApi, getModules, waitTx} from "./utils.mjs";
+import {Keyring} from "@polkadot/api";
+import {bnToBn} from "@polkadot/util";
+import {Command} from "commander";
+
 const unit = bnToBn('1000000000000');
 
 async function showNft(api, classID, tokenID) {
@@ -44,7 +46,6 @@ async function proxyDeposit(api, num_proxies) {
 async function main() {
 	const ss58Format = 50;
 	const keyring = new Keyring({type: 'sr25519', ss58Format});
-	const {Command} = require('commander');
 	const program = new Command();
 	program.command('create-class <account>').action(async (account) => {
 		await demo_create_class(keyring, account);
@@ -89,10 +90,10 @@ async function main() {
 }
 
 async function demo_show_categories() {
-	let api = await Utils.getApi();
+	let api = await getApi();
 	let cateCount = 0;
 	const callCategories = await api.query.nftmart.categories.entries();
-	for(let category of callCategories){
+	for (let category of callCategories) {
 		let key = category[0];
 		const data = category[1].unwrap();
 		const len = key.length;
@@ -108,28 +109,28 @@ async function demo_show_categories() {
 }
 
 async function demo_create_category(keyring, metadata, account) {
-	let api = await Utils.getApi();
-	let moduleMetadata = await Utils.getModules(api);
+	let api = await getApi();
+	let moduleMetadata = await getModules(api);
 	account = keyring.addFromUri(account);
 	const call = api.tx.sudo.sudo(api.tx.nftmart.createCategory(metadata));
 	const feeInfo = await call.paymentInfo(account);
 	console.log("The fee of the call: %s.", feeInfo.partialFee / unit);
-	let [a, b] = Utils.waitTx(moduleMetadata);
+	let [a, b] = waitTx(moduleMetadata);
 	await call.signAndSend(account, a);
 	await b();
 	process.exit();
 }
 
 async function demo_show_create_class_deposit(metadata, name, description) {
-	let api = await Utils.getApi();
+	let api = await getApi();
 	const deposit = await classDeposit(api, metadata, name, description);
 	console.log(deposit.toString());
 	process.exit(0);
 }
 
 async function demo_destroy_class(keyring, classID, account) {
-	let api = await Utils.getApi();
-	let moduleMetadata = await Utils.getModules(api);
+	let api = await getApi();
+	let moduleMetadata = await getModules(api);
 	account = keyring.addFromUri(account);
 	let classInfo = await api.query.ormlNft.classes(classID);
 	if (classInfo.isSome) {
@@ -137,7 +138,7 @@ async function demo_destroy_class(keyring, classID, account) {
 		const call = api.tx.proxy.proxy(classInfo.owner, null, api.tx.nftmart.destroyClass(classID, account.address));
 		const feeInfo = await call.paymentInfo(account);
 		console.log("The fee of the call: %s.", feeInfo.partialFee / unit);
-		let [a, b] = Utils.waitTx(moduleMetadata);
+		let [a, b] = waitTx(moduleMetadata);
 		await call.signAndSend(account, a);
 		await b();
 	}
@@ -145,16 +146,16 @@ async function demo_destroy_class(keyring, classID, account) {
 }
 
 async function demo_burn_nft(keyring, classID, tokenID, account) {
-	let api = await Utils.getApi();
+	let api = await getApi();
 	await showNft(api, classID, tokenID);
 
-	let moduleMetadata = await Utils.getModules(api);
+	let moduleMetadata = await getModules(api);
 	account = keyring.addFromUri(account);
 
 	const call = api.tx.nftmart.burn([classID, tokenID]);
 	const feeInfo = await call.paymentInfo(account);
 	console.log("The fee of the call: %s.", feeInfo.partialFee / unit);
-	let [a, b] = Utils.waitTx(moduleMetadata);
+	let [a, b] = waitTx(moduleMetadata);
 	await call.signAndSend(account, a);
 	await b();
 
@@ -163,10 +164,10 @@ async function demo_burn_nft(keyring, classID, tokenID, account) {
 }
 
 async function demo_transfer_nft(keyring, classID, tokenID, from, to) {
-	let api = await Utils.getApi();
+	let api = await getApi();
 	await showNft(api, classID, tokenID);
 
-	let moduleMetadata = await Utils.getModules(api);
+	let moduleMetadata = await getModules(api);
 	from = keyring.addFromUri(from);
 	to = keyring.addFromUri(to).address;
 
@@ -174,7 +175,7 @@ async function demo_transfer_nft(keyring, classID, tokenID, from, to) {
 	const feeInfo = await call.paymentInfo(from);
 	console.log("The fee of the call: %s.", feeInfo.partialFee / unit);
 
-	let [a, b] = Utils.waitTx(moduleMetadata);
+	let [a, b] = waitTx(moduleMetadata);
 	await call.signAndSend(from, a);
 	await b();
 
@@ -183,7 +184,7 @@ async function demo_transfer_nft(keyring, classID, tokenID, from, to) {
 }
 
 async function demo_query_class(keyring, account) {
-	let api = await Utils.getApi();
+	let api = await getApi();
 	const address = keyring.addFromUri(account).address;
 	const allClasses = await api.query.ormlNft.classes.entries();
 	for (const c of allClasses) {
@@ -209,7 +210,7 @@ async function demo_query_nft(keyring, account) {
 		return tokenIDLow32;
 	}
 
-	let api = await Utils.getApi();
+	let api = await getApi();
 	const address = keyring.addFromUri(account).address;
 	const nfts = await api.query.ormlNft.tokensByOwner.entries(address);
 	for (let clzToken of nfts) {
@@ -233,7 +234,7 @@ async function demo_query_nft(keyring, account) {
 }
 
 async function demo_show_all_nfts(classID) {
-	let api = await Utils.getApi();
+	let api = await getApi();
 	const nextTokenId = await api.query.ormlNft.nextTokenId(classID);
 	console.log(`nextTokenId is ${nextTokenId}.`);
 	let tokenCount = 0;
@@ -257,8 +258,8 @@ async function demo_show_all_nfts(classID) {
 }
 
 async function demo_mint_nft(keyring, account, classID) {
-	let api = await Utils.getApi();
-	let moduleMetadata = await Utils.getModules(api);
+	let api = await getApi();
+	let moduleMetadata = await getModules(api);
 	account = keyring.addFromUri(account);
 	const classInfo = await api.query.ormlNft.classes(classID);
 	if (classInfo.isSome) {
@@ -276,7 +277,7 @@ async function demo_mint_nft(keyring, account, classID) {
 		const feeInfo = await batchExtrinsic.paymentInfo(account);
 		console.log("fee of batchExtrinsic: %s", feeInfo.partialFee / unit);
 
-		let [a, b] = Utils.waitTx(moduleMetadata);
+		let [a, b] = waitTx(moduleMetadata);
 		await batchExtrinsic.signAndSend(account, a);
 		await b();
 	}
@@ -284,8 +285,8 @@ async function demo_mint_nft(keyring, account, classID) {
 }
 
 async function demo_add_class_admin(keyring, account) {
-	let api = await Utils.getApi();
-	let moduleMetadata = await Utils.getModules(api);
+	let api = await getApi();
+	let moduleMetadata = await getModules(api);
 	const alice = keyring.addFromUri("//Alice");
 	const bob = keyring.addFromUri(account);
 	const classCount = bnToBn((await api.query.ormlNft.nextClassId()).toString());
@@ -303,7 +304,7 @@ async function demo_add_class_admin(keyring, account) {
 	const feeInfo = await batchExtrinsic.paymentInfo(alice);
 	console.log("fee of batchExtrinsic: %s", feeInfo.partialFee / unit);
 
-	let [a, b] = Utils.waitTx(moduleMetadata);
+	let [a, b] = waitTx(moduleMetadata);
 	await batchExtrinsic.signAndSend(alice, a);
 	await b();
 
@@ -311,7 +312,7 @@ async function demo_add_class_admin(keyring, account) {
 }
 
 async function demo_show_class_info() {
-	let api = await Utils.getApi();
+	let api = await getApi();
 	let classCount = 0;
 
 	const allClasses = await api.query.ormlNft.classes.entries();
@@ -332,10 +333,10 @@ async function demo_show_class_info() {
 }
 
 async function demo_create_class(keyring, account) {
-	let api = await Utils.getApi();
-	let moduleMetadata = await Utils.getModules(api);
+	let api = await getApi();
+	let moduleMetadata = await getModules(api);
 	account = keyring.addFromUri(account);
-	let [a, b] = Utils.waitTx(moduleMetadata);
+	let [a, b] = waitTx(moduleMetadata);
 	// pub enum ClassProperty {
 	// 	/// Token can be transferred
 	// 	Transferable = 0b00000001,
