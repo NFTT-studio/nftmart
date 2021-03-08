@@ -19,7 +19,7 @@ async function nftDeposit(api, metadata, nft_quantity) {
 		return bnToBn(depositAll);
 	} catch (e) {
 		console.log(e);
-		return bnToBn(0);
+		return null;
 	}
 }
 
@@ -29,7 +29,7 @@ async function classDeposit(api, metadata, name, description) {
 		return bnToBn(depositAll);
 	} catch (e) {
 		console.log(e);
-		return bnToBn(0);
+		return null;
 	}
 }
 
@@ -39,7 +39,7 @@ async function proxyDeposit(api, num_proxies) {
 		return bnToBn(deposit);
 	} catch (e) {
 		console.log(e);
-		return bnToBn(0);
+		return null;
 	}
 }
 
@@ -267,6 +267,9 @@ async function demo_mint_nft(keyring, account, classID) {
 		const nftMetadata = 'aabbccdd';
 		const quantity = 3;
 		const balancesNeeded = await nftDeposit(api, nftMetadata, bnToBn(quantity));
+		if (balancesNeeded === null) {
+			return;
+		}
 		const txs = [
 			// make sure `ownerOfClass0` has sufficient balances to mint nft.
 			api.tx.balances.transfer(ownerOfClass, balancesNeeded),
@@ -293,6 +296,9 @@ async function demo_add_class_admin(keyring, account) {
 
 	const ownerOfClass0 = '62qUEaQwPx7g4vDz88bN4zMBTFmcwLPYbPsvbBhH2QiqWhfB'
 	const balancesNeeded = await proxyDeposit(api, 1);
+	if (balancesNeeded === null) {
+		return;
+	}
 	console.log("adding a class admin needs to reserve %s", balancesNeeded);
 	const txs = [
 		// make sure `ownerOfClass0` has sufficient balances.
