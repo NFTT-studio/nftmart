@@ -59,7 +59,7 @@ async function main() {
 	program.command('mint-nft <account> <classID>').action(async (account, classID) => {
 		await demo_mint_nft(keyring, account, classID);
 	});
-	program.command('show-all-nfts <classID>').action(async (classID) => {
+	program.command('show-all-nfts [classID]').action(async (classID) => {
 		await demo_show_all_nfts(classID);
 	});
 	program.command('query-nft <account>').action(async (account) => {
@@ -152,7 +152,7 @@ async function demo_burn_nft(keyring, classID, tokenID, account) {
 	let moduleMetadata = await getModules(api);
 	account = keyring.addFromUri(account);
 
-	const call = api.tx.nftmart.burn([classID, tokenID]);
+	const call = api.tx.nftmart.burn(classID, tokenID);
 	const feeInfo = await call.paymentInfo(account);
 	console.log("The fee of the call: %s.", feeInfo.partialFee / unit);
 	let [a, b] = waitTx(moduleMetadata);
@@ -171,7 +171,7 @@ async function demo_transfer_nft(keyring, classID, tokenID, from, to) {
 	from = keyring.addFromUri(from);
 	to = keyring.addFromUri(to).address;
 
-	const call = api.tx.nftmart.transfer(to, [classID, tokenID]);
+	const call = api.tx.nftmart.transfer(to, classID, tokenID);
 	const feeInfo = await call.paymentInfo(from);
 	console.log("The fee of the call: %s.", feeInfo.partialFee / unit);
 
@@ -233,8 +233,7 @@ async function demo_query_nft(keyring, account) {
 	process.exit();
 }
 
-async function demo_show_all_nfts(classID) {
-	let api = await getApi();
+async function show_all_nfts(api, classID) {
 	const nextTokenId = await api.query.ormlNft.nextTokenId(classID);
 	console.log(`nextTokenId is ${nextTokenId}.`);
 	let tokenCount = 0;
@@ -254,6 +253,22 @@ async function demo_show_all_nfts(classID) {
 		}
 	}
 	console.log(`The token count of class ${classID} is ${tokenCount}.`);
+}
+
+async function demo_show_all_nfts(classID) {
+	let api = await getApi();
+	if (classID === undefined) {
+		const allClasses = await api.query.ormlNft.classes.entries();
+		for (const c of allClasses) {
+			let key = c[0];
+			const len = key.length;
+			key = key.buffer.slice(len - 4, len);
+			const classID = new Uint32Array(key)[0];
+			await show_all_nfts(api, classID);
+		}
+	} else {
+		await show_all_nfts(api, classID);
+	}
 	process.exit();
 }
 

@@ -178,11 +178,11 @@ fn transfer_should_work() {
 			2
 		));
 
-		assert_ok!(Nftmart::transfer(Origin::signed(BOB), ALICE, (CLASS_ID, TOKEN_ID)));
+		assert_ok!(Nftmart::transfer(Origin::signed(BOB), ALICE, CLASS_ID, TOKEN_ID));
 		let event = Event::nftmart_nft(crate::Event::TransferredToken(BOB, ALICE, CLASS_ID, TOKEN_ID));
 		assert_eq!(last_event(), event);
 
-		assert_ok!(Nftmart::transfer(Origin::signed(ALICE), BOB, (CLASS_ID, TOKEN_ID)));
+		assert_ok!(Nftmart::transfer(Origin::signed(ALICE), BOB, CLASS_ID, TOKEN_ID));
 		let event = Event::nftmart_nft(crate::Event::TransferredToken(ALICE, BOB, CLASS_ID, TOKEN_ID));
 		assert_eq!(last_event(), event);
 	});
@@ -207,15 +207,15 @@ fn transfer_should_fail() {
 			1
 		));
 		assert_noop!(
-			Nftmart::transfer(Origin::signed(BOB), ALICE, (CLASS_ID_NOT_EXIST, TOKEN_ID)),
+			Nftmart::transfer(Origin::signed(BOB), ALICE, CLASS_ID_NOT_EXIST, TOKEN_ID),
 			Error::<Runtime>::ClassIdNotFound
 		);
 		assert_noop!(
-			Nftmart::transfer(Origin::signed(BOB), ALICE, (CLASS_ID, TOKEN_ID_NOT_EXIST)),
+			Nftmart::transfer(Origin::signed(BOB), ALICE, CLASS_ID, TOKEN_ID_NOT_EXIST),
 			Error::<Runtime>::TokenIdNotFound
 		);
 		assert_noop!(
-			Nftmart::transfer(Origin::signed(ALICE), BOB, (CLASS_ID, TOKEN_ID)),
+			Nftmart::transfer(Origin::signed(ALICE), BOB, CLASS_ID, TOKEN_ID),
 			Error::<Runtime>::NoPermission
 		);
 	});
@@ -235,7 +235,7 @@ fn transfer_should_fail() {
 			1
 		));
 		assert_noop!(
-			Nftmart::transfer(Origin::signed(BOB), ALICE, (CLASS_ID, TOKEN_ID)),
+			Nftmart::transfer(Origin::signed(BOB), ALICE, CLASS_ID, TOKEN_ID),
 			Error::<Runtime>::NonTransferable
 		);
 	});
@@ -266,7 +266,7 @@ fn burn_should_work() {
 			reserved_balance(&class_id_account()),
 			deposit_class.saturating_add(deposit_token)
 		);
-		assert_ok!(Nftmart::burn(Origin::signed(BOB), (CLASS_ID, TOKEN_ID)));
+		assert_ok!(Nftmart::burn(Origin::signed(BOB), CLASS_ID, TOKEN_ID));
 		let event = Event::nftmart_nft(crate::Event::BurnedToken(BOB, CLASS_ID, TOKEN_ID));
 		assert_eq!(last_event(), event);
 
@@ -298,12 +298,12 @@ fn burn_should_fail() {
 			1
 		));
 		assert_noop!(
-			Nftmart::burn(Origin::signed(BOB), (CLASS_ID, TOKEN_ID_NOT_EXIST)),
+			Nftmart::burn(Origin::signed(BOB), CLASS_ID, TOKEN_ID_NOT_EXIST),
 			Error::<Runtime>::TokenIdNotFound
 		);
 
 		assert_noop!(
-			Nftmart::burn(Origin::signed(ALICE), (CLASS_ID, TOKEN_ID)),
+			Nftmart::burn(Origin::signed(ALICE), CLASS_ID, TOKEN_ID),
 			Error::<Runtime>::NoPermission
 		);
 
@@ -311,7 +311,7 @@ fn burn_should_fail() {
 			class_info.as_mut().unwrap().total_issuance = 0;
 		});
 		assert_noop!(
-			Nftmart::burn(Origin::signed(BOB), (CLASS_ID, TOKEN_ID)),
+			Nftmart::burn(Origin::signed(BOB), CLASS_ID, TOKEN_ID),
 			orml_nft::Error::<Runtime>::NumOverflow
 		);
 	});
@@ -331,7 +331,7 @@ fn burn_should_fail() {
 			1
 		));
 		assert_noop!(
-			Nftmart::burn(Origin::signed(BOB), (CLASS_ID, TOKEN_ID)),
+			Nftmart::burn(Origin::signed(BOB), CLASS_ID, TOKEN_ID),
 			Error::<Runtime>::NonBurnable
 		);
 	});
@@ -367,7 +367,7 @@ fn destroy_class_should_work() {
 		));
 		assert_eq!(free_balance(&class_id_account()), 0);
 		assert_eq!(reserved_balance(&class_id_account()), deposit_class.saturating_add(deposit_token));
-		assert_ok!(Nftmart::burn(Origin::signed(BOB), (CLASS_ID, TOKEN_ID)));
+		assert_ok!(Nftmart::burn(Origin::signed(BOB), CLASS_ID, TOKEN_ID));
 		assert_eq!(reserved_balance(&class_id_account()), deposit_class);
 		assert_eq!(free_balance(&class_id_account()), 0);
 		assert_ok!(Nftmart::destroy_class(
@@ -422,7 +422,7 @@ fn destroy_class_should_fail() {
 			Error::<Runtime>::CannotDestroyClass
 		);
 
-		assert_ok!(Nftmart::burn(Origin::signed(BOB), (CLASS_ID, TOKEN_ID)));
+		assert_ok!(Nftmart::burn(Origin::signed(BOB), CLASS_ID, TOKEN_ID));
 		assert_ok!(Nftmart::destroy_class(
 			Origin::signed(class_id_account()),
 			CLASS_ID,

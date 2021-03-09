@@ -56,6 +56,7 @@ impl Decode for Properties {
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct ClassData {
 	/// The minimum balance to create class
+	#[codec(compact)]
 	pub deposit: Balance,
 	/// Property of all tokens in this class.
 	pub properties: Properties,
@@ -69,6 +70,7 @@ pub struct ClassData {
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct TokenData {
 	/// The minimum balance to create token
+	#[codec(compact)]
 	pub deposit: Balance,
 }
 
@@ -78,6 +80,7 @@ pub struct CategoryData {
 	/// The category metadata.
 	pub metadata: NFTMetadata,
 	/// The number of NFTs in this category.
+	#[codec(compact)]
 	pub nft_count: Balance,
 }
 
@@ -253,9 +256,9 @@ pub mod module {
 		pub fn mint(
 			origin: OriginFor<T>,
 			to: <T::Lookup as StaticLookup>::Source,
-			class_id: ClassIdOf<T>,
+			#[pallet::compact] class_id: ClassIdOf<T>,
 			metadata: NFTMetadata,
-			quantity: u32,
+			#[pallet::compact] quantity: u32,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			let to = T::Lookup::lookup(to)?;
@@ -283,11 +286,12 @@ pub mod module {
 		pub fn transfer(
 			origin: OriginFor<T>,
 			to: <T::Lookup as StaticLookup>::Source,
-			token: (ClassIdOf<T>, TokenIdOf<T>),
+			#[pallet::compact] class_id: ClassIdOf<T>,
+			#[pallet::compact] token_id: TokenIdOf<T>,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			let to = T::Lookup::lookup(to)?;
-			Self::do_transfer(&who, &to, token)?;
+			Self::do_transfer(&who, &to, (class_id, token_id))?;
 			Ok(().into())
 		}
 
@@ -296,27 +300,31 @@ pub mod module {
 		/// - `token`: (class_id, token_id)
 		#[pallet::weight(100_000)]
 		#[transactional]
-		pub fn burn(origin: OriginFor<T>, token: (ClassIdOf<T>, TokenIdOf<T>)) -> DispatchResultWithPostInfo {
+		pub fn burn(
+			origin: OriginFor<T>,
+			#[pallet::compact] class_id: ClassIdOf<T>,
+			#[pallet::compact] token_id: TokenIdOf<T>,
+		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
-			let class_info = orml_nft::Module::<T>::classes(token.0).ok_or(Error::<T>::ClassIdNotFound)?;
+			let class_info = orml_nft::Module::<T>::classes(class_id).ok_or(Error::<T>::ClassIdNotFound)?;
 			let data = class_info.data;
 			ensure!(
 				data.properties.0.contains(ClassProperty::Burnable),
 				Error::<T>::NonBurnable
 			);
 
-			let token_info = orml_nft::Module::<T>::tokens(token.0, token.1).ok_or(Error::<T>::TokenIdNotFound)?;
+			let token_info = orml_nft::Module::<T>::tokens(class_id, token_id).ok_or(Error::<T>::TokenIdNotFound)?;
 			ensure!(who == token_info.owner, Error::<T>::NoPermission);
 
-			orml_nft::Module::<T>::burn(&who, token)?;
-			let owner: T::AccountId = T::ModuleId::get().into_sub_account(token.0);
+			orml_nft::Module::<T>::burn(&who, (class_id, token_id))?;
+			let owner: T::AccountId = T::ModuleId::get().into_sub_account(class_id);
 			let data = token_info.data;
 			// `repatriate_reserved` will check `to` account exist and return `DeadAccount`.
 			// `transfer` not do this check.
 			<T as Config>::Currency::unreserve(&owner, data.deposit.saturated_into());
 			<T as Config>::Currency::transfer(&owner, &who, data.deposit.saturated_into(), KeepAlive)?;
 
-			Self::deposit_event(Event::BurnedToken(who, token.0, token.1));
+			Self::deposit_event(Event::BurnedToken(who, class_id, token_id));
 			Ok(().into())
 		}
 
@@ -328,7 +336,7 @@ pub mod module {
 		#[transactional]
 		pub fn destroy_class(
 			origin: OriginFor<T>,
-			class_id: ClassIdOf<T>,
+			#[pallet::compact] class_id: ClassIdOf<T>,
 			dest: <T::Lookup as StaticLookup>::Source,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
