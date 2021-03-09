@@ -1075,7 +1075,7 @@ impl pallet_gilt::Config for Runtime {
 }
 
 orml_traits::parameter_type_with_key! {
-	pub ExistentialDeposits: |currency_id: sp_core::constants_types::CurrencyIdType| -> Balance {
+	pub ExistentialDeposits: |currency_id: sp_core::constants_types::CurrencyId| -> Balance {
 		if currency_id == &sp_core::constants_types::NATIVE_CURRENCY_ID {
 			ExistentialDeposit::get()
 		} else  {
@@ -1088,14 +1088,14 @@ impl orml_tokens::Config for Runtime {
 	type Event = Event;
 	type Balance = Balance;
 	type Amount = sp_core::constants_types::Amount;
-	type CurrencyId = sp_core::constants_types::CurrencyIdType;
+	type CurrencyId = sp_core::constants_types::CurrencyId;
 	type WeightInfo = ();
 	type ExistentialDeposits = ExistentialDeposits;
 	type OnDust = ();
 }
 
 parameter_types! {
-	pub const GetNativeCurrencyId: sp_core::constants_types::CurrencyIdType = sp_core::constants_types::NATIVE_CURRENCY_ID;
+	pub const GetNativeCurrencyId: sp_core::constants_types::CurrencyId = sp_core::constants_types::NATIVE_CURRENCY_ID;
 }
 
 pub type AdaptedBasicCurrency = BasicCurrencyAdapter<Runtime, Balances, sp_core::constants_types::Amount, sp_core::constants_types::Moment>;
@@ -1109,8 +1109,8 @@ impl orml_currencies::Config for Runtime {
 }
 
 impl orml_nft::Config for Runtime {
-	type ClassId = u32;
-	type TokenId = u64;
+	type ClassId = sp_core::constants_types::ClassId;
+	type TokenId = sp_core::constants_types::TokenId;
 	type ClassData = nftmart_nft::ClassData;
 	type TokenData = nftmart_nft::TokenData;
 }
@@ -1130,7 +1130,7 @@ impl nftmart_nft::Config for Runtime {
 	type ModuleId = NftModuleId;
 	type Currency = Balances;
 	type MultiCurrency = Currencies;
-	type CategoryId = u32;
+	type CategoryId = sp_core::constants_types::CategoryId;
 }
 
 construct_runtime!(
