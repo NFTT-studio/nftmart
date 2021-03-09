@@ -14,9 +14,9 @@ sp-runtime = { version = "3.0.0", default-features = false, path = "../../primit
 frame-support = { version = "3.0.0", default-features = false, path = "../../frame/support" }
 frame-system = { version = "3.0.0", default-features = false, path = "../../frame/system" }
 pallet-proxy = { version = "3.0.0", default-features = false, path = "../../frame/proxy" }
+pallet-timestamp = { version = "3.0.0", default-features = false, path = "../../frame/timestamp" }
 orml-traits = { version = "0.4.1-dev", default-features = false, path = "../orml-traits" }
 orml-nft = { version = "0.4.1-dev", default-features = false, path = "../orml-nft" }
-pallet-timestamp = { version = "3.0.0", default-features = false, path = "../../frame/timestamp" }
 
 [dev-dependencies]
 sp-io = { version = "3.0.0", path = "../../primitives/io" }

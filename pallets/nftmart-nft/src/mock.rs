@@ -156,8 +156,8 @@ impl orml_currencies::Config for Runtime {
 }
 
 impl orml_nft::Config for Runtime {
-	type ClassId = u32;
-	type TokenId = u64;
+	type ClassId = sp_core::constants_types::ClassId;
+	type TokenId = sp_core::constants_types::TokenId;
 	type ClassData = nftmart_nft::ClassData;
 	type TokenData = nftmart_nft::TokenData;
 }
@@ -177,7 +177,8 @@ impl nftmart_nft::Config for Runtime {
 	type ModuleId = NftModuleId;
 	type Currency = Balances;
 	type MultiCurrency = Currencies;
-	type CategoryId = u32;
+	type CategoryId = sp_core::constants_types::CategoryId;
+	type OrderId = sp_core::constants_types::OrderId;
 }
 
 use frame_system::Call as SystemCall;

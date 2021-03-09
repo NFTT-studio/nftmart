@@ -43,3 +43,6 @@ pub type TokenId = u64;
 
 /// NFT category ID type.
 pub type CategoryId = u32;
+
+/// NFT order ID type.
+pub type OrderId = u64;

@@ -8,16 +8,16 @@ use frame_support::{
 };
 use sp_std::vec::Vec;
 use frame_system::pallet_prelude::*;
-use orml_traits::{MultiReservableCurrency};
-use sp_core::constants_types::Balance;
+use orml_traits::{MultiCurrency, MultiReservableCurrency};
+use sp_core::constants_types::{Balance, CurrencyId, TokenId, ClassId, CategoryId};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::{
-	traits::{CheckedAdd,
+	traits::{CheckedAdd, Bounded,
 			 AccountIdConversion, StaticLookup, Zero, One, AtLeast32BitUnsigned},
-	ModuleId, RuntimeDebug,
+	ModuleId, RuntimeDebug, SaturatedConversion,
 };
-use sp_runtime::SaturatedConversion;
+use codec::FullCodec;
 
 mod mock;
 mod tests;
@@ -84,11 +84,32 @@ pub struct CategoryData {
 	pub nft_count: Balance,
 }
 
+#[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub struct OrderData {
+	/// currency ID.
+	#[codec(compact)]
+	pub currency_id: CurrencyId,
+	/// Price of this order.
+	#[codec(compact)]
+	pub price: Balance,
+	/// Category of this order.
+	#[codec(compact)]
+	pub category_id: CategoryId,
+	/// Class ID of the NFT.
+	#[codec(compact)]
+	pub class_id: ClassId,
+	/// Token ID of the NFT.
+	#[codec(compact)]
+	pub token_id: TokenId,
+}
+
+pub type NFTMetadata = Vec<u8>;
 pub type TokenIdOf<T> = <T as orml_nft::Config>::TokenId;
 pub type ClassIdOf<T> = <T as orml_nft::Config>::ClassId;
 pub type CategoryIdOf<T> = <T as Config>::CategoryId;
 pub type BalanceOf<T> = <<T as module::Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
-pub type NFTMetadata = Vec<u8>;
+pub type CurrencyIdOf<T> = <<T as module::Config>::MultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::CurrencyId;
 
 #[frame_support::pallet]
 pub mod module {
@@ -121,7 +142,10 @@ pub mod module {
 		type Currency: ReservableCurrency<Self::AccountId>;
 
 		/// The Category ID type
-		type CategoryId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy;
+		type CategoryId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy + MaybeSerializeDeserialize + Bounded + FullCodec;
+
+		/// The Order ID type
+		type OrderId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy + MaybeSerializeDeserialize + Bounded + FullCodec;
 	}
 
 	#[pallet::error]
@@ -173,10 +197,20 @@ pub mod module {
 	#[pallet::getter(fn next_category_id)]
 	pub type NextCategoryId<T: Config> = StorageValue<_, T::CategoryId, ValueQuery>;
 
-	/// Next available common category ID.
+	/// The storage of categories.
 	#[pallet::storage]
 	#[pallet::getter(fn category)]
 	pub type Categories<T: Config> = StorageMap<_, Identity, T::CategoryId, CategoryData>;
+
+	/// Next available order ID.
+	#[pallet::storage]
+	#[pallet::getter(fn next_order_id)]
+	pub type NextOrderId<T: Config> = StorageValue<_, T::OrderId, ValueQuery>;
+
+	/// The storage of orders.
+	#[pallet::storage]
+	#[pallet::getter(fn order)]
+	pub type Orders<T: Config> = StorageMap<_, Identity, T::OrderId, OrderData>;
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -380,6 +414,8 @@ impl<T: Config> Pallet<T> {
 		ensure!(*from == token_info.owner, Error::<T>::NoPermission);
 
 		orml_nft::Module::<T>::transfer(from, to, token)?;
+
+		// TODO: delete the corresponding nft order.
 
 		Self::deposit_event(Event::TransferredToken(from.clone(), to.clone(), token.0, token.1));
 		Ok(())

@@ -65,9 +65,9 @@ pub mod module {
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		/// The class ID type
-		type ClassId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy;
+		type ClassId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy + MaybeSerializeDeserialize + codec::FullCodec;
 		/// The token ID type
-		type TokenId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy;
+		type TokenId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy + MaybeSerializeDeserialize + codec::FullCodec;
 		/// The class properties type
 		type ClassData: Parameter + Member + MaybeSerializeDeserialize;
 		/// The token properties type

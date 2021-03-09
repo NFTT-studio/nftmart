@@ -74,36 +74,40 @@ export async function getApi(dest = 'ws://8.136.111.191:9944') {
 	const provider = new WsProvider(dest);
 
 	const types = {
+		Properties: 'u8',
+		NFTMetadata: 'Vec<u8>',
+
+		CategoryId: 'u32',
+		CategoryIdOf: 'CategoryId',
 		CategoryData: {
 			metadata: 'NFTMetadata',
 			nftCount: 'Balance',
 		},
-		CategoryId: 'u32',
-		CategoryIdOf: 'CategoryId',
-		ClassId: 'u32',
-		TokenId: 'u64',
+
 		CurrencyId: 'u32',
 		CurrencyIdOf: 'CurrencyId',
 		Amount: 'i128',
 		AmountOf: 'Amount',
-		NFTMetadata: 'Vec<u8>',
+
+		ClassId: 'u32',
 		ClassIdOf: 'ClassId',
-		TokenIdOf: 'TokenId',
 		ClassInfoOf: {
 			metadata: 'NFTMetadata',
 			totalIssuance: 'TokenId',
 			owner: 'AccountId',
 			data: 'ClassData'
 		},
-		TokenInfoOf: {metadata: 'NFTMetadata', owner: 'AccountId', data: 'TokenData'},
 		ClassData: {
 			deposit: 'Balance',
 			properties: 'Properties',
 			name: 'Vec<u8>',
 			description: 'Vec<u8>'
 		},
+
+		TokenId: 'u64',
+		TokenIdOf: 'TokenId',
+		TokenInfoOf: {metadata: 'NFTMetadata', owner: 'AccountId', data: 'TokenData'},
 		TokenData: {deposit: 'Balance'},
-		Properties: 'u8'
 	};
 
 	const api = await ApiPromise.create({provider, types});
