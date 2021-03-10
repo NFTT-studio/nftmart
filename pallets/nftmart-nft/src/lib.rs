@@ -158,6 +158,8 @@ pub mod module {
 		NoPermission,
 		/// Quantity is invalid. need >= 1
 		InvalidQuantity,
+		/// Price is invalid. need > 0
+		InvalidPrice,
 		/// Property of class don't support transfer
 		NonTransferable,
 		/// Property of class don't support burn
@@ -167,6 +169,8 @@ pub mod module {
 		CannotDestroyClass,
 		/// No available category ID
 		NoAvailableCategoryId,
+		/// No available order ID
+		NoAvailableOrderId,
 	}
 
 	#[pallet::event]
@@ -184,6 +188,12 @@ pub mod module {
 		DestroyedClass(T::AccountId, ClassIdOf<T>, T::AccountId),
 		/// Created NFT common category. \[category_id\]
 		CreatedCategory(CategoryIdOf<T>),
+		/// Created a NFT Order. \[order_id, category_id\]
+		CreatedOrder(T::OrderId, CategoryIdOf<T>),
+		/// Updated a NFT Order. \[order_id, category_id\]
+		UpdatedOrder(T::OrderId, CategoryIdOf<T>),
+		/// Removed a NFT Order. \[order_id, category_id\]
+		RemovedOrder(T::OrderId, CategoryIdOf<T>),
 	}
 
 	#[pallet::pallet]
@@ -212,8 +222,86 @@ pub mod module {
 	#[pallet::getter(fn order)]
 	pub type Orders<T: Config> = StorageMap<_, Identity, T::OrderId, OrderData<T>>;
 
+	/// Create an index mapping from token to orderId.
+	#[pallet::storage]
+	#[pallet::getter(fn token2order)]
+	pub type Token2Order<T: Config> = StorageMap<_, Blake2_128Concat, (ClassIdOf<T>,TokenIdOf<T>), T::OrderId>;
+
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		/// Create an NFT order. If the order already exists, it will update the order.
+		/// Set the price to zero to delete the order.
+		///
+		/// - `name`: class name, with len limitation.
+		#[pallet::weight(100_000)]
+		#[transactional]
+		pub fn submit_order(
+			origin: OriginFor<T>,
+			#[pallet::compact] currency_id: CurrencyId,
+			#[pallet::compact] price: Balance,
+			#[pallet::compact] category_id: CategoryIdOf<T>,
+			#[pallet::compact] class_id: ClassIdOf<T>,
+			#[pallet::compact] token_id: TokenIdOf<T>,
+		) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+			let token = (class_id, token_id);
+			// Check ownership.
+			ensure!(orml_nft::Module::<T>::is_owner(&who, token), Error::<T>::NoPermission);
+
+			let (is_new, order_id) = match Token2Order::<T>::get(token) {
+				Some(order_id) => {
+					(false, order_id)
+				},
+				None => {
+					ensure!(!price.is_zero(), Error::<T>::InvalidPrice);
+					// Get and increase order ID.
+					let id = NextOrderId::<T>::try_mutate(|id| -> Result<T::OrderId, DispatchError> {
+						let current_id = *id;
+						*id = id.checked_add(&One::one()).ok_or(Error::<T>::NoAvailableOrderId)?;
+						Ok(current_id)
+					})?;
+					(true, id)
+				}
+			};
+
+			match (is_new, price.is_zero()) {
+				(false, true) => {
+					// remove the order
+					Orders::<T>::remove(order_id);
+					Token2Order::<T>::remove(token);
+					Self::deposit_event(Event::RemovedOrder(order_id, category_id));
+				},
+				(true, true) => {
+					ensure!(false, Error::<T>::InvalidPrice);
+				},
+				(false, false) => {
+					// update the order
+					let order = OrderData {
+						currency_id,
+						price,
+						category_id,
+						class_id,
+						token_id,
+					};
+					Orders::<T>::insert(order_id, order);
+					Self::deposit_event(Event::UpdatedOrder(order_id, category_id));
+				},
+				(true, false) => {
+					let order = OrderData {
+						currency_id,
+						price,
+						category_id,
+						class_id,
+						token_id,
+					};
+					Orders::<T>::insert(order_id, order);
+					Token2Order::<T>::insert(token, order_id);
+					Self::deposit_event(Event::CreatedOrder(order_id, category_id));
+				},
+			}
+			Ok(().into())
+		}
+
 		/// Create a common category for trading NFT.
 		/// A Selling NFT should belong to a category.
 		///
@@ -221,7 +309,7 @@ pub mod module {
 		#[pallet::weight(100_000)]
 		#[transactional]
 		pub fn create_category(origin: OriginFor<T>, metadata: NFTMetadata) -> DispatchResultWithPostInfo {
-			let _ = ensure_root(origin)?;
+			ensure_root(origin)?;
 
 			let category_id = NextCategoryId::<T>::try_mutate(|id| -> Result<T::CategoryId, DispatchError> {
 				let current_id = *id;
