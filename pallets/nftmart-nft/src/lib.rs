@@ -9,7 +9,7 @@ use frame_support::{
 use sp_std::vec::Vec;
 use frame_system::pallet_prelude::*;
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
-use sp_core::constants_types::{Balance, CurrencyId, TokenId, ClassId, CategoryId};
+use sp_core::constants_types::{Balance, CurrencyId};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::{
@@ -86,7 +86,7 @@ pub struct CategoryData {
 
 #[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub struct OrderData {
+pub struct OrderData<T: Config> {
 	/// currency ID.
 	#[codec(compact)]
 	pub currency_id: CurrencyId,
@@ -95,13 +95,13 @@ pub struct OrderData {
 	pub price: Balance,
 	/// Category of this order.
 	#[codec(compact)]
-	pub category_id: CategoryId,
+	pub category_id: CategoryIdOf<T>,
 	/// Class ID of the NFT.
 	#[codec(compact)]
-	pub class_id: ClassId,
+	pub class_id: ClassIdOf<T>,
 	/// Token ID of the NFT.
 	#[codec(compact)]
-	pub token_id: TokenId,
+	pub token_id: TokenIdOf<T>,
 }
 
 pub type NFTMetadata = Vec<u8>;
@@ -210,7 +210,7 @@ pub mod module {
 	/// The storage of orders.
 	#[pallet::storage]
 	#[pallet::getter(fn order)]
-	pub type Orders<T: Config> = StorageMap<_, Identity, T::OrderId, OrderData>;
+	pub type Orders<T: Config> = StorageMap<_, Identity, T::OrderId, OrderData<T>>;
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {

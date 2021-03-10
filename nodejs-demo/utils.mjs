@@ -98,7 +98,7 @@ export async function getApi(dest = 'ws://8.136.111.191:9944') {
 			data: 'ClassData'
 		},
 		ClassData: {
-			deposit: 'Balance',
+			deposit: 'Compact<Balance>',
 			properties: 'Properties',
 			name: 'Vec<u8>',
 			description: 'Vec<u8>'
@@ -107,7 +107,7 @@ export async function getApi(dest = 'ws://8.136.111.191:9944') {
 		TokenId: 'u64',
 		TokenIdOf: 'TokenId',
 		TokenInfoOf: {metadata: 'NFTMetadata', owner: 'AccountId', data: 'TokenData'},
-		TokenData: {deposit: 'Balance'},
+		TokenData: {deposit: 'Compact<Balance>'},
 	};
 
 	const api = await ApiPromise.create({provider, types});

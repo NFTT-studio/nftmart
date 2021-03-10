@@ -1,4 +1,4 @@
-import {getApi, getModules, waitTx} from "./utils.mjs";
+import {getApi, getModules, waitTx, hexToUtf8} from "./utils.mjs";
 import {Keyring} from "@polkadot/api";
 import {bnToBn} from "@polkadot/util";
 import {Command} from "commander";
@@ -193,6 +193,7 @@ async function demo_query_class(keyring, account) {
 		key = key.buffer.slice(len - 4, len);
 		const classID = new Uint32Array(key)[0];
 		let clazz = c[1].toJSON();
+		clazz.metadata = hexToUtf8(clazz.metadata.slice(2));
 		clazz.classID = classID;
 		clazz.adminList = await api.query.proxy.proxies(clazz.owner);
 		for (const a of clazz.adminList[0]) {
@@ -343,6 +344,7 @@ async function demo_show_class_info() {
 		key = key.buffer.slice(len - 4, len);
 		const classID = new Uint32Array(key)[0];
 		let clazz = c[1].toJSON();
+		clazz.metadata = hexToUtf8(clazz.metadata.slice(2));
 		clazz.classID = classID;
 		clazz.adminList = await api.query.proxy.proxies(clazz.owner);
 		console.log("%s", JSON.stringify(clazz));
