@@ -23,6 +23,7 @@ mod mock;
 mod tests;
 
 pub use module::*;
+use orml_nft::TokenInfoOf;
 
 #[repr(u8)]
 #[derive(Encode, Decode, Clone, Copy, BitFlags, RuntimeDebug, PartialEq, Eq)]
@@ -150,6 +151,8 @@ pub mod module {
 
 	#[pallet::error]
 	pub enum Error<T> {
+		/// OrderId not found
+		OrderIdNotFound,
 		/// ClassId not found
 		ClassIdNotFound,
 		/// TokenId not found
@@ -171,6 +174,8 @@ pub mod module {
 		NoAvailableCategoryId,
 		/// No available order ID
 		NoAvailableOrderId,
+		/// Order price too high.
+		CanNotAfford,
 	}
 
 	#[pallet::event]
@@ -194,6 +199,8 @@ pub mod module {
 		UpdatedOrder(T::OrderId, CategoryIdOf<T>),
 		/// Removed a NFT Order. \[order_id\]
 		RemovedOrder(T::OrderId),
+		/// An order had been taken. \[order_id, price\]
+		TakenOrder(T::OrderId, Balance),
 	}
 
 	#[pallet::pallet]
@@ -229,10 +236,39 @@ pub mod module {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		/// Take an NFT order.
+		///
+		/// - `order_id`: order ID.
+		/// - `max_price`: The max price to take an order. Usually it is set to the price of the target order.
+		#[pallet::weight(100_000)]
+		#[transactional]
+		pub fn take_order(
+			origin: OriginFor<T>,
+			#[pallet::compact] order_id: T::OrderId,
+			#[pallet::compact] max_price: Balance,
+		) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+			let order = Orders::<T>::get(order_id).ok_or(Error::<T>::OrderIdNotFound)?;
+			let token_info = orml_nft::Module::<T>::tokens(order.class_id, order.token_id).ok_or(Error::<T>::TokenIdNotFound)?;
+			if who == token_info.owner {
+				return Ok(().into());
+			}
+			ensure!(max_price >= order.price, Error::<T>::CanNotAfford);
+			Self::do_transfer(&token_info.owner, &who, order.class_id, order.token_id, Some(&token_info))?;
+
+			T::MultiCurrency::transfer(order.currency_id.saturated_into(), &who, &token_info.owner, order.price)?;
+			Self::deposit_event(Event::TakenOrder(order_id, order.price));
+			Ok(().into())
+		}
+
 		/// Create an NFT order. If the order already exists, it will update the order.
 		/// Set the price to zero to delete the order.
 		///
-		/// - `name`: class name, with len limitation.
+		/// - `currency_id`: currency id
+		/// - `price`: price
+		/// - `category_id`: category id
+		/// - `class_id`: class id
+		/// - `token_id`: token id
 		#[pallet::weight(100_000)]
 		#[transactional]
 		pub fn submit_order(
@@ -302,7 +338,7 @@ pub mod module {
 		/// Create a common category for trading NFT.
 		/// A Selling NFT should belong to a category.
 		///
-		/// - `name`: class name, with len limitation.
+		/// - `metadata`: metadata
 		#[pallet::weight(100_000)]
 		#[transactional]
 		pub fn create_category(origin: OriginFor<T>, metadata: NFTMetadata) -> DispatchResultWithPostInfo {
@@ -399,7 +435,8 @@ pub mod module {
 		/// Transfer NFT token to another account
 		///
 		/// - `to`: the token owner's account
-		/// - `token`: (class_id, token_id)
+		/// - `class_id`: class id
+		/// - `token_id`: token id
 		#[pallet::weight(100_000)]
 		#[transactional]
 		pub fn transfer(
@@ -410,13 +447,14 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			let to = T::Lookup::lookup(to)?;
-			Self::do_transfer(&who, &to, class_id, token_id)?;
+			Self::do_transfer(&who, &to, class_id, token_id, None)?;
 			Ok(().into())
 		}
 
 		/// Burn NFT token
 		///
-		/// - `token`: (class_id, token_id)
+		/// - `class_id`: class id
+		/// - `token_id`: token id
 		#[pallet::weight(100_000)]
 		#[transactional]
 		pub fn burn(
@@ -487,7 +525,7 @@ pub mod module {
 impl<T: Config> Pallet<T> {
 	/// Ensured atomic.
 	#[transactional]
-	fn do_transfer(from: &T::AccountId, to: &T::AccountId, class_id: ClassIdOf<T>, token_id: TokenIdOf<T>) -> DispatchResult {
+	fn do_transfer(from: &T::AccountId, to: &T::AccountId, class_id: ClassIdOf<T>, token_id: TokenIdOf<T>, token_info: Option<&TokenInfoOf<T>>) -> DispatchResult {
 		let class_info = orml_nft::Module::<T>::classes(class_id).ok_or(Error::<T>::ClassIdNotFound)?;
 		let data = class_info.data;
 		ensure!(
@@ -495,8 +533,12 @@ impl<T: Config> Pallet<T> {
 			Error::<T>::NonTransferable
 		);
 
-		let token_info = orml_nft::Module::<T>::tokens(class_id, token_id).ok_or(Error::<T>::TokenIdNotFound)?;
-		ensure!(*from == token_info.owner, Error::<T>::NoPermission);
+		let token_owner = match token_info {
+			Some(token_info)=> token_info.owner.clone(),
+			None => orml_nft::Module::<T>::tokens(class_id, token_id).ok_or(Error::<T>::TokenIdNotFound)?.owner
+		};
+
+		ensure!(*from == token_owner, Error::<T>::NoPermission);
 
 		if from == to {
 			return Ok(());

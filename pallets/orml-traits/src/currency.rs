@@ -2,7 +2,7 @@ use crate::arithmetic;
 use codec::{Codec, FullCodec};
 pub use frame_support::traits::{BalanceStatus, LockIdentifier};
 use sp_runtime::{
-	traits::{AtLeast32BitUnsigned, MaybeSerializeDeserialize},
+	traits::{AtLeast32BitUnsigned, MaybeSerializeDeserialize, Bounded},
 	DispatchError, DispatchResult,
 };
 use sp_std::{
@@ -15,7 +15,7 @@ use sp_std::{
 /// Abstraction over a fungible multi-currency system.
 pub trait MultiCurrency<AccountId> {
 	/// The currency identifier.
-	type CurrencyId: FullCodec + Eq + PartialEq + Copy + MaybeSerializeDeserialize + Debug;
+	type CurrencyId: FullCodec + Eq + PartialEq + Copy + MaybeSerializeDeserialize + Debug + Bounded + AtLeast32BitUnsigned;
 
 	/// The balance of an account.
 	type Balance: AtLeast32BitUnsigned + FullCodec + Copy + MaybeSerializeDeserialize + Debug + Default;
