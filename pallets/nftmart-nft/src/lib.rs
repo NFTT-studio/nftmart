@@ -192,8 +192,8 @@ pub mod module {
 		CreatedOrder(T::OrderId, CategoryIdOf<T>),
 		/// Updated a NFT Order. \[order_id, category_id\]
 		UpdatedOrder(T::OrderId, CategoryIdOf<T>),
-		/// Removed a NFT Order. \[order_id, category_id\]
-		RemovedOrder(T::OrderId, CategoryIdOf<T>),
+		/// Removed a NFT Order. \[order_id\]
+		RemovedOrder(T::OrderId),
 	}
 
 	#[pallet::pallet]
@@ -266,10 +266,7 @@ pub mod module {
 
 			match (is_new, price.is_zero()) {
 				(false, true) => {
-					// remove the order
-					Orders::<T>::remove(order_id);
-					Token2Order::<T>::remove(token);
-					Self::deposit_event(Event::RemovedOrder(order_id, category_id));
+					Self::do_remove_order(order_id, class_id, token_id);
 				},
 				(true, true) => {
 					ensure!(false, Error::<T>::InvalidPrice);
@@ -413,7 +410,7 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			let to = T::Lookup::lookup(to)?;
-			Self::do_transfer(&who, &to, (class_id, token_id))?;
+			Self::do_transfer(&who, &to, class_id, token_id)?;
 			Ok(().into())
 		}
 
@@ -490,23 +487,41 @@ pub mod module {
 impl<T: Config> Pallet<T> {
 	/// Ensured atomic.
 	#[transactional]
-	fn do_transfer(from: &T::AccountId, to: &T::AccountId, token: (ClassIdOf<T>, TokenIdOf<T>)) -> DispatchResult {
-		let class_info = orml_nft::Module::<T>::classes(token.0).ok_or(Error::<T>::ClassIdNotFound)?;
+	fn do_transfer(from: &T::AccountId, to: &T::AccountId, class_id: ClassIdOf<T>, token_id: TokenIdOf<T>) -> DispatchResult {
+		let class_info = orml_nft::Module::<T>::classes(class_id).ok_or(Error::<T>::ClassIdNotFound)?;
 		let data = class_info.data;
 		ensure!(
 			data.properties.0.contains(ClassProperty::Transferable),
 			Error::<T>::NonTransferable
 		);
 
-		let token_info = orml_nft::Module::<T>::tokens(token.0, token.1).ok_or(Error::<T>::TokenIdNotFound)?;
+		let token_info = orml_nft::Module::<T>::tokens(class_id, token_id).ok_or(Error::<T>::TokenIdNotFound)?;
 		ensure!(*from == token_info.owner, Error::<T>::NoPermission);
 
-		orml_nft::Module::<T>::transfer(from, to, token)?;
+		if from == to {
+			return Ok(());
+		}
 
-		// TODO: delete the corresponding nft order.
+		orml_nft::Module::<T>::transfer(from, to, (class_id, token_id))?;
 
-		Self::deposit_event(Event::TransferredToken(from.clone(), to.clone(), token.0, token.1));
+		Self::do_remove_order_by_token(class_id, token_id);
+
+		Self::deposit_event(Event::TransferredToken(from.clone(), to.clone(), class_id, token_id));
 		Ok(())
+	}
+
+	/// Delete the nft order by class_id & token_id.
+	fn do_remove_order_by_token(class_id: ClassIdOf<T>, token_id: TokenIdOf<T>) {
+		if let Some(order_id) = Token2Order::<T>::get((class_id, token_id)) {
+			Self::do_remove_order(order_id, class_id, token_id);
+		}
+	}
+
+	/// remove an order
+	fn do_remove_order(order_id: T::OrderId, class_id: ClassIdOf<T>, token_id: TokenIdOf<T>) {
+		Orders::<T>::remove(order_id);
+		Token2Order::<T>::remove((class_id, token_id));
+		Self::deposit_event(Event::RemovedOrder(order_id));
 	}
 
 	pub fn add_class_admin_deposit(admin_count: u32) -> Balance {
