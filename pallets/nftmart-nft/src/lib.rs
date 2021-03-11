@@ -212,7 +212,7 @@ pub mod module {
 		RemovedOrder(ClassIdOf<T>, TokenIdOf<T>, T::AccountId, Balance),
 		/// An order had been taken. \[class_id, token_id, order_owner\]
 		TakenOrder(ClassIdOf<T>, TokenIdOf<T>, T::AccountId),
-		/// An order had been taken. \[class_id, token_id, order_owner, price\]
+		/// Price updated \[class_id, token_id, order_owner, price\]
 		UpdatedOrderPrice(ClassIdOf<T>, TokenIdOf<T>, T::AccountId, Balance),
 	}
 
@@ -279,7 +279,7 @@ pub mod module {
 				},
 				(false, true) => {
 					ensure!(price <= order.price, Error::<T>::PriceTooLow);
-					// `who`/`token_info.owner` will accept order submitting by `order_owner`
+					// `who`/`token_info.owner` will accept the order submitting by `order_owner`
 					Self::delete_order(class_id, token_id, &order_owner);
 					Self::delete_order(class_id, token_id, &who);
 					// `order_owner` transfers this NFT to `who`
@@ -289,7 +289,7 @@ pub mod module {
 					Self::deposit_event(Event::TakenOrder(class_id, token_id, order_owner));
 				},
 				_ => {
-					ensure!(false, Error::<T>::NoPermission);
+					return Err(Error::<T>::NoPermission.into());
 				},
 			}
 			Ok(().into())
@@ -522,6 +522,7 @@ pub mod module {
 			let token_info = orml_nft::Module::<T>::tokens(class_id, token_id).ok_or(Error::<T>::TokenIdNotFound)?;
 			ensure!(who == token_info.owner, Error::<T>::NoPermission);
 
+			ensure!(Self::order((class_id, token_id), &who).is_none(), Error::<T>::OrderExists);
 			orml_nft::Module::<T>::burn(&who, (class_id, token_id))?;
 			let owner: T::AccountId = T::ModuleId::get().into_sub_account(class_id);
 			let data = token_info.data;
@@ -579,6 +580,8 @@ impl<T: Config> Pallet<T> {
 			let deposit = <T as Config>::Currency::unreserve(&who, deposit.saturated_into());
 			Order::<T>::remove((class_id, token_id), who);
 			Self::deposit_event(Event::RemovedOrder(class_id, token_id, who.clone(), deposit.saturated_into()));
+
+			// TODO: update category.
 		}
 	}
 
