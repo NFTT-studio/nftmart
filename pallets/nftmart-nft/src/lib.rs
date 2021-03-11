@@ -9,7 +9,7 @@ use frame_support::{
 use sp_std::vec::Vec;
 use frame_system::pallet_prelude::*;
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
-use sp_core::constants_types::{Balance, CurrencyId};
+use sp_core::constants_types::Balance;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::{
@@ -315,7 +315,10 @@ pub mod module {
 			#[pallet::compact] deadline: BlockNumberOf<T>,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
+
+			let _ = orml_nft::Module::<T>::tokens(class_id, token_id).ok_or(Error::<T>::TokenIdNotFound)?;
 			// ensure!(orml_nft::Module::<T>::is_owner(&who, (class_id, token_id)), Error::<T>::NoPermission);
+
 			ensure!(Self::order((class_id, token_id), &who).is_none(), Error::<T>::DuplicatedOrder);
 			ensure!(<frame_system::Pallet<T>>::block_number() < deadline, Error::<T>::InvalidDeadline);
 
@@ -333,6 +336,9 @@ pub mod module {
 				token_id,
 			};
 			Order::<T>::insert((class_id, token_id), &who, order);
+
+			// TODO: update category.
+			// Categories::<T>::try_mu
 
 			Self::deposit_event(Event::CreatedOrder(class_id, token_id, who));
 			Ok(().into())

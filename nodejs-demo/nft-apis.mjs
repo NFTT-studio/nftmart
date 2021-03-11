@@ -248,7 +248,7 @@ async function show_all_nfts(api, classID) {
 			let nft = await api.query.ormlNft.tokens(classID, i);
 			if (nft.isSome) {
 				nft = nft.unwrap();
-				console.log(i, nft.toString());
+				console.log(classID, i, nft.toString());
 				tokenCount++;
 			}
 		}

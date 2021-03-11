@@ -30,7 +30,7 @@ pub type CurrencyId = u32;
 pub type Amount = i128;
 
 /// Native currency
-pub const NATIVE_CURRENCY_ID: CurrencyId = 1;
+pub const NATIVE_CURRENCY_ID: CurrencyId = 0;
 
 /// Type used for expressing timestamp.
 pub type Moment = u64;
