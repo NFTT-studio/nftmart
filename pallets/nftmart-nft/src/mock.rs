@@ -178,7 +178,6 @@ impl nftmart_nft::Config for Runtime {
 	type Currency = Balances;
 	type MultiCurrency = Currencies;
 	type CategoryId = sp_core::constants_types::CategoryId;
-	type OrderId = sp_core::constants_types::OrderId;
 }
 
 use frame_system::Call as SystemCall;

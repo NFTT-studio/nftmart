@@ -150,9 +150,6 @@ pub mod module {
 
 		/// The Category ID type
 		type CategoryId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy + MaybeSerializeDeserialize + Bounded + FullCodec;
-
-		/// The Order ID type
-		type OrderId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy + MaybeSerializeDeserialize + Bounded + FullCodec;
 	}
 
 	#[pallet::error]
@@ -190,6 +187,8 @@ pub mod module {
 		TakeOwnOrder,
 		/// Cannot transfer NFT while order existing.
 		OrderExists,
+		/// Order expired
+		OrderExpired,
 	}
 
 	#[pallet::event]
@@ -260,6 +259,8 @@ pub mod module {
 				ensure!(order.is_some(), Error::<T>::OrderNotFound);
 				order.unwrap()
 			};
+
+			ensure!(<frame_system::Pallet<T>>::block_number() <= order.deadline, Error::<T>::OrderExpired);
 
 			let token_info = orml_nft::Module::<T>::tokens(class_id, token_id).ok_or(Error::<T>::TokenIdNotFound)?;
 			match (order_owner == token_info.owner, token_info.owner == who) {
@@ -349,12 +350,7 @@ pub mod module {
 			#[pallet::compact] token_id: TokenIdOf<T>,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
-			let order = Self::order((class_id, token_id), &who);
-			ensure!(order.is_some(), Error::<T>::OrderNotFound);
-			let deposit = order.unwrap().deposit;
-			let deposit = <T as Config>::Currency::unreserve(&who, deposit.saturated_into());
-			Order::<T>::remove((class_id, token_id), &who);
-			Self::deposit_event(Event::RemovedOrder(class_id, token_id, who, deposit.saturated_into()));
+			Self::delete_order(class_id, token_id, &who);
 			Ok(().into())
 		}
 
@@ -550,8 +546,9 @@ impl<T: Config> Pallet<T> {
 	fn delete_order(class_id: ClassIdOf<T>, token_id: TokenIdOf<T>, who: &T::AccountId) {
 		if let Some(order) = Self::order((class_id, token_id), who) {
 			let deposit = order.deposit;
-			let _ = <T as Config>::Currency::unreserve(&who, deposit.saturated_into());
+			let deposit = <T as Config>::Currency::unreserve(&who, deposit.saturated_into());
 			Order::<T>::remove((class_id, token_id), who);
+			Self::deposit_event(Event::RemovedOrder(class_id, token_id, who.clone(), deposit.saturated_into()));
 		}
 	}
 
