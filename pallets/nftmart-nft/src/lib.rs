@@ -212,6 +212,8 @@ pub mod module {
 		RemovedOrder(ClassIdOf<T>, TokenIdOf<T>, T::AccountId, Balance),
 		/// An order had been taken. \[class_id, token_id, order_owner\]
 		TakenOrder(ClassIdOf<T>, TokenIdOf<T>, T::AccountId),
+		/// An order had been taken. \[class_id, token_id, order_owner, price\]
+		UpdatedOrderPrice(ClassIdOf<T>, TokenIdOf<T>, T::AccountId, Balance),
 	}
 
 	#[pallet::pallet]
@@ -357,6 +359,28 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			Self::delete_order(class_id, token_id, &who);
+			Ok(().into())
+		}
+
+		/// Update order price
+		///
+		/// - `class_id`: class id
+		/// - `token_id`: token id
+		/// - `price`: price
+		#[pallet::weight(100_000)]
+		#[transactional]
+		pub fn update_order_price(
+			origin: OriginFor<T>,
+			#[pallet::compact] class_id: ClassIdOf<T>,
+			#[pallet::compact] token_id: TokenIdOf<T>,
+			#[pallet::compact] price: Balance,
+		) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+			if let Some(mut order) = Self::order((class_id, token_id), &who) {
+				order.price = price;
+				Order::<T>::insert((class_id, token_id), &who, order);
+				Self::deposit_event(Event::UpdatedOrderPrice(class_id, token_id, who, price));
+			}
 			Ok(().into())
 		}
 
