@@ -89,7 +89,58 @@ async function main() {
 	program.command('show-orders').action(async () => {
 		await demo_show_orders(keyring);
 	});
+	program.command('create-order <classID> <tokenID> <account>').action(async (classID, tokenID, account) => {
+		await demo_create_order(keyring, classID, tokenID, account);
+	});
+	program.command('take-order <classID> <tokenID> <orderOwner> <account>').action(async (classID, tokenID, orderOwner, account) => {
+		await demo_take_order(keyring, classID, tokenID, orderOwner, account);
+	});
 	program.parse();
+}
+
+async function demo_take_order(keyring, classID, tokenID, orderOwner, account) {
+	let api = await getApi();
+	let moduleMetadata = await getModules(api);
+	account = keyring.addFromUri(account);
+	orderOwner = keyring.addFromUri(orderOwner).address;
+	let order = await api.query.nftmart.orders([classID, tokenID], orderOwner);
+	if(order.isSome){
+		order = order.unwrap();
+		const call =  api.tx.nftmart.takeOrder(classID, tokenID, order.price, orderOwner);
+		const feeInfo = await call.paymentInfo(account);
+		console.log("The fee of the call: %s.", feeInfo.partialFee / unit);
+		let [a, b] = waitTx(moduleMetadata);
+		await call.signAndSend(account, a);
+		await b();
+	}
+	process.exit();
+}
+
+const NativeCurrencyID = 0;
+
+async function demo_create_order(keyring, classID, tokenID, account) {
+	let api = await getApi();
+	let moduleMetadata = await getModules(api);
+	account = keyring.addFromUri(account);
+	const price = unit.mul(bnToBn('20'));
+	const deposit = unit.mul(bnToBn('5'));
+	const categoryId = 0;
+	const currentBlockNumber = bnToBn(await api.query.system.number());
+
+	const call = api.tx.nftmart.submitOrder(
+		NativeCurrencyID,
+		price,
+		categoryId,
+		classID, tokenID,
+		deposit,
+		currentBlockNumber.add(bnToBn('1000')),
+	);
+	const feeInfo = await call.paymentInfo(account);
+	console.log("The fee of the call: %s.", feeInfo.partialFee / unit);
+	let [a, b] = waitTx(moduleMetadata);
+	await call.signAndSend(account, a);
+	await b();
+	process.exit();
 }
 
 async function demo_show_orders(keyring) {
