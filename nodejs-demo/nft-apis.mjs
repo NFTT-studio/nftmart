@@ -86,7 +86,22 @@ async function main() {
 	program.command('show-categories').action(async () => {
 		await demo_show_categories();
 	});
+	program.command('show-orders').action(async () => {
+		await demo_show_orders();
+	});
 	program.parse();
+}
+
+async function demo_show_orders() {
+	let api = await getApi();
+	let orderCount = 0;
+	const allOrders = await api.query.nftmart.orders.entries();
+	for (let order of allOrders) {
+		console.log(order);
+		orderCount++;
+	}
+	console.log(`orderCount is ${orderCount}.`);
+	process.exit();
 }
 
 async function demo_show_categories() {

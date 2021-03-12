@@ -206,6 +206,8 @@ pub mod module {
 		DestroyedClass(T::AccountId, ClassIdOf<T>, T::AccountId),
 		/// Created NFT common category. \[category_id\]
 		CreatedCategory(CategoryIdOf<T>),
+		/// Updated NFT common category. \[category_id\]
+		UpdatedCategory(CategoryIdOf<T>),
 		/// Created a NFT Order. \[class_id, token_id, order_owner\]
 		CreatedOrder(ClassIdOf<T>, TokenIdOf<T>, T::AccountId),
 		/// Removed a NFT Order. \[class_id, token_id, order_owner, unreserved\]
@@ -229,13 +231,13 @@ pub mod module {
 
 	/// The storage of categories.
 	#[pallet::storage]
-	#[pallet::getter(fn category)]
+	#[pallet::getter(fn categories)]
 	pub type Categories<T: Config> = StorageMap<_, Identity, T::CategoryId, CategoryData>;
 
 	/// An index mapping from token to order.
 	#[pallet::storage]
-	#[pallet::getter(fn order)]
-	pub type Order<T: Config> = StorageDoubleMap<_, Blake2_128Concat, (ClassIdOf<T>,TokenIdOf<T>), Blake2_128Concat, T::AccountId, OrderData<T>>;
+	#[pallet::getter(fn orders)]
+	pub type Orders<T: Config> = StorageDoubleMap<_, Blake2_128Concat, (ClassIdOf<T>,TokenIdOf<T>), Blake2_128Concat, T::AccountId, OrderData<T>>;
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -257,7 +259,7 @@ pub mod module {
 			ensure!(order_owner != who, Error::<T>::TakeOwnOrder);
 
 			let order: OrderData<T> = {
-				let order = Self::order((class_id, token_id), &order_owner);
+				let order = Self::orders((class_id, token_id), &order_owner);
 				ensure!(order.is_some(), Error::<T>::OrderNotFound);
 				order.unwrap()
 			};
@@ -321,7 +323,7 @@ pub mod module {
 			let _ = orml_nft::Module::<T>::tokens(class_id, token_id).ok_or(Error::<T>::TokenIdNotFound)?;
 			// ensure!(orml_nft::Module::<T>::is_owner(&who, (class_id, token_id)), Error::<T>::NoPermission);
 
-			ensure!(Self::order((class_id, token_id), &who).is_none(), Error::<T>::DuplicatedOrder);
+			ensure!(Self::orders((class_id, token_id), &who).is_none(), Error::<T>::DuplicatedOrder);
 			ensure!(<frame_system::Pallet<T>>::block_number() < deadline, Error::<T>::InvalidDeadline);
 
 			// TODO: make it configurable.
@@ -337,7 +339,7 @@ pub mod module {
 				class_id,
 				token_id,
 			};
-			Order::<T>::insert((class_id, token_id), &who, order);
+			Orders::<T>::insert((class_id, token_id), &who, order);
 
 			// TODO: update category.
 			// Categories::<T>::try_mu
@@ -376,9 +378,9 @@ pub mod module {
 			#[pallet::compact] price: Balance,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
-			if let Some(mut order) = Self::order((class_id, token_id), &who) {
+			if let Some(mut order) = Self::orders((class_id, token_id), &who) {
 				order.price = price;
-				Order::<T>::insert((class_id, token_id), &who, order);
+				Orders::<T>::insert((class_id, token_id), &who, order);
 				Self::deposit_event(Event::UpdatedOrderPrice(class_id, token_id, who, price));
 			}
 			Ok(().into())
@@ -406,6 +408,25 @@ pub mod module {
 			Categories::<T>::insert(category_id, info);
 
 			Self::deposit_event(Event::CreatedCategory(category_id));
+			Ok(().into())
+		}
+
+		/// Update a common category.
+		///
+		/// - `category_id`: category ID
+		/// - `metadata`: metadata
+		#[pallet::weight(100_000)]
+		#[transactional]
+		pub fn update_category(origin: OriginFor<T>, category_id: CategoryIdOf<T>, metadata: NFTMetadata) -> DispatchResultWithPostInfo {
+			ensure_root(origin)?;
+			if let Some(category) = Self::categories(category_id) {
+				let info = CategoryData {
+					metadata,
+					nft_count: category.nft_count,
+				};
+				Categories::<T>::insert(category_id, info);
+				Self::deposit_event(Event::UpdatedCategory(category_id));
+			}
 			Ok(().into())
 		}
 
@@ -522,7 +543,7 @@ pub mod module {
 			let token_info = orml_nft::Module::<T>::tokens(class_id, token_id).ok_or(Error::<T>::TokenIdNotFound)?;
 			ensure!(who == token_info.owner, Error::<T>::NoPermission);
 
-			ensure!(Self::order((class_id, token_id), &who).is_none(), Error::<T>::OrderExists);
+			ensure!(Self::orders((class_id, token_id), &who).is_none(), Error::<T>::OrderExists);
 			orml_nft::Module::<T>::burn(&who, (class_id, token_id))?;
 			let owner: T::AccountId = T::ModuleId::get().into_sub_account(class_id);
 			let data = token_info.data;
@@ -575,10 +596,10 @@ pub mod module {
 impl<T: Config> Pallet<T> {
 
 	fn delete_order(class_id: ClassIdOf<T>, token_id: TokenIdOf<T>, who: &T::AccountId) {
-		if let Some(order) = Self::order((class_id, token_id), who) {
+		if let Some(order) = Self::orders((class_id, token_id), who) {
 			let deposit = order.deposit;
 			let deposit = <T as Config>::Currency::unreserve(&who, deposit.saturated_into());
-			Order::<T>::remove((class_id, token_id), who);
+			Orders::<T>::remove((class_id, token_id), who);
 			Self::deposit_event(Event::RemovedOrder(class_id, token_id, who.clone(), deposit.saturated_into()));
 
 			// TODO: update category.
@@ -598,7 +619,7 @@ impl<T: Config> Pallet<T> {
 		let token_info = orml_nft::Module::<T>::tokens(class_id, token_id).ok_or(Error::<T>::TokenIdNotFound)?;
 		ensure!(*from == token_info.owner, Error::<T>::NoPermission);
 
-		ensure!(Self::order((class_id, token_id), from).is_none(), Error::<T>::OrderExists);
+		ensure!(Self::orders((class_id, token_id), from).is_none(), Error::<T>::OrderExists);
 
 		orml_nft::Module::<T>::transfer(from, to, (class_id, token_id))?;
 
