@@ -84,9 +84,7 @@ export async function getApi(dest = 'ws://8.136.111.191:9944') {
 			price: 'Compact<Balance>',
 			deposit: 'Compact<Balance>',
 			deadline: 'Compact<BlockNumberOf>',
-			categoryId: 'Compact<CategoryIdOf>',
-			classId: 'Compact<ClassIdOf>',
-			tokenId: 'Compact<TokenIdOf>',
+			categoryId: 'Compact<CategoryIdOf>'
 		},
 
 		CategoryId: 'u32',

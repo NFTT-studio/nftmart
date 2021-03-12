@@ -87,17 +87,38 @@ async function main() {
 		await demo_show_categories();
 	});
 	program.command('show-orders').action(async () => {
-		await demo_show_orders();
+		await demo_show_orders(keyring);
 	});
 	program.parse();
 }
 
-async function demo_show_orders() {
+async function demo_show_orders(keyring) {
 	let api = await getApi();
 	let orderCount = 0;
 	const allOrders = await api.query.nftmart.orders.entries();
 	for (let order of allOrders) {
-		console.log(order);
+		let key = order[0];
+		let keyLen = key.length;
+		const orderOwner = keyring.encodeAddress(new Uint8Array(key.buffer.slice(keyLen - 32, keyLen)));
+
+		const classID = new Uint32Array(key.slice(keyLen - 4 - 8 - 32 - 16, keyLen - 8 - 32 - 16))[0];
+		const tokenIDRaw = new Uint32Array(key.slice(keyLen - 8 - 32 - 16, keyLen - 32 - 16));
+
+		const tokenIDLow32 = tokenIDRaw[0];
+		const tokenIDHigh32 = tokenIDRaw[1];
+		const tokenID = u32ToU64(tokenIDLow32, tokenIDHigh32);
+
+		let nft = await api.query.ormlNft.tokens(classID, tokenID);
+		if (nft.isSome) {
+			nft = nft.unwrap();
+		}
+
+		let data = order[1].toHuman();
+		data.orderOwner = orderOwner;
+		data.classID = classID;
+		data.tokenID = tokenID;
+		data.nft = nft;
+		console.log("%s", JSON.stringify(data));
 		orderCount++;
 	}
 	console.log(`orderCount is ${orderCount}.`);
@@ -220,12 +241,12 @@ async function demo_query_class(keyring, account) {
 	process.exit();
 }
 
-async function demo_query_nft(keyring, account) {
-	function U32ToU64(tokenIDLow32, tokenIDHigh32) {
-		// TODO: convert [tokenIDLow32, tokenIDHigh32] into Uint64.
-		return tokenIDLow32;
-	}
+function u32ToU64(tokenIDLow32, tokenIDHigh32) {
+	// TODO: convert [tokenIDLow32, tokenIDHigh32] into Uint64.
+	return tokenIDLow32;
+}
 
+async function demo_query_nft(keyring, account) {
 	let api = await getApi();
 	const address = keyring.addFromUri(account).address;
 	const nfts = await api.query.ormlNft.tokensByOwner.entries(address);
@@ -238,7 +259,7 @@ async function demo_query_nft(keyring, account) {
 
 		const tokenIDLow32 = tokenIDRaw[0];
 		const tokenIDHigh32 = tokenIDRaw[1];
-		const tokenID = U32ToU64(tokenIDLow32, tokenIDHigh32);
+		const tokenID = u32ToU64(tokenIDLow32, tokenIDHigh32);
 
 		let nft = await api.query.ormlNft.tokens(classID, tokenID);
 		if (nft.isSome) {

@@ -102,12 +102,6 @@ pub struct OrderData<T: Config> {
 	/// Category of this order.
 	#[codec(compact)]
 	pub category_id: CategoryIdOf<T>,
-	/// Class ID of the NFT.
-	#[codec(compact)]
-	pub class_id: ClassIdOf<T>,
-	/// Token ID of the NFT.
-	#[codec(compact)]
-	pub token_id: TokenIdOf<T>,
 }
 
 pub type NFTMetadata = Vec<u8>;
@@ -237,7 +231,7 @@ pub mod module {
 	/// An index mapping from token to order.
 	#[pallet::storage]
 	#[pallet::getter(fn orders)]
-	pub type Orders<T: Config> = StorageDoubleMap<_, Blake2_128Concat, (ClassIdOf<T>,TokenIdOf<T>), Blake2_128Concat, T::AccountId, OrderData<T>>;
+	pub type Orders<T: Config> = StorageDoubleMap<_, Blake2_128Concat, (ClassIdOf<T>, TokenIdOf<T>), Blake2_128Concat, T::AccountId, OrderData<T>>;
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -274,7 +268,7 @@ pub mod module {
 					Self::delete_order(class_id, token_id, &order_owner);
 					Self::delete_order(class_id, token_id, &who);
 					// `order_owner` transfers this NFT to `who`
-					Self::do_transfer(&order_owner, &who, order.class_id, order.token_id)?;
+					Self::do_transfer(&order_owner, &who, class_id, token_id)?;
 					T::MultiCurrency::transfer(order.currency_id, &who, &order_owner, order.price)?;
 					// TODO: T::MultiCurrency::transfer(order.currency_id, &order_owner, some_account,platform-fee)?;
 					Self::deposit_event(Event::TakenOrder(class_id, token_id, order_owner));
@@ -285,7 +279,7 @@ pub mod module {
 					Self::delete_order(class_id, token_id, &order_owner);
 					Self::delete_order(class_id, token_id, &who);
 					// `order_owner` transfers this NFT to `who`
-					Self::do_transfer(&who, &order_owner, order.class_id, order.token_id)?;
+					Self::do_transfer(&who, &order_owner, class_id, token_id)?;
 					T::MultiCurrency::transfer(order.currency_id, &order_owner, &who, order.price)?;
 					// TODO: T::MultiCurrency::transfer(order.currency_id, &who, some_account,platform-fee)?;
 					Self::deposit_event(Event::TakenOrder(class_id, token_id, order_owner));
@@ -336,8 +330,6 @@ pub mod module {
 				deposit,
 				deadline,
 				category_id,
-				class_id,
-				token_id,
 			};
 			Orders::<T>::insert((class_id, token_id), &who, order);
 
