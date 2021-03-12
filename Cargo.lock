@@ -5634,21 +5634,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-usetech-nft"
-version = "3.0.0"
-dependencies = [
- "frame-support",
- "frame-system",
- "pallet-balances",
- "parity-scale-codec",
- "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
 name = "pallet-utility"
 version = "3.0.0"
 dependencies = [
@@ -5681,22 +5666,6 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "sp-storage",
-]
-
-[[package]]
-name = "pallet-w3f-nft"
-version = "3.0.0"
-dependencies = [
- "frame-support",
- "frame-system",
- "pallet-balances",
- "pallet-transaction-payment",
- "parity-scale-codec",
- "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
 ]
 
 [[package]]
