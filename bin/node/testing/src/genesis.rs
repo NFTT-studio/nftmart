@@ -125,5 +125,6 @@ pub fn config_endowed(
 		pallet_gilt: Default::default(),
 		orml_tokens: Default::default(),
 		orml_nft: Default::default(),
+		nftmart_nft: Default::default(),
 	}
 }

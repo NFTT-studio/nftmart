@@ -54,7 +54,7 @@ impl Decode for Properties {
 
 #[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub struct ClassData {
+pub struct ClassData<BlockNumber> {
 	/// The minimum balance to create class
 	#[codec(compact)]
 	pub deposit: Balance,
@@ -64,14 +64,18 @@ pub struct ClassData {
 	pub name: Vec<u8>,
 	/// Description of class.
 	pub description: Vec<u8>,
+	#[codec(compact)]
+	pub create_block: BlockNumber,
 }
 
 #[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub struct TokenData {
+pub struct TokenData<BlockNumber> {
 	/// The minimum balance to create token
 	#[codec(compact)]
 	pub deposit: Balance,
+	#[codec(compact)]
+	pub create_block: BlockNumber,
 }
 
 #[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq)]
@@ -112,12 +116,91 @@ pub type BalanceOf<T> = <<T as module::Config>::Currency as Currency<<T as frame
 pub type CurrencyIdOf<T> = <<T as module::Config>::MultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::CurrencyId;
 pub type BlockNumberOf<T> = <T as frame_system::Config>::BlockNumber;
 
+#[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug)]
+enum Releases {
+	V1_0_0,
+	V2_0_0,
+}
+
+impl Default for Releases {
+	fn default() -> Self {
+		Releases::V2_0_0
+	}
+}
+
+pub mod migrations {
+	use super::*;
+
+	#[derive(Decode)]
+	pub struct OldClassData {
+		#[codec(compact)]
+		pub deposit: Balance,
+		pub properties: Properties,
+		pub name: Vec<u8>,
+		pub description: Vec<u8>,
+	}
+
+	#[derive(Decode)]
+	pub struct OldTokenData {
+		#[codec(compact)]
+		pub deposit: Balance,
+	}
+
+	impl OldClassData {
+		fn upgraded<T>(self) -> ClassData<T> where T: AtLeast32BitUnsigned + Bounded + Copy + From<u32> {
+			let create_block: T = One::one();
+			ClassData {
+				create_block: create_block * 2u32.into(),
+				deposit: self.deposit,
+				properties: self.properties,
+				name: self.name,
+				description: self.description,
+			}
+		}
+	}
+
+	impl OldTokenData {
+		fn upgraded<T>(self) -> TokenData<T> where T: AtLeast32BitUnsigned + Bounded + Copy + From<u32> {
+			let create_block: T = One::one();
+			TokenData {
+				create_block: create_block * 3u32.into(),
+				deposit: self.deposit,
+			}
+		}
+	}
+
+	pub fn do_migrate<T: Config>() -> Weight {
+		type OldClass<T> = orml_nft::ClassInfo<TokenIdOf<T>, <T as frame_system::Config>::AccountId, OldClassData>;
+		type NewClass<T> = orml_nft::ClassInfo<TokenIdOf<T>, <T as frame_system::Config>::AccountId, ClassData<BlockNumberOf<T>>>;
+		orml_nft::Classes::<T>::translate::<OldClass<T>, _>(|_, p: OldClass<T>| {
+			let new_data: NewClass<T> = NewClass::<T> {
+				 metadata: p.metadata,
+				 total_issuance: p.total_issuance,
+				 owner: p.owner,
+				 data: p.data.upgraded::<BlockNumberOf<T>>(),
+			};
+			Some(new_data)
+		});
+		type OldToken<T> = orml_nft::TokenInfo<<T as frame_system::Config>::AccountId, OldTokenData>;
+		type NewToken<T> = orml_nft::TokenInfo<<T as frame_system::Config>::AccountId, TokenData<BlockNumberOf<T>>>;
+		orml_nft::Tokens::<T>::translate::<OldToken<T>, _>(|_, _, p: OldToken<T>| {
+			let new_data: NewToken<T> = NewToken::<T> {
+				metadata: p.metadata,
+				owner: p.owner,
+				data: p.data.upgraded::<BlockNumberOf<T>>(),
+			};
+			Some(new_data)
+		});
+		T::BlockWeights::get().max_block
+	}
+}
+
 #[frame_support::pallet]
 pub mod module {
 	use super::*;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config + orml_nft::Config<ClassData = ClassData, TokenData = TokenData> + pallet_proxy::Config {
+	pub trait Config: frame_system::Config + orml_nft::Config<ClassData = ClassData<BlockNumberOf<Self>>, TokenData = TokenData<BlockNumberOf<Self>>> + pallet_proxy::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 		/// The minimum balance to create class
@@ -216,7 +299,41 @@ pub mod module {
 	pub struct Pallet<T>(PhantomData<T>);
 
 	#[pallet::hooks]
-	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
+	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
+		fn on_runtime_upgrade() -> Weight {
+			if StorageVersion::<T>::get() == Releases::V1_0_0 {
+				StorageVersion::<T>::put(Releases::V2_0_0);
+				migrations::do_migrate::<T>()
+			} else {
+				0
+			}
+		}
+
+		fn integrity_test () {}
+	}
+
+	#[pallet::genesis_config]
+	pub struct GenesisConfig<T: Config> {
+		_phantom: PhantomData<T>,
+	}
+
+	#[cfg(feature = "std")]
+	impl<T: Config> Default for GenesisConfig<T> {
+		fn default() -> Self {
+			Self { _phantom: Default::default() }
+		}
+	}
+
+	#[pallet::genesis_build]
+	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+		fn build(&self) {
+			<StorageVersion<T>>::put(Releases::V2_0_0);
+		}
+	}
+
+	/// Storage version of the pallet.
+	#[pallet::storage]
+	pub(super) type StorageVersion<T: Config> = StorageValue<_, Releases, ValueQuery>;
 
 	/// Next available common category ID.
 	#[pallet::storage]
@@ -450,11 +567,12 @@ pub mod module {
 			// owner add proxy delegate to origin
 			<pallet_proxy::Module<T>>::add_proxy_delegate(&owner, who, Default::default(), Zero::zero())?;
 
-			let data = ClassData {
+			let data: ClassData<BlockNumberOf<T>> = ClassData {
 				deposit,
 				properties,
 				name,
 				description,
+				create_block: <frame_system::Pallet<T>>::block_number(),
 			};
 			orml_nft::Module::<T>::create_class(&owner, metadata, data)?;
 
@@ -485,7 +603,10 @@ pub mod module {
 			let (deposit, total_deposit) = Self::mint_token_deposit(metadata.len().saturated_into(), quantity);
 
 			<T as Config>::Currency::reserve(&class_info.owner, total_deposit.saturated_into())?;
-			let data = TokenData { deposit };
+			let data: TokenData<BlockNumberOf<T>> = TokenData {
+				deposit,
+				create_block: <frame_system::Pallet<T>>::block_number(),
+			};
 			for _ in 0..quantity {
 				orml_nft::Module::<T>::mint(&to, class_id, metadata.clone(), data.clone())?;
 			}

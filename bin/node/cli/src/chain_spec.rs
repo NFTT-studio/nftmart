@@ -339,6 +339,7 @@ pub fn testnet_genesis(
 				}).collect(),
 		},
 		orml_nft: OrmlNFTConfig { tokens: vec![] },
+		nftmart_nft: Default::default(),
 	}
 }
 

@@ -111,13 +111,17 @@ export async function getApi(dest = 'ws://8.136.111.191:9944') {
 			deposit: 'Compact<Balance>',
 			properties: 'Properties',
 			name: 'Vec<u8>',
-			description: 'Vec<u8>'
+			description: 'Vec<u8>',
+			createBlock: 'Compact<BlockNumberOf>'
 		},
 
 		TokenId: 'u64',
 		TokenIdOf: 'TokenId',
 		TokenInfoOf: {metadata: 'NFTMetadata', owner: 'AccountId', data: 'TokenData'},
-		TokenData: {deposit: 'Compact<Balance>'}
+		TokenData: {
+			deposit: 'Compact<Balance>',
+			createBlock: 'Compact<BlockNumberOf>'
+		}
 	};
 
 	const api = await ApiPromise.create({provider, types});

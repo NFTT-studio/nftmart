@@ -116,7 +116,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	// and set impl_version to 0. If only runtime
 	// implementation changes and behavior does not, then leave spec_version as
 	// is and increment impl_version.
-	spec_version: 289,
+	spec_version: 291,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 2,
@@ -1120,8 +1120,8 @@ impl orml_currencies::Config for Runtime {
 impl orml_nft::Config for Runtime {
 	type ClassId = sp_core::constants_types::ClassId;
 	type TokenId = sp_core::constants_types::TokenId;
-	type ClassData = nftmart_nft::ClassData;
-	type TokenData = nftmart_nft::TokenData;
+	type ClassData = nftmart_nft::ClassData<BlockNumber>;
+	type TokenData = nftmart_nft::TokenData<BlockNumber>;
 }
 
 parameter_types! {
@@ -1189,7 +1189,7 @@ construct_runtime!(
 		Tokens: orml_tokens::{Module, Storage, Event<T>, Config<T>},
 		Currencies: orml_currencies::{Module, Call, Event<T>},
 		OrmlNFT: orml_nft::{Module, Storage, Config<T>},
-		Nftmart: nftmart_nft::{Module, Call, Storage, Event<T>},
+		Nftmart: nftmart_nft::{Module, Call, Storage, Event<T>, Config<T>},
 	}
 );
 
