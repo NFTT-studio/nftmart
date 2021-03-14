@@ -450,8 +450,10 @@ pub mod module {
 			};
 			Orders::<T>::insert((class_id, token_id), &who, order);
 
-			// TODO: update category.
-			// Categories::<T>::try_mu
+			Categories::<T>::try_mutate(category_id, |category| -> DispatchResult {
+				category.as_mut().map(|cate| cate.nft_count = cate.nft_count.saturating_add(One::one()));
+				Ok(())
+			})?;
 
 			Self::deposit_event(Event::CreatedOrder(class_id, token_id, who));
 			Ok(().into())
@@ -710,12 +712,13 @@ impl<T: Config> Pallet<T> {
 
 	fn delete_order(class_id: ClassIdOf<T>, token_id: TokenIdOf<T>, who: &T::AccountId) {
 		if let Some(order) = Self::orders((class_id, token_id), who) {
-			let deposit = order.deposit;
-			let deposit = <T as Config>::Currency::unreserve(&who, deposit.saturated_into());
+			let deposit = <T as Config>::Currency::unreserve(&who, order.deposit.saturated_into());
 			Orders::<T>::remove((class_id, token_id), who);
+			let _ = Categories::<T>::try_mutate(order.category_id, |category| -> DispatchResult {
+				category.as_mut().map(|cate| cate.nft_count = cate.nft_count.saturating_sub(One::one()) );
+				Ok(())
+			});
 			Self::deposit_event(Event::RemovedOrder(class_id, token_id, who.clone(), deposit.saturated_into()));
-
-			// TODO: update category.
 		}
 	}
 
