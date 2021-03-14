@@ -269,8 +269,6 @@ pub mod module {
 		OrderExists,
 		/// Order expired
 		OrderExpired,
-		/// Only token owner allowed
-		TokenOwnerOnly,
 	}
 
 	#[pallet::event]
@@ -498,9 +496,13 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			Orders::<T>::try_mutate((class_id, token_id), &who, |maybe_order| -> DispatchResult {
-				ensure!(orml_nft::Module::<T>::is_owner(&who, (class_id, token_id)), Error::<T>::TokenOwnerOnly);
-
 				let order = maybe_order.as_mut().ok_or(Error::<T>::OrderNotFound)?;
+
+				if !orml_nft::Module::<T>::is_owner(&who, (class_id, token_id)) {
+					let _ = T::MultiCurrency::unreserve(order.currency_id, &who, order.price.saturated_into());
+					T::MultiCurrency::reserve(order.currency_id, &who, price.saturated_into())?;
+				}
+
 				order.price = price;
 				Self::deposit_event(Event::UpdatedOrderPrice(class_id, token_id, who.clone(), price));
 				Ok(())
