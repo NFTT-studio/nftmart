@@ -252,6 +252,8 @@ pub mod module {
 		NonTransferable,
 		/// Property of class don't support burn
 		NonBurnable,
+		/// Property of class support burn
+		Burnable,
 		/// Can not destroy class
 		/// Total issuance is not 0
 		CannotDestroyClass,
@@ -380,13 +382,13 @@ pub mod module {
 
 			ensure!(<frame_system::Pallet<T>>::block_number() <= order.deadline, Error::<T>::OrderExpired);
 
-			let token_info = orml_nft::Module::<T>::tokens(class_id, token_id).ok_or(Error::<T>::TokenIdNotFound)?;
-			match (order_owner == token_info.owner, token_info.owner == who) {
+			let token_owner = orml_nft::Module::<T>::tokens(class_id, token_id).ok_or(Error::<T>::TokenIdNotFound)?.owner;
+			match (order_owner == token_owner, token_owner == who) {
 				(true, false) => {
 					ensure!(price >= order.price, Error::<T>::CanNotAfford);
-					// `who` will take the order submitting by `order_owner`/`token_info.owner`
-					Self::delete_order(class_id, token_id, &order_owner)?;
-					Self::try_delete_order(class_id, token_id, &who);
+					// `who` will take the order submitting by `order_owner`/`token_owner`
+					Self::delete_order(class_id, token_id, &order_owner, &token_owner)?;
+					Self::try_delete_order(class_id, token_id, &who, &token_owner);
 					// `order_owner` transfers this NFT to `who`
 					Self::do_transfer(&order_owner, &who, class_id, token_id)?;
 					T::MultiCurrency::transfer(order.currency_id, &who, &order_owner, order.price)?;
@@ -395,12 +397,11 @@ pub mod module {
 				},
 				(false, true) => {
 					ensure!(price <= order.price, Error::<T>::PriceTooLow);
-					// `who`/`token_info.owner` will accept the order submitting by `order_owner`
-					Self::delete_order(class_id, token_id, &order_owner)?;
-					Self::try_delete_order(class_id, token_id, &who);
+					// `who`/`token_owner` will accept the order submitting by `order_owner`
+					Self::delete_order(class_id, token_id, &order_owner, &token_owner)?;
+					Self::try_delete_order(class_id, token_id, &who, &token_owner);
 					// `order_owner` transfers this NFT to `who`
 					Self::do_transfer(&who, &order_owner, class_id, token_id)?;
-					let _ = T::MultiCurrency::unreserve(order.currency_id, &order_owner, order.price);
 					T::MultiCurrency::transfer(order.currency_id, &order_owner, &who, order.price)?;
 					// TODO: T::MultiCurrency::transfer(order.currency_id, &who, some_account,platform-fee)?;
 					Self::deposit_event(Event::TakenOrder(class_id, token_id, order_owner));
@@ -449,6 +450,7 @@ pub mod module {
 			<T as Config>::Currency::reserve(&who, deposit.saturated_into())?;
 
 			if token.owner != who {
+				ensure!(!Self::is_burnable(class_id)?, Error::<T>::Burnable);
 				T::MultiCurrency::reserve(currency_id, &who, price.saturated_into())?;
 			}
 
@@ -477,7 +479,8 @@ pub mod module {
 			#[pallet::compact] token_id: TokenIdOf<T>,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
-			Self::delete_order(class_id, token_id, &who)?;
+			let token_owner = orml_nft::Module::<T>::tokens(class_id, token_id).ok_or(Error::<T>::TokenIdNotFound)?.owner;
+			Self::delete_order(class_id, token_id, &who, &token_owner)?;
 			Ok(().into())
 		}
 
@@ -661,12 +664,7 @@ pub mod module {
 			#[pallet::compact] token_id: TokenIdOf<T>,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
-			let class_info = orml_nft::Module::<T>::classes(class_id).ok_or(Error::<T>::ClassIdNotFound)?;
-			let data = class_info.data;
-			ensure!(
-				data.properties.0.contains(ClassProperty::Burnable),
-				Error::<T>::NonBurnable
-			);
+			ensure!(Self::is_burnable(class_id)?, Error::<T>::NonBurnable);
 
 			let token_info = orml_nft::Module::<T>::tokens(class_id, token_id).ok_or(Error::<T>::TokenIdNotFound)?;
 			ensure!(who == token_info.owner, Error::<T>::NoPermission);
@@ -723,11 +721,21 @@ pub mod module {
 
 impl<T: Config> Pallet<T> {
 
-	fn delete_order(class_id: ClassIdOf<T>, token_id: TokenIdOf<T>, who: &T::AccountId) -> DispatchResult {
+	fn is_burnable(class_id: ClassIdOf<T>) -> Result<bool, DispatchError> {
+		let class_info = orml_nft::Module::<T>::classes(class_id).ok_or(Error::<T>::ClassIdNotFound)?;
+		let data = class_info.data;
+		Ok(data.properties.0.contains(ClassProperty::Burnable))
+	}
+
+	fn delete_order(class_id: ClassIdOf<T>, token_id: TokenIdOf<T>, who: &T::AccountId, token_owner: &T::AccountId) -> DispatchResult {
 		Orders::<T>::try_mutate_exists((class_id, token_id), who, |maybe_order| {
 			let order = maybe_order.as_mut().ok_or(Error::<T>::OrderNotFound)?;
 			let deposit = <T as Config>::Currency::unreserve(&who, order.deposit.saturated_into());
 			Self::deposit_event(Event::RemovedOrder(class_id, token_id, who.clone(), deposit.saturated_into()));
+
+			if who != token_owner {
+				let _ = T::MultiCurrency::unreserve(order.currency_id, &who, order.price.saturated_into());
+			}
 
 			Categories::<T>::try_mutate(order.category_id, |category| -> DispatchResult {
 				category.as_mut().map(|cate| cate.nft_count = cate.nft_count.saturating_sub(One::one()) );
@@ -739,8 +747,8 @@ impl<T: Config> Pallet<T> {
 		})
 	}
 
-	fn try_delete_order(class_id: ClassIdOf<T>, token_id: TokenIdOf<T>, who: &T::AccountId) {
-		let _ = Self::delete_order(class_id, token_id, who);
+	fn try_delete_order(class_id: ClassIdOf<T>, token_id: TokenIdOf<T>, who: &T::AccountId, token_owner: &T::AccountId) {
+		let _ = Self::delete_order(class_id, token_id, who, token_owner);
 	}
 
 	/// Ensured atomic.
