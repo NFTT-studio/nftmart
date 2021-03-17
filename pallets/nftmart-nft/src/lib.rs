@@ -9,7 +9,7 @@ use frame_support::{
 use sp_std::vec::Vec;
 use frame_system::pallet_prelude::*;
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
-use sp_core::constants_types::Balance;
+use sp_core::constants_types::{Balance, ACCURACY};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::{
@@ -319,20 +319,25 @@ pub mod module {
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
+		order_deposit: Balance,
 		_phantom: PhantomData<T>,
 	}
 
 	#[cfg(feature = "std")]
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
-			Self { _phantom: Default::default() }
+			Self {
+				order_deposit: ACCURACY,
+				_phantom: Default::default(),
+			}
 		}
 	}
 
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
-			<StorageVersion<T>>::put(Releases::V2_0_0);
+			<StorageVersion<T>>::put(Releases::default());
+			OrderDeposit::<T>::put(self.order_deposit);
 		}
 	}
 
@@ -354,6 +359,11 @@ pub mod module {
 	#[pallet::storage]
 	#[pallet::getter(fn orders)]
 	pub type Orders<T: Config> = StorageDoubleMap<_, Blake2_128Concat, (ClassIdOf<T>, TokenIdOf<T>), Blake2_128Concat, T::AccountId, OrderData<T>>;
+
+	/// Order deposit config
+	#[pallet::storage]
+	#[pallet::getter(fn order_deposit)]
+	pub type OrderDeposit<T: Config> = StorageValue<_, Balance, ValueQuery>;
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -445,8 +455,7 @@ pub mod module {
 				Ok(())
 			})?;
 
-			// TODO: make it configurable.
-			ensure!(deposit >= 1000_000_000_000u128, Error::<T>::InvalidDeposit);
+			ensure!(deposit >= Self::order_deposit(), Error::<T>::InvalidDeposit);
 			<T as Config>::Currency::reserve(&who, deposit.saturated_into())?;
 
 			if token.owner != who {
