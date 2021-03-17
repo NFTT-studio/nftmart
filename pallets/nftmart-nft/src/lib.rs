@@ -106,6 +106,7 @@ pub struct OrderData<T: Config> {
 	/// Category of this order.
 	#[codec(compact)]
 	pub category_id: CategoryIdOf<T>,
+	// TODO: Add `is_token_owner` field.
 }
 
 pub type NFTMetadata = Vec<u8>;
@@ -298,6 +299,8 @@ pub mod module {
 		TakenOrder(ClassIdOf<T>, TokenIdOf<T>, T::AccountId),
 		/// Price updated \[class_id, token_id, order_owner, price\]
 		UpdatedOrderPrice(ClassIdOf<T>, TokenIdOf<T>, T::AccountId, Balance),
+		/// OrderMinDeposit updated \[old, new\]
+		UpdatedMinOrderDeposit(Balance, Balance),
 	}
 
 	#[pallet::pallet]
@@ -319,7 +322,7 @@ pub mod module {
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
-		order_deposit: Balance,
+		min_order_deposit: Balance,
 		_phantom: PhantomData<T>,
 	}
 
@@ -327,7 +330,7 @@ pub mod module {
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
 			Self {
-				order_deposit: ACCURACY,
+				min_order_deposit: ACCURACY,
 				_phantom: Default::default(),
 			}
 		}
@@ -337,7 +340,7 @@ pub mod module {
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
 			<StorageVersion<T>>::put(Releases::default());
-			OrderDeposit::<T>::put(self.order_deposit);
+			MinOrderDeposit::<T>::put(self.min_order_deposit);
 		}
 	}
 
@@ -362,8 +365,8 @@ pub mod module {
 
 	/// Order deposit config
 	#[pallet::storage]
-	#[pallet::getter(fn order_deposit)]
-	pub type OrderDeposit<T: Config> = StorageValue<_, Balance, ValueQuery>;
+	#[pallet::getter(fn min_order_deposit)]
+	pub type MinOrderDeposit<T: Config> = StorageValue<_, Balance, ValueQuery>;
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -455,11 +458,11 @@ pub mod module {
 				Ok(())
 			})?;
 
-			ensure!(deposit >= Self::order_deposit(), Error::<T>::InvalidDeposit);
+			ensure!(deposit >= Self::min_order_deposit(), Error::<T>::InvalidDeposit);
 			<T as Config>::Currency::reserve(&who, deposit.saturated_into())?;
 
 			if token.owner != who {
-				ensure!(!Self::is_burnable(class_id)?, Error::<T>::Burnable);
+				ensure!(!Self::is_burnable(class_id)?, Error::<T>::Burnable); // TODO: Get ride of this limitation.
 				T::MultiCurrency::reserve(currency_id, &who, price.saturated_into())?;
 			}
 
@@ -563,6 +566,19 @@ pub mod module {
 				Categories::<T>::insert(category_id, info);
 				Self::deposit_event(Event::UpdatedCategory(category_id));
 			}
+			Ok(().into())
+		}
+
+		/// Update the `MinOrderDeposit` storage.
+		#[pallet::weight(100_000)]
+		#[transactional]
+		pub fn update_min_order_deposit(origin: OriginFor<T>, new_deposit: Balance) -> DispatchResultWithPostInfo {
+			ensure_root(origin)?;
+			MinOrderDeposit::<T>::mutate(|d|{
+				let old = *d;
+				*d = new_deposit;
+				Self::deposit_event(Event::UpdatedMinOrderDeposit(old, new_deposit));
+			});
 			Ok(().into())
 		}
 
