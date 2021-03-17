@@ -272,6 +272,10 @@ pub mod module {
 		OrderExists,
 		/// Order expired
 		OrderExpired,
+		/// NameTooLong
+		NameTooLong,
+		/// DescriptionTooLong
+		DescriptionTooLong,
 	}
 
 	#[pallet::event]
@@ -594,8 +598,8 @@ pub mod module {
 			let who = ensure_signed(origin)?;
 
 			// TODO: pass constants from runtime configuration.
-			ensure!(name.len() <= 20, "Name too long.");
-			ensure!(description.len() <= 256, "Description too long.");
+			ensure!(name.len() <= 20, Error::<T>::NameTooLong);
+			ensure!(description.len() <= 256, Error::<T>::DescriptionTooLong);
 
 			let next_id = orml_nft::Module::<T>::next_class_id();
 			let owner: T::AccountId = T::ModuleId::get().into_sub_account(next_id);
