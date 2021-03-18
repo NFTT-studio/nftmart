@@ -209,6 +209,8 @@ pub const CATEGORY_ID: <Runtime as Config>::CategoryId = 0;
 pub const CATEGORY_ID_NOT_EXIST: <Runtime as Config>::CategoryId = 100;
 pub const CLASS_ID_NOT_EXIST: <Runtime as orml_nft::Config>::ClassId = 1;
 pub const TOKEN_ID: <Runtime as orml_nft::Config>::TokenId = 0;
+pub const DEADLINE: BlockNumberOf<Runtime> = 2;
+pub const DEADLINE_INVALID: BlockNumberOf<Runtime> = 1;
 pub const TOKEN_ID_NOT_EXIST: <Runtime as orml_nft::Config>::TokenId = 1;
 
 pub struct ExtBuilder;

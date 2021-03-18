@@ -220,6 +220,17 @@ fn transfer_should_fail() {
 			Nftmart::transfer(Origin::signed(ALICE), BOB, CLASS_ID, TOKEN_ID),
 			Error::<Runtime>::NoPermission
 		);
+		// submit an order.
+		assert_ok!(Nftmart::create_category(Origin::root(), vec![1]));
+		assert_ok!(Nftmart::update_min_order_deposit(Origin::root(), 20));
+		assert_ok!(Currencies::deposit(NATIVE_CURRENCY_ID, &BOB, ACCURACY));
+		assert_ok!(Nftmart::submit_order(Origin::signed(BOB), NATIVE_CURRENCY_ID, ACCURACY, CATEGORY_ID,
+			CLASS_ID, TOKEN_ID, ACCURACY, DEADLINE));
+		// prevent transfer the NFT.
+		assert_noop!(
+			Nftmart::transfer(Origin::signed(BOB), ALICE, CLASS_ID, TOKEN_ID),
+			Error::<Runtime>::OrderExists
+		);
 	});
 
 	ExtBuilder::default().build().execute_with(|| {

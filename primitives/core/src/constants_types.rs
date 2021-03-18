@@ -39,7 +39,7 @@ pub type Moment = u64;
 pub type ClassId = u32;
 
 /// NFT token ID type.
-pub type TokenId = u64;
+pub type TokenId = u32;
 
 /// NFT category ID type.
 pub type CategoryId = u32;

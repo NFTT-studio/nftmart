@@ -9,7 +9,7 @@ use frame_support::{
 use sp_std::vec::Vec;
 use frame_system::pallet_prelude::*;
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
-use sp_core::constants_types::{Balance, ACCURACY};
+pub use sp_core::constants_types::{Balance, ACCURACY, NATIVE_CURRENCY_ID};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::{
@@ -24,6 +24,24 @@ mod tests;
 
 pub use module::*;
 
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode, RuntimeDebug)]
+pub enum AuctionKind {
+	/// None
+	None,
+	/// British
+	British,
+	/// Dutch
+	Dutch,
+	/// Candle
+	Candle,
+}
+
+impl Default for AuctionKind {
+	fn default() -> Self {
+		Self::None
+	}
+}
+
 #[repr(u8)]
 #[derive(Encode, Decode, Clone, Copy, BitFlags, RuntimeDebug, PartialEq, Eq)]
 pub enum ClassProperty {
@@ -31,6 +49,8 @@ pub enum ClassProperty {
 	Transferable = 0b00000001,
 	/// Token can be burned
 	Burnable = 0b00000010,
+	/// Need to charge royalties when orders are completed.
+	RoyaltiesChargeable = 0b00000100,
 }
 
 #[derive(Clone, Copy, PartialEq, Default, RuntimeDebug)]
@@ -106,7 +126,16 @@ pub struct OrderData<T: Config> {
 	/// Category of this order.
 	#[codec(compact)]
 	pub category_id: CategoryIdOf<T>,
-	// TODO: Add `is_token_owner` field.
+	/// True, if the order was submitted by the token owner.
+	pub by_token_owner: bool,
+}
+
+#[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub struct OrderHistory {
+	/// Price of this order.
+	#[codec(compact)]
+	pub price: Balance,
 }
 
 pub type NFTMetadata = Vec<u8>;
@@ -200,6 +229,7 @@ pub mod migrations {
 pub mod module {
 	use super::*;
 	use orml_nft::TokenInfoOf;
+	use sp_runtime::{PerU16};
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config + orml_nft::Config<ClassData = ClassData<BlockNumberOf<Self>>, TokenData = TokenData<BlockNumberOf<Self>>> + pallet_proxy::Config {
@@ -253,10 +283,7 @@ pub mod module {
 		NonTransferable,
 		/// Property of class don't support burn
 		NonBurnable,
-		/// Property of class support burn
-		Burnable,
-		/// Can not destroy class
-		/// Total issuance is not 0
+		/// Can not destroy class Total issuance is not 0
 		CannotDestroyClass,
 		/// No available category ID
 		NoAvailableCategoryId,
@@ -276,6 +303,8 @@ pub mod module {
 		NameTooLong,
 		/// DescriptionTooLong
 		DescriptionTooLong,
+		/// NativeCurrencyOnlyForNow
+		NativeCurrencyOnlyForNow,
 	}
 
 	#[pallet::event]
@@ -327,6 +356,9 @@ pub mod module {
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
 		min_order_deposit: Balance,
+		min_reference_deposit: Balance,
+		royalties_rate: PerU16,
+		max_distribution_reward: PerU16,
 		_phantom: PhantomData<T>,
 	}
 
@@ -335,6 +367,9 @@ pub mod module {
 		fn default() -> Self {
 			Self {
 				min_order_deposit: ACCURACY,
+				min_reference_deposit: ACCURACY,
+				royalties_rate: PerU16::from_percent(5),
+				max_distribution_reward: PerU16::from_percent(100),
 				_phantom: Default::default(),
 			}
 		}
@@ -345,6 +380,9 @@ pub mod module {
 		fn build(&self) {
 			<StorageVersion<T>>::put(Releases::default());
 			MinOrderDeposit::<T>::put(self.min_order_deposit);
+			RoyaltiesRate::<T>::put(self.royalties_rate);
+			MaxDistributionReward::<T>::put(self.max_distribution_reward);
+			MinReferenceDeposit::<T>::put(self.min_reference_deposit);
 		}
 	}
 
@@ -367,10 +405,30 @@ pub mod module {
 	#[pallet::getter(fn orders)]
 	pub type Orders<T: Config> = StorageDoubleMap<_, Blake2_128Concat, (ClassIdOf<T>, TokenIdOf<T>), Blake2_128Concat, T::AccountId, OrderData<T>>;
 
+	/// Latest order price
+	#[pallet::storage]
+	#[pallet::getter(fn latest_order_prices)]
+	pub type LatestOrderPrices<T: Config> = StorageMap<_, Blake2_128Concat, (ClassIdOf<T>, TokenIdOf<T>, CurrencyIdOf<T>), OrderHistory>;
+
 	/// Order deposit config
 	#[pallet::storage]
 	#[pallet::getter(fn min_order_deposit)]
 	pub type MinOrderDeposit<T: Config> = StorageValue<_, Balance, ValueQuery>;
+
+	/// Royalties rate, which can be set by council or sudo.
+	#[pallet::storage]
+	#[pallet::getter(fn royalties_rate)]
+	pub type RoyaltiesRate<T: Config> = StorageValue<_, PerU16, ValueQuery>;
+
+	/// MaxDistributionReward
+	#[pallet::storage]
+	#[pallet::getter(fn max_distribution_reward)]
+	pub type MaxDistributionReward<T: Config> = StorageValue<_, PerU16, ValueQuery>;
+
+	/// MinReferenceDeposit
+	#[pallet::storage]
+	#[pallet::getter(fn min_reference_deposit)]
+	pub type MinReferenceDeposit<T: Config> = StorageValue<_, Balance, ValueQuery>;
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -389,23 +447,25 @@ pub mod module {
 			order_owner: T::AccountId,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
+			// Simplify the logic, to make life easier.
 			ensure!(order_owner != who, Error::<T>::TakeOwnOrder);
+			let token_owner = orml_nft::Module::<T>::tokens(class_id, token_id).ok_or(Error::<T>::TokenIdNotFound)?.owner;
 
 			let order: OrderData<T> = {
 				let order = Self::orders((class_id, token_id), &order_owner);
 				ensure!(order.is_some(), Error::<T>::OrderNotFound);
-				order.unwrap()
+				let order = order.unwrap();
+				ensure!(<frame_system::Pallet<T>>::block_number() <= order.deadline, Error::<T>::OrderExpired);
+				order
 			};
 
-			ensure!(<frame_system::Pallet<T>>::block_number() <= order.deadline, Error::<T>::OrderExpired);
-
-			let token_owner = orml_nft::Module::<T>::tokens(class_id, token_id).ok_or(Error::<T>::TokenIdNotFound)?.owner;
 			match (order_owner == token_owner, token_owner == who) {
 				(true, false) => {
 					ensure!(price >= order.price, Error::<T>::CanNotAfford);
 					// `who` will take the order submitting by `order_owner`/`token_owner`
-					Self::delete_order(class_id, token_id, &order_owner, &token_owner)?;
-					Self::try_delete_order(class_id, token_id, &who, &token_owner);
+					Self::delete_order(class_id, token_id, &order_owner)?;
+					// Try to delete another order. Because `who` may have already submitted a order to the same token.
+					Self::try_delete_order(class_id, token_id, &who);
 					// `order_owner` transfers this NFT to `who`
 					Self::do_transfer(&order_owner, &who, class_id, token_id)?;
 					T::MultiCurrency::transfer(order.currency_id, &who, &order_owner, order.price)?;
@@ -414,9 +474,9 @@ pub mod module {
 				},
 				(false, true) => {
 					ensure!(price <= order.price, Error::<T>::PriceTooLow);
-					// `who`/`token_owner` will accept the order submitting by `order_owner`
-					Self::delete_order(class_id, token_id, &order_owner, &token_owner)?;
-					Self::try_delete_order(class_id, token_id, &who, &token_owner);
+					// `who`/`token_owner` will accept the order submitted by `order_owner`
+					Self::delete_order(class_id, token_id, &order_owner)?;
+					Self::try_delete_order(class_id, token_id, &who);
 					// `order_owner` transfers this NFT to `who`
 					Self::do_transfer(&who, &order_owner, class_id, token_id)?;
 					T::MultiCurrency::transfer(order.currency_id, &order_owner, &who, order.price)?;
@@ -452,6 +512,8 @@ pub mod module {
 			#[pallet::compact] deadline: BlockNumberOf<T>,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
+			ensure!(currency_id == NATIVE_CURRENCY_ID.saturated_into(), Error::<T>::NativeCurrencyOnlyForNow); // TODO: remove this limitation.
+
 			let token: TokenInfoOf<T> = orml_nft::Module::<T>::tokens(class_id, token_id).ok_or(Error::<T>::TokenIdNotFound)?;
 
 			ensure!(Self::orders((class_id, token_id), &who).is_none(), Error::<T>::DuplicatedOrder);
@@ -466,7 +528,6 @@ pub mod module {
 			<T as Config>::Currency::reserve(&who, deposit.saturated_into())?;
 
 			if token.owner != who {
-				ensure!(!Self::is_burnable(class_id)?, Error::<T>::Burnable); // TODO: Get ride of this limitation.
 				T::MultiCurrency::reserve(currency_id, &who, price.saturated_into())?;
 			}
 
@@ -476,6 +537,7 @@ pub mod module {
 				deposit,
 				deadline,
 				category_id,
+				by_token_owner: token.owner == who,
 			};
 			Orders::<T>::insert((class_id, token_id), &who, order);
 
@@ -495,39 +557,39 @@ pub mod module {
 			#[pallet::compact] token_id: TokenIdOf<T>,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
-			let token_owner = orml_nft::Module::<T>::tokens(class_id, token_id).ok_or(Error::<T>::TokenIdNotFound)?.owner;
-			Self::delete_order(class_id, token_id, &who, &token_owner)?;
+			Self::delete_order(class_id, token_id, &who)?;
 			Ok(().into())
 		}
 
-		/// Update order price
-		///
-		/// - `class_id`: class id
-		/// - `token_id`: token id
-		/// - `price`: price
-		#[pallet::weight(100_000)]
-		#[transactional]
-		pub fn update_order_price(
-			origin: OriginFor<T>,
-			#[pallet::compact] class_id: ClassIdOf<T>,
-			#[pallet::compact] token_id: TokenIdOf<T>,
-			#[pallet::compact] price: Balance,
-		) -> DispatchResultWithPostInfo {
-			let who = ensure_signed(origin)?;
-			Orders::<T>::try_mutate((class_id, token_id), &who, |maybe_order| -> DispatchResult {
-				let order = maybe_order.as_mut().ok_or(Error::<T>::OrderNotFound)?;
-
-				if !orml_nft::Module::<T>::is_owner(&who, (class_id, token_id)) {
-					let _ = T::MultiCurrency::unreserve(order.currency_id, &who, order.price.saturated_into());
-					T::MultiCurrency::reserve(order.currency_id, &who, price.saturated_into())?;
-				}
-
-				order.price = price;
-				Self::deposit_event(Event::UpdatedOrderPrice(class_id, token_id, who.clone(), price));
-				Ok(())
-			})?;
-			Ok(().into())
-		}
+		// /// TODO: Update order price
+		// ///
+		// /// - `class_id`: class id
+		// /// - `token_id`: token id
+		// /// - `price`: price
+		// #[pallet::weight(100_000)]
+		// #[transactional]
+		// pub fn update_order_price(
+		// 	origin: OriginFor<T>,
+		// 	#[pallet::compact] class_id: ClassIdOf<T>,
+		// 	#[pallet::compact] token_id: TokenIdOf<T>,
+		// 	#[pallet::compact] price: Balance,
+		// ) -> DispatchResultWithPostInfo {
+		// 	let who = ensure_signed(origin)?;
+		// 	Orders::<T>::try_mutate((class_id, token_id), &who, |maybe_order| -> DispatchResult {
+		// 		let order = maybe_order.as_mut().ok_or(Error::<T>::OrderNotFound)?;
+		// 		let token_owner = orml_nft::Module::<T>::tokens(class_id, token_id).ok_or(Error::<T>::TokenIdNotFound)?.owner;
+		//
+		// 		if token_owner != who {
+		// 			let _ = T::MultiCurrency::unreserve(order.currency_id, &who, order.price.saturated_into());
+		// 			T::MultiCurrency::reserve(order.currency_id, &who, price.saturated_into())?;
+		// 		}
+		//
+		// 		order.price = price;
+		// 		Self::deposit_event(Event::UpdatedOrderPrice(class_id, token_id, who.clone(), price));
+		// 		Ok(())
+		// 	})?;
+		// 	Ok(().into())
+		// }
 
 		/// Create a common category for trading NFT.
 		/// A Selling NFT should belong to a category.
@@ -546,7 +608,7 @@ pub mod module {
 
 			let info = CategoryData {
 				metadata,
-				nft_count: Default::default(),
+				nft_count: Zero::zero(),
 			};
 			Categories::<T>::insert(category_id, info);
 
@@ -597,9 +659,8 @@ pub mod module {
 		pub fn create_class(origin: OriginFor<T>, metadata: NFTMetadata, name: Vec<u8>, description: Vec<u8>, properties: Properties) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			// TODO: pass constants from runtime configuration.
-			ensure!(name.len() <= 20, Error::<T>::NameTooLong);
-			ensure!(description.len() <= 256, Error::<T>::DescriptionTooLong);
+			ensure!(name.len() <= 20, Error::<T>::NameTooLong);// TODO: pass configurations from runtime configuration.
+			ensure!(description.len() <= 256, Error::<T>::DescriptionTooLong);// TODO: pass configurations from runtime configuration.
 
 			let next_id = orml_nft::Module::<T>::next_class_id();
 			let owner: T::AccountId = T::ModuleId::get().into_sub_account(next_id);
@@ -756,13 +817,11 @@ impl<T: Config> Pallet<T> {
 		Ok(data.properties.0.contains(ClassProperty::Burnable))
 	}
 
-	fn delete_order(class_id: ClassIdOf<T>, token_id: TokenIdOf<T>, who: &T::AccountId, token_owner: &T::AccountId) -> DispatchResult {
+	fn delete_order(class_id: ClassIdOf<T>, token_id: TokenIdOf<T>, who: &T::AccountId) -> DispatchResult {
 		Orders::<T>::try_mutate_exists((class_id, token_id), who, |maybe_order| {
 			let order = maybe_order.as_mut().ok_or(Error::<T>::OrderNotFound)?;
-			let deposit = <T as Config>::Currency::unreserve(&who, order.deposit.saturated_into());
-			Self::deposit_event(Event::RemovedOrder(class_id, token_id, who.clone(), deposit.saturated_into()));
 
-			if who != token_owner {
+			if !order.by_token_owner {
 				let _ = T::MultiCurrency::unreserve(order.currency_id, &who, order.price.saturated_into());
 			}
 
@@ -771,13 +830,15 @@ impl<T: Config> Pallet<T> {
 				Ok(())
 			})?;
 
+			let deposit = <T as Config>::Currency::unreserve(&who, order.deposit.saturated_into());
+			Self::deposit_event(Event::RemovedOrder(class_id, token_id, who.clone(), deposit.saturated_into()));
 			*maybe_order = None;
 			Ok(())
 		})
 	}
 
-	fn try_delete_order(class_id: ClassIdOf<T>, token_id: TokenIdOf<T>, who: &T::AccountId, token_owner: &T::AccountId) {
-		let _ = Self::delete_order(class_id, token_id, who, token_owner);
+	fn try_delete_order(class_id: ClassIdOf<T>, token_id: TokenIdOf<T>, who: &T::AccountId) {
+		let _ = Self::delete_order(class_id, token_id, who);
 	}
 
 	/// Ensured atomic.
