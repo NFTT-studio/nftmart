@@ -327,6 +327,17 @@ fn burn_should_fail() {
 			Nftmart::burn(Origin::signed(BOB), CLASS_ID, TOKEN_ID),
 			orml_nft::Error::<Runtime>::NumOverflow
 		);
+
+		// submit an order.
+		assert_ok!(Nftmart::create_category(Origin::root(), vec![1]));
+		assert_ok!(Nftmart::update_min_order_deposit(Origin::root(), 20));
+		assert_ok!(Currencies::deposit(NATIVE_CURRENCY_ID, &BOB, ACCURACY));
+		assert_ok!(Nftmart::submit_order(Origin::signed(BOB), NATIVE_CURRENCY_ID, ACCURACY, CATEGORY_ID,
+			CLASS_ID, TOKEN_ID, ACCURACY, DEADLINE));
+		assert_noop!(
+			Nftmart::burn(Origin::signed(BOB), CLASS_ID, TOKEN_ID),
+			Error::<Runtime>::OrderExists
+		);
 	});
 
 	ExtBuilder::default().build().execute_with(|| {
