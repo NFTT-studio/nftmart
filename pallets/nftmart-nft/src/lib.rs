@@ -525,9 +525,11 @@ pub mod module {
 			})?;
 
 			ensure!(deposit >= Self::min_order_deposit(), Error::<T>::InvalidDeposit);
+			// Reserve native currency.
 			<T as Config>::Currency::reserve(&who, deposit.saturated_into())?;
 
 			if token.owner != who {
+				// Reserve specified currency.
 				T::MultiCurrency::reserve(currency_id, &who, price.saturated_into())?;
 			}
 

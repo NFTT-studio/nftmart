@@ -1,7 +1,7 @@
 #![cfg(test)]
 
 use super::*;
-
+use frame_support::{assert_ok};
 use orml_currencies::BasicCurrencyAdapter;
 use sp_core::constants_types::*;
 use crate as nftmart_nft;
@@ -242,4 +242,51 @@ pub fn last_event() -> Event {
 		.pop()
 		.expect("Event expected")
 		.event
+}
+
+pub fn free_balance(who: &AccountId) -> Balance {
+	<Runtime as Config>::Currency::free_balance(who)
+}
+
+pub fn reserved_balance(who: &AccountId) -> Balance {
+	<Runtime as Config>::Currency::reserved_balance(who)
+}
+
+pub fn class_id_account() -> AccountId {
+	<Runtime as Config>::ModuleId::get().into_sub_account(CLASS_ID)
+}
+
+pub fn add_category() {
+	assert_ok!(Nftmart::create_category(Origin::root(), vec![1]));
+}
+
+pub fn ensure_min_order_deposit_a_unit() {
+	assert_ok!(Nftmart::update_min_order_deposit(Origin::root(), ACCURACY));
+}
+
+pub fn ensure_bob_balances(amount: Balance) {
+	assert_ok!(Currencies::deposit(NATIVE_CURRENCY_ID, &BOB, amount));
+	assert_eq!(Currencies::free_balance(NATIVE_CURRENCY_ID, &BOB), amount);
+}
+
+pub fn add_class(who: AccountId) {
+	let metadata = vec![1];
+	assert_ok!(Nftmart::create_class(
+		Origin::signed(who),
+		metadata.clone(), vec![1], vec![1],
+		Properties(ClassProperty::Transferable | ClassProperty::Burnable)
+	));
+}
+
+pub fn add_token(who: AccountId) {
+	let metadata = vec![1];
+	let deposit = Nftmart::mint_token_deposit(metadata.len() as u32, 1).1;
+	assert_eq!(Balances::deposit_into_existing(&class_id_account(), deposit).is_ok(), true);
+	assert_ok!(Nftmart::mint(
+			Origin::signed(class_id_account()),
+			who,
+			CLASS_ID,
+			vec![1],
+			1
+		));
 }

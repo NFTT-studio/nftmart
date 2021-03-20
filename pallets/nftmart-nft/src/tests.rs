@@ -2,53 +2,38 @@
 
 use super::*;
 use frame_support::{assert_noop, assert_ok};
-use mock::{Event, *};
+use crate::mock::{Event, *};
 
-fn free_balance(who: &AccountId) -> Balance {
-	<Runtime as Config>::Currency::free_balance(who)
-}
-
-fn reserved_balance(who: &AccountId) -> Balance {
-	<Runtime as Config>::Currency::reserved_balance(who)
-}
-
-fn class_id_account() -> AccountId {
-	<Runtime as Config>::ModuleId::get().into_sub_account(CLASS_ID)
-}
-
-fn add_category() {
-	assert_ok!(Nftmart::create_category(Origin::root(), vec![1]));
-}
-
-fn ensure_min_order_deposit_a_unit() {
-	assert_ok!(Nftmart::update_min_order_deposit(Origin::root(), ACCURACY));
-}
-
-fn ensure_bob_balances() {
-	assert_ok!(Currencies::deposit(NATIVE_CURRENCY_ID, &BOB, ACCURACY));
-	assert_eq!(Currencies::free_balance(NATIVE_CURRENCY_ID, &BOB), ACCURACY);
-}
-
-fn add_class(who: AccountId) {
-	let metadata = vec![1];
-	assert_ok!(Nftmart::create_class(
-		Origin::signed(who),
-		metadata.clone(), vec![1], vec![1],
-		Properties(ClassProperty::Transferable | ClassProperty::Burnable)
-	));
-}
-
-fn add_token(who: AccountId) {
-	let metadata = vec![1];
-	let deposit = Nftmart::mint_token_deposit(metadata.len() as u32, 1).1;
-	assert_eq!(Balances::deposit_into_existing(&class_id_account(), deposit).is_ok(), true);
-	assert_ok!(Nftmart::mint(
-			Origin::signed(class_id_account()),
-			who,
-			CLASS_ID,
-			vec![1],
-			1
-		));
+#[test]
+fn submit_order_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		add_category();
+		ensure_min_order_deposit_a_unit();
+		ensure_bob_balances(ACCURACY * 4);
+		add_class(ALICE);
+		add_token(BOB);
+		add_token(ALICE);
+		// Get the accounts of Alice & Bob.
+		let alice_reserved = Currencies::reserved_balance(NATIVE_CURRENCY_ID, &ALICE);
+		let bob_reserved = Currencies::reserved_balance(NATIVE_CURRENCY_ID, &BOB);
+		assert_eq!(alice_reserved + bob_reserved, 0);
+		// Bob submits his own token.
+		assert_ok!(Nftmart::submit_order(Origin::signed(BOB), NATIVE_CURRENCY_ID,
+							  ACCURACY, CATEGORY_ID, CLASS_ID, TOKEN_ID, ACCURACY + 3, DEADLINE + 1));
+		let alice_reserved = Currencies::reserved_balance(NATIVE_CURRENCY_ID, &ALICE);
+		let bob_reserved = Currencies::reserved_balance(NATIVE_CURRENCY_ID, &BOB);
+		assert_eq!(alice_reserved, 0);
+		assert_eq!(bob_reserved, ACCURACY + 3);
+		assert!(Nftmart::orders((CLASS_ID, TOKEN_ID), BOB).unwrap().by_token_owner);
+		// Bob submits an order to buy Alice's token.
+		assert_ok!(Nftmart::submit_order(Origin::signed(BOB), NATIVE_CURRENCY_ID,
+							  ACCURACY, CATEGORY_ID, CLASS_ID, TOKEN_ID + 1, ACCURACY + 3, DEADLINE + 1));
+		let alice_reserved = Currencies::reserved_balance(NATIVE_CURRENCY_ID, &ALICE);
+		let bob_reserved = Currencies::reserved_balance(NATIVE_CURRENCY_ID, &BOB);
+		assert_eq!(alice_reserved, 0);
+		assert_eq!(bob_reserved, ACCURACY + 3 + ACCURACY + ACCURACY + 3);
+		assert!(!Nftmart::orders((CLASS_ID, TOKEN_ID + 1), BOB).unwrap().by_token_owner);
+	});
 }
 
 #[test]
@@ -56,14 +41,33 @@ fn submit_order_should_fail() {
 	ExtBuilder::default().build().execute_with(|| {
 		add_category();
 		ensure_min_order_deposit_a_unit();
-		ensure_bob_balances();
+		ensure_bob_balances(ACCURACY);
 		add_class(ALICE);
 		add_token(BOB);
 		assert_noop!(
 			Nftmart::submit_order(Origin::signed(BOB), 1, ACCURACY, CATEGORY_ID, CLASS_ID, TOKEN_ID, ACCURACY, DEADLINE),
 			Error::<Runtime>::NativeCurrencyOnlyForNow,
 		);
-
+		assert_noop!(
+			Nftmart::submit_order(Origin::signed(BOB), NATIVE_CURRENCY_ID,
+				ACCURACY, CATEGORY_ID, CLASS_ID, TOKEN_ID_NOT_EXIST, ACCURACY, DEADLINE),
+			Error::<Runtime>::TokenIdNotFound,
+		);
+		assert_noop!(
+			Nftmart::submit_order(Origin::signed(BOB), NATIVE_CURRENCY_ID,
+				ACCURACY, CATEGORY_ID, CLASS_ID, TOKEN_ID, ACCURACY, 1),
+			Error::<Runtime>::InvalidDeadline,
+		);
+		assert_noop!(
+			Nftmart::submit_order(Origin::signed(BOB), NATIVE_CURRENCY_ID,
+				ACCURACY, CATEGORY_ID_NOT_EXIST, CLASS_ID, TOKEN_ID, ACCURACY, DEADLINE + 1),
+			Error::<Runtime>::CategoryNotFound,
+		);
+		assert_noop!(
+			Nftmart::submit_order(Origin::signed(BOB), NATIVE_CURRENCY_ID,
+				ACCURACY, CATEGORY_ID, CLASS_ID, TOKEN_ID, ACCURACY - 1, DEADLINE + 1),
+			Error::<Runtime>::InvalidDeposit,
+		);
 	});
 }
 
