@@ -16,6 +16,57 @@ fn class_id_account() -> AccountId {
 	<Runtime as Config>::ModuleId::get().into_sub_account(CLASS_ID)
 }
 
+fn add_category() {
+	assert_ok!(Nftmart::create_category(Origin::root(), vec![1]));
+}
+
+fn ensure_min_order_deposit_a_unit() {
+	assert_ok!(Nftmart::update_min_order_deposit(Origin::root(), ACCURACY));
+}
+
+fn ensure_bob_balances() {
+	assert_ok!(Currencies::deposit(NATIVE_CURRENCY_ID, &BOB, ACCURACY));
+	assert_eq!(Currencies::free_balance(NATIVE_CURRENCY_ID, &BOB), ACCURACY);
+}
+
+fn add_class(who: AccountId) {
+	let metadata = vec![1];
+	assert_ok!(Nftmart::create_class(
+		Origin::signed(who),
+		metadata.clone(), vec![1], vec![1],
+		Properties(ClassProperty::Transferable | ClassProperty::Burnable)
+	));
+}
+
+fn add_token(who: AccountId) {
+	let metadata = vec![1];
+	let deposit = Nftmart::mint_token_deposit(metadata.len() as u32, 1).1;
+	assert_eq!(Balances::deposit_into_existing(&class_id_account(), deposit).is_ok(), true);
+	assert_ok!(Nftmart::mint(
+			Origin::signed(class_id_account()),
+			who,
+			CLASS_ID,
+			vec![1],
+			1
+		));
+}
+
+#[test]
+fn submit_order_should_fail() {
+	ExtBuilder::default().build().execute_with(|| {
+		add_category();
+		ensure_min_order_deposit_a_unit();
+		ensure_bob_balances();
+		add_class(ALICE);
+		add_token(BOB);
+		assert_noop!(
+			Nftmart::submit_order(Origin::signed(BOB), 1, ACCURACY, CATEGORY_ID, CLASS_ID, TOKEN_ID, ACCURACY, DEADLINE),
+			Error::<Runtime>::NativeCurrencyOnlyForNow,
+		);
+
+	});
+}
+
 #[test]
 fn create_category_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
@@ -226,7 +277,7 @@ fn transfer_should_fail() {
 		assert_ok!(Currencies::deposit(NATIVE_CURRENCY_ID, &BOB, ACCURACY));
 		assert_ok!(Nftmart::submit_order(Origin::signed(BOB), NATIVE_CURRENCY_ID, ACCURACY, CATEGORY_ID,
 			CLASS_ID, TOKEN_ID, ACCURACY, DEADLINE));
-		// prevent transfer the NFT.
+		// prevent from transferring the NFT.
 		assert_noop!(
 			Nftmart::transfer(Origin::signed(BOB), ALICE, CLASS_ID, TOKEN_ID),
 			Error::<Runtime>::OrderExists
