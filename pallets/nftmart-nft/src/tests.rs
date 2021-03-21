@@ -5,6 +5,52 @@ use frame_support::{assert_noop, assert_ok};
 use crate::mock::{Event, *};
 
 #[test]
+fn remove_order_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		add_category();
+		ensure_min_order_deposit_a_unit();
+		ensure_bob_balances(ACCURACY * 4);
+		add_class(ALICE);
+		add_token(BOB);
+		add_token(ALICE);
+		assert_ok!(Nftmart::submit_order(Origin::signed(BOB), NATIVE_CURRENCY_ID,
+							  ACCURACY, CATEGORY_ID, CLASS_ID, TOKEN_ID, ACCURACY + 3, DEADLINE + 1));
+		let order: OrderData<Runtime> = Nftmart::orders((CLASS_ID, TOKEN_ID), BOB).unwrap();
+		assert_eq!(order.deposit, ACCURACY + 3);
+		assert_eq!(order.price, ACCURACY);
+		assert_ok!(Nftmart::remove_order(Origin::signed(BOB), CLASS_ID, TOKEN_ID));
+		assert_eq!(last_event(), Event::nftmart_nft(crate::Event::RemovedOrder(CLASS_ID, TOKEN_ID, BOB, ACCURACY + 3)));
+		assert_ok!(Nftmart::submit_order(Origin::signed(BOB), NATIVE_CURRENCY_ID,
+							  ACCURACY, CATEGORY_ID, CLASS_ID, TOKEN_ID + 1, ACCURACY + 3, DEADLINE + 1));
+		assert_ok!(Nftmart::remove_order(Origin::signed(BOB), CLASS_ID, TOKEN_ID + 1));
+		assert_eq!(last_event(), Event::nftmart_nft(crate::Event::RemovedOrder(CLASS_ID, TOKEN_ID + 1, BOB, ACCURACY * 2 + 3)));
+	});
+}
+
+#[test]
+fn remove_order_should_fail() {
+	ExtBuilder::default().build().execute_with(|| {
+		add_category();
+		ensure_min_order_deposit_a_unit();
+		ensure_bob_balances(ACCURACY * 4);
+		add_class(ALICE);
+		add_token(BOB);
+		add_token(ALICE);
+		assert_ok!(Nftmart::submit_order(Origin::signed(BOB), NATIVE_CURRENCY_ID,
+							  ACCURACY, CATEGORY_ID, CLASS_ID, TOKEN_ID, ACCURACY + 3, DEADLINE + 1));
+		assert_noop!(
+			Nftmart::remove_order(Origin::signed(ALICE), CLASS_ID, TOKEN_ID),
+			Error::<Runtime>::OrderNotFound,
+		);
+		assert_ok!(Nftmart::remove_order(Origin::signed(BOB), CLASS_ID, TOKEN_ID));
+		assert_noop!(
+			Nftmart::remove_order(Origin::signed(BOB), CLASS_ID, TOKEN_ID),
+			Error::<Runtime>::OrderNotFound,
+		);
+	});
+}
+
+#[test]
 fn submit_order_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		add_category();
@@ -20,6 +66,7 @@ fn submit_order_should_work() {
 		// Bob submits his own token.
 		assert_ok!(Nftmart::submit_order(Origin::signed(BOB), NATIVE_CURRENCY_ID,
 							  ACCURACY, CATEGORY_ID, CLASS_ID, TOKEN_ID, ACCURACY + 3, DEADLINE + 1));
+		assert_eq!(last_event(), Event::nftmart_nft(crate::Event::CreatedOrder(CLASS_ID, TOKEN_ID, BOB)));
 		let alice_reserved = Currencies::reserved_balance(NATIVE_CURRENCY_ID, &ALICE);
 		let bob_reserved = Currencies::reserved_balance(NATIVE_CURRENCY_ID, &BOB);
 		assert_eq!(alice_reserved, 0);
@@ -28,6 +75,7 @@ fn submit_order_should_work() {
 		// Bob submits an order to buy Alice's token.
 		assert_ok!(Nftmart::submit_order(Origin::signed(BOB), NATIVE_CURRENCY_ID,
 							  ACCURACY, CATEGORY_ID, CLASS_ID, TOKEN_ID + 1, ACCURACY + 3, DEADLINE + 1));
+		assert_eq!(last_event(), Event::nftmart_nft(crate::Event::CreatedOrder(CLASS_ID, TOKEN_ID + 1, BOB)));
 		let alice_reserved = Currencies::reserved_balance(NATIVE_CURRENCY_ID, &ALICE);
 		let bob_reserved = Currencies::reserved_balance(NATIVE_CURRENCY_ID, &BOB);
 		assert_eq!(alice_reserved, 0);

@@ -823,8 +823,10 @@ impl<T: Config> Pallet<T> {
 		Orders::<T>::try_mutate_exists((class_id, token_id), who, |maybe_order| {
 			let order = maybe_order.as_mut().ok_or(Error::<T>::OrderNotFound)?;
 
+			let mut deposit: Balance = Zero::zero();
 			if !order.by_token_owner {
-				let _ = T::MultiCurrency::unreserve(order.currency_id, &who, order.price.saturated_into());
+				let d = T::MultiCurrency::unreserve(order.currency_id, &who, order.price.saturated_into());
+				deposit = deposit.saturating_add(order.price).saturating_sub(d);
 			}
 
 			Categories::<T>::try_mutate(order.category_id, |category| -> DispatchResult {
@@ -832,7 +834,10 @@ impl<T: Config> Pallet<T> {
 				Ok(())
 			})?;
 
-			let deposit = <T as Config>::Currency::unreserve(&who, order.deposit.saturated_into());
+			let deposit = {
+				let d = <T as Config>::Currency::unreserve(&who, order.deposit.saturated_into());
+				deposit.saturating_add(order.deposit).saturating_sub(d.saturated_into())
+			};
 			Self::deposit_event(Event::RemovedOrder(class_id, token_id, who.clone(), deposit.saturated_into()));
 			*maybe_order = None;
 			Ok(())
