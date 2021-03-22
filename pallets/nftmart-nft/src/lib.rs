@@ -464,7 +464,8 @@ pub mod module {
 					ensure!(price >= order.price, Error::<T>::CanNotAfford);
 					// `who` will take the order submitting by `order_owner`/`token_owner`
 					Self::delete_order(class_id, token_id, &order_owner)?;
-					// Try to delete another order. Because `who` may have already submitted a order to the same token.
+					// Try to delete another order for safety.
+					// Because `who` may have already submitted an order to the same token.
 					Self::try_delete_order(class_id, token_id, &who);
 					// `order_owner` transfers this NFT to `who`
 					Self::do_transfer(&order_owner, &who, class_id, token_id)?;

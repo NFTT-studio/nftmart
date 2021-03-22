@@ -204,6 +204,7 @@ construct_runtime!(
 
 pub const ALICE: AccountId = AccountId::new([1u8; 32]);
 pub const BOB: AccountId = AccountId::new([2u8; 32]);
+pub const CHARLIE: AccountId = AccountId::new([3u8; 32]);
 pub const CLASS_ID: <Runtime as orml_nft::Config>::ClassId = 0;
 pub const CATEGORY_ID: <Runtime as Config>::CategoryId = 0;
 pub const CATEGORY_ID_NOT_EXIST: <Runtime as Config>::CategoryId = 100;

@@ -5,6 +5,61 @@ use frame_support::{assert_noop, assert_ok};
 use crate::mock::{Event, *};
 
 #[test]
+fn take_order_should_fail() {
+	ExtBuilder::default().build().execute_with(|| {
+		add_category();
+		ensure_min_order_deposit_a_unit();
+		ensure_bob_balances(ACCURACY * 4);
+		add_class(ALICE);
+		add_token(BOB);
+		add_token(ALICE);
+		assert_noop!(
+			Nftmart::take_order(Origin::signed(BOB), CLASS_ID, TOKEN_ID + 2, ACCURACY, BOB),
+			Error::<Runtime>::TakeOwnOrder,
+		);
+		assert_noop!(
+			Nftmart::take_order(Origin::signed(ALICE), CLASS_ID, TOKEN_ID + 2, ACCURACY, BOB),
+			Error::<Runtime>::TokenIdNotFound,
+		);
+		assert_noop!(
+			Nftmart::take_order(Origin::signed(ALICE), CLASS_ID, TOKEN_ID, ACCURACY, CHARLIE),
+			Error::<Runtime>::OrderNotFound,
+		);
+		assert_ok!(Nftmart::submit_order(Origin::signed(BOB), NATIVE_CURRENCY_ID, ACCURACY, CATEGORY_ID, CLASS_ID, TOKEN_ID, ACCURACY + 3, DEADLINE + 1));
+		System::set_block_number(10);
+		assert_noop!(
+			Nftmart::take_order(Origin::signed(ALICE), CLASS_ID, TOKEN_ID, ACCURACY, BOB), // may take BOB's token
+			Error::<Runtime>::OrderExpired,
+		);
+		System::set_block_number(1);
+		assert_noop!(
+			Nftmart::take_order(Origin::signed(ALICE), CLASS_ID, TOKEN_ID, ACCURACY - 10, BOB), // may take BOB's token
+			Error::<Runtime>::CanNotAfford,
+		);
+		assert_noop!(
+			Nftmart::take_order(Origin::signed(ALICE), CLASS_ID, TOKEN_ID, ACCURACY, BOB), // may take BOB's token
+			pallet_balances::Error::<Runtime>::InsufficientBalance,
+		);
+		const ALICE_TOKEN: <Runtime as orml_nft::Config>::TokenId = TOKEN_ID + 1;
+		assert_ok!(Nftmart::submit_order(Origin::signed(BOB), NATIVE_CURRENCY_ID, ACCURACY, CATEGORY_ID, CLASS_ID, ALICE_TOKEN, ACCURACY, DEADLINE + 1));
+		System::set_block_number(10);
+		assert_noop!(
+			Nftmart::take_order(Origin::signed(ALICE), CLASS_ID, ALICE_TOKEN, ACCURACY, BOB), // may sell token to BOB
+			Error::<Runtime>::OrderExpired,
+		);
+		System::set_block_number(1);
+		assert_noop!(
+			Nftmart::take_order(Origin::signed(ALICE), CLASS_ID, ALICE_TOKEN, ACCURACY + 10, BOB), // may sell token to BOB
+			Error::<Runtime>::PriceTooLow,
+		);
+		assert_noop!(
+			Nftmart::take_order(Origin::signed(CHARLIE), CLASS_ID, ALICE_TOKEN, ACCURACY + 10, BOB),
+			Error::<Runtime>::NoPermission,
+		);
+	});
+}
+
+#[test]
 fn remove_order_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		add_category();
