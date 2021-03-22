@@ -449,7 +449,7 @@ pub mod module {
 			let who = ensure_signed(origin)?;
 			// Simplify the logic, to make life easier.
 			ensure!(order_owner != who, Error::<T>::TakeOwnOrder);
-			let token_owner = orml_nft::Module::<T>::tokens(class_id, token_id).ok_or(Error::<T>::TokenIdNotFound)?.owner;
+			let token_owner = orml_nft::Pallet::<T>::tokens(class_id, token_id).ok_or(Error::<T>::TokenIdNotFound)?.owner;
 
 			let order: OrderData<T> = {
 				let order = Self::orders((class_id, token_id), &order_owner);
@@ -514,7 +514,7 @@ pub mod module {
 			let who = ensure_signed(origin)?;
 			ensure!(currency_id == NATIVE_CURRENCY_ID.saturated_into(), Error::<T>::NativeCurrencyOnlyForNow); // TODO: remove this limitation.
 
-			let token: TokenInfoOf<T> = orml_nft::Module::<T>::tokens(class_id, token_id).ok_or(Error::<T>::TokenIdNotFound)?;
+			let token: TokenInfoOf<T> = orml_nft::Pallet::<T>::tokens(class_id, token_id).ok_or(Error::<T>::TokenIdNotFound)?;
 
 			ensure!(Self::orders((class_id, token_id), &who).is_none(), Error::<T>::DuplicatedOrder);
 			ensure!(<frame_system::Pallet<T>>::block_number() < deadline, Error::<T>::InvalidDeadline);
@@ -579,7 +579,7 @@ pub mod module {
 		// 	let who = ensure_signed(origin)?;
 		// 	Orders::<T>::try_mutate((class_id, token_id), &who, |maybe_order| -> DispatchResult {
 		// 		let order = maybe_order.as_mut().ok_or(Error::<T>::OrderNotFound)?;
-		// 		let token_owner = orml_nft::Module::<T>::tokens(class_id, token_id).ok_or(Error::<T>::TokenIdNotFound)?.owner;
+		// 		let token_owner = orml_nft::Pallet::<T>::tokens(class_id, token_id).ok_or(Error::<T>::TokenIdNotFound)?.owner;
 		//
 		// 		if token_owner != who {
 		// 			let _ = T::MultiCurrency::unreserve(order.currency_id, &who, order.price.saturated_into());
@@ -664,7 +664,7 @@ pub mod module {
 			ensure!(name.len() <= 20, Error::<T>::NameTooLong);// TODO: pass configurations from runtime configuration.
 			ensure!(description.len() <= 256, Error::<T>::DescriptionTooLong);// TODO: pass configurations from runtime configuration.
 
-			let next_id = orml_nft::Module::<T>::next_class_id();
+			let next_id = orml_nft::Pallet::<T>::next_class_id();
 			let owner: T::AccountId = T::ModuleId::get().into_sub_account(next_id);
 			let (deposit, all_deposit) = Self::create_class_deposit(
 				metadata.len().saturated_into(),
@@ -675,7 +675,7 @@ pub mod module {
 			<T as Config>::Currency::transfer(&who, &owner, all_deposit.saturated_into(), KeepAlive)?;
 			<T as Config>::Currency::reserve(&owner, deposit.saturated_into())?;
 			// owner add proxy delegate to origin
-			<pallet_proxy::Module<T>>::add_proxy_delegate(&owner, who, Default::default(), Zero::zero())?;
+			<pallet_proxy::Pallet<T>>::add_proxy_delegate(&owner, who, Default::default(), Zero::zero())?;
 
 			let data: ClassData<BlockNumberOf<T>> = ClassData {
 				deposit,
@@ -684,7 +684,7 @@ pub mod module {
 				description,
 				create_block: <frame_system::Pallet<T>>::block_number(),
 			};
-			orml_nft::Module::<T>::create_class(&owner, metadata, data)?;
+			orml_nft::Pallet::<T>::create_class(&owner, metadata, data)?;
 
 			Self::deposit_event(Event::CreatedClass(owner, next_id));
 			Ok(().into())
@@ -708,7 +708,7 @@ pub mod module {
 			let who = ensure_signed(origin)?;
 			let to = T::Lookup::lookup(to)?;
 			ensure!(quantity >= 1, Error::<T>::InvalidQuantity);
-			let class_info = orml_nft::Module::<T>::classes(class_id).ok_or(Error::<T>::ClassIdNotFound)?;
+			let class_info = orml_nft::Pallet::<T>::classes(class_id).ok_or(Error::<T>::ClassIdNotFound)?;
 			ensure!(who == class_info.owner, Error::<T>::NoPermission);
 			let (deposit, total_deposit) = Self::mint_token_deposit(metadata.len().saturated_into(), quantity);
 
@@ -718,7 +718,7 @@ pub mod module {
 				create_block: <frame_system::Pallet<T>>::block_number(),
 			};
 			for _ in 0..quantity {
-				orml_nft::Module::<T>::mint(&to, class_id, metadata.clone(), data.clone())?;
+				orml_nft::Pallet::<T>::mint(&to, class_id, metadata.clone(), data.clone())?;
 			}
 
 			Self::deposit_event(Event::MintedToken(who, to, class_id, quantity));
@@ -758,11 +758,11 @@ pub mod module {
 			let who = ensure_signed(origin)?;
 			ensure!(Self::is_burnable(class_id)?, Error::<T>::NonBurnable);
 
-			let token_info = orml_nft::Module::<T>::tokens(class_id, token_id).ok_or(Error::<T>::TokenIdNotFound)?;
+			let token_info = orml_nft::Pallet::<T>::tokens(class_id, token_id).ok_or(Error::<T>::TokenIdNotFound)?;
 			ensure!(who == token_info.owner, Error::<T>::NoPermission);
 
 			ensure!(Self::orders((class_id, token_id), &who).is_none(), Error::<T>::OrderExists);
-			orml_nft::Module::<T>::burn(&who, (class_id, token_id))?;
+			orml_nft::Pallet::<T>::burn(&who, (class_id, token_id))?;
 			let owner: T::AccountId = T::ModuleId::get().into_sub_account(class_id);
 			let data = token_info.data;
 			// `repatriate_reserved` will check `to` account exist and return `DeadAccount`.
@@ -787,7 +787,7 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			let dest = T::Lookup::lookup(dest)?;
-			let class_info = orml_nft::Module::<T>::classes(class_id).ok_or(Error::<T>::ClassIdNotFound)?;
+			let class_info = orml_nft::Pallet::<T>::classes(class_id).ok_or(Error::<T>::ClassIdNotFound)?;
 			ensure!(who == class_info.owner, Error::<T>::NoPermission);
 			ensure!(
 				class_info.total_issuance == Zero::zero(),
@@ -803,7 +803,7 @@ pub mod module {
 			<T as Config>::Currency::transfer(&owner, &dest, data.deposit.saturated_into(), KeepAlive)?;
 
 			// transfer all free from origin to dest
-			orml_nft::Module::<T>::destroy_class(&who, class_id)?;
+			orml_nft::Pallet::<T>::destroy_class(&who, class_id)?;
 
 			Self::deposit_event(Event::DestroyedClass(who, class_id, dest));
 			Ok(().into())
@@ -814,7 +814,7 @@ pub mod module {
 impl<T: Config> Pallet<T> {
 
 	fn is_burnable(class_id: ClassIdOf<T>) -> Result<bool, DispatchError> {
-		let class_info = orml_nft::Module::<T>::classes(class_id).ok_or(Error::<T>::ClassIdNotFound)?;
+		let class_info = orml_nft::Pallet::<T>::classes(class_id).ok_or(Error::<T>::ClassIdNotFound)?;
 		let data = class_info.data;
 		Ok(data.properties.0.contains(ClassProperty::Burnable))
 	}
@@ -851,27 +851,27 @@ impl<T: Config> Pallet<T> {
 	/// Ensured atomic.
 	#[transactional]
 	fn do_transfer(from: &T::AccountId, to: &T::AccountId, class_id: ClassIdOf<T>, token_id: TokenIdOf<T>) -> DispatchResult {
-		let class_info = orml_nft::Module::<T>::classes(class_id).ok_or(Error::<T>::ClassIdNotFound)?;
+		let class_info = orml_nft::Pallet::<T>::classes(class_id).ok_or(Error::<T>::ClassIdNotFound)?;
 		let data = class_info.data;
 		ensure!(
 			data.properties.0.contains(ClassProperty::Transferable),
 			Error::<T>::NonTransferable
 		);
 
-		let token_info = orml_nft::Module::<T>::tokens(class_id, token_id).ok_or(Error::<T>::TokenIdNotFound)?;
+		let token_info = orml_nft::Pallet::<T>::tokens(class_id, token_id).ok_or(Error::<T>::TokenIdNotFound)?;
 		ensure!(*from == token_info.owner, Error::<T>::NoPermission);
 
 		ensure!(Self::orders((class_id, token_id), from).is_none(), Error::<T>::OrderExists);
 
-		orml_nft::Module::<T>::transfer(from, to, (class_id, token_id))?;
+		orml_nft::Pallet::<T>::transfer(from, to, (class_id, token_id))?;
 
 		Self::deposit_event(Event::TransferredToken(from.clone(), to.clone(), class_id, token_id));
 		Ok(())
 	}
 
 	pub fn add_class_admin_deposit(admin_count: u32) -> Balance {
-		let proxy_deposit_before: Balance = <pallet_proxy::Module<T>>::deposit(1).saturated_into();
-		let proxy_deposit_after: Balance = <pallet_proxy::Module<T>>::deposit(admin_count.saturating_add(1)).saturated_into();
+		let proxy_deposit_before: Balance = <pallet_proxy::Pallet<T>>::deposit(1).saturated_into();
+		let proxy_deposit_after: Balance = <pallet_proxy::Pallet<T>>::deposit(admin_count.saturating_add(1)).saturated_into();
 		proxy_deposit_after.saturating_sub(proxy_deposit_before)
 	}
 
@@ -893,7 +893,7 @@ impl<T: Config> Pallet<T> {
 				(total_bytes as Balance).saturating_mul(T::MetaDataByteDeposit::get())
 			)
 		};
-		let proxy_deposit: Balance = <pallet_proxy::Module<T>>::deposit(1).saturated_into();
+		let proxy_deposit: Balance = <pallet_proxy::Pallet<T>>::deposit(1).saturated_into();
 		(deposit, deposit.saturating_add(proxy_deposit))
 	}
 }
