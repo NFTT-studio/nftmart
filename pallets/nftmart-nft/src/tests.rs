@@ -19,11 +19,17 @@ fn remove_order_should_work() {
 		assert_eq!(order.deposit, ACCURACY + 3);
 		assert_eq!(order.price, ACCURACY);
 		assert_ok!(Nftmart::remove_order(Origin::signed(BOB), CLASS_ID, TOKEN_ID));
+		// check category
+		assert_eq!(0, Nftmart::categories(CATEGORY_ID).unwrap().nft_count);
+		assert!(Nftmart::categories(CATEGORY_ID + 1).is_none());
 		assert_eq!(last_event(), Event::nftmart_nft(crate::Event::RemovedOrder(CLASS_ID, TOKEN_ID, BOB, ACCURACY + 3)));
 		assert_ok!(Nftmart::submit_order(Origin::signed(BOB), NATIVE_CURRENCY_ID,
 							  ACCURACY, CATEGORY_ID, CLASS_ID, TOKEN_ID + 1, ACCURACY + 3, DEADLINE + 1));
 		assert_ok!(Nftmart::remove_order(Origin::signed(BOB), CLASS_ID, TOKEN_ID + 1));
 		assert_eq!(last_event(), Event::nftmart_nft(crate::Event::RemovedOrder(CLASS_ID, TOKEN_ID + 1, BOB, ACCURACY * 2 + 3)));
+		// check category
+		assert_eq!(0, Nftmart::categories(CATEGORY_ID).unwrap().nft_count);
+		assert!(Nftmart::categories(CATEGORY_ID + 1).is_none());
 	});
 }
 
@@ -42,11 +48,17 @@ fn remove_order_should_fail() {
 			Nftmart::remove_order(Origin::signed(ALICE), CLASS_ID, TOKEN_ID),
 			Error::<Runtime>::OrderNotFound,
 		);
+		// check category
+		assert_eq!(1, Nftmart::categories(CATEGORY_ID).unwrap().nft_count);
+		assert!(Nftmart::categories(CATEGORY_ID + 1).is_none());
 		assert_ok!(Nftmart::remove_order(Origin::signed(BOB), CLASS_ID, TOKEN_ID));
 		assert_noop!(
 			Nftmart::remove_order(Origin::signed(BOB), CLASS_ID, TOKEN_ID),
 			Error::<Runtime>::OrderNotFound,
 		);
+		// check category
+		assert_eq!(0, Nftmart::categories(CATEGORY_ID).unwrap().nft_count);
+		assert!(Nftmart::categories(CATEGORY_ID + 1).is_none());
 	});
 }
 
@@ -67,6 +79,9 @@ fn submit_order_should_work() {
 		assert_ok!(Nftmart::submit_order(Origin::signed(BOB), NATIVE_CURRENCY_ID,
 							  ACCURACY, CATEGORY_ID, CLASS_ID, TOKEN_ID, ACCURACY + 3, DEADLINE + 1));
 		assert_eq!(last_event(), Event::nftmart_nft(crate::Event::CreatedOrder(CLASS_ID, TOKEN_ID, BOB)));
+		// check category
+		assert_eq!(1, Nftmart::categories(CATEGORY_ID).unwrap().nft_count);
+		assert!(Nftmart::categories(CATEGORY_ID + 1).is_none());
 		let alice_reserved = Currencies::reserved_balance(NATIVE_CURRENCY_ID, &ALICE);
 		let bob_reserved = Currencies::reserved_balance(NATIVE_CURRENCY_ID, &BOB);
 		assert_eq!(alice_reserved, 0);
@@ -81,6 +96,8 @@ fn submit_order_should_work() {
 		assert_eq!(alice_reserved, 0);
 		assert_eq!(bob_reserved, ACCURACY + 3 + ACCURACY + ACCURACY + 3);
 		assert!(!Nftmart::orders((CLASS_ID, TOKEN_ID + 1), BOB).unwrap().by_token_owner);
+		assert_eq!(2, Nftmart::categories(CATEGORY_ID).unwrap().nft_count);
+		assert!(Nftmart::categories(CATEGORY_ID + 1).is_none());
 	});
 }
 
@@ -133,8 +150,6 @@ fn create_category_should_work() {
 		assert_eq!({ let id_expect: CategoryIdOf<Runtime> = One::one(); id_expect }, Nftmart::next_category_id());
 		assert_eq!(Some(CategoryData{ metadata, nft_count: 0 }), Nftmart::categories(CATEGORY_ID));
 		assert_eq!(None, Nftmart::categories(CATEGORY_ID_NOT_EXIST));
-
-		// TODO: test update
 	});
 }
 
