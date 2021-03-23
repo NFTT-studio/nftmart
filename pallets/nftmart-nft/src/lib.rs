@@ -461,9 +461,10 @@ pub mod module {
 			#[pallet::compact] class_id: ClassIdOf<T>,
 			#[pallet::compact] token_id: TokenIdOf<T>,
 			#[pallet::compact] price: Balance,
-			order_owner: T::AccountId,
+			order_owner: <T::Lookup as StaticLookup>::Source,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
+			let order_owner = T::Lookup::lookup(order_owner)?;
 			// Simplify the logic, to make life easier.
 			ensure!(order_owner != who, Error::<T>::TakeOwnOrder);
 			let token_owner = orml_nft::Pallet::<T>::tokens(class_id, token_id).ok_or(Error::<T>::TokenIdNotFound)?.owner;
@@ -710,6 +711,47 @@ pub mod module {
 			Ok(().into())
 		}
 
+		/// Update token royalty.
+		#[pallet::weight(100_000)]
+		#[transactional]
+		pub fn update_token_royalty(
+			origin: OriginFor<T>,
+			#[pallet::compact] class_id: ClassIdOf<T>,
+			#[pallet::compact] token_id: TokenIdOf<T>,
+			charge_royalty: Option<bool>,
+		) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+			orml_nft::Tokens::<T>::try_mutate(class_id, token_id, |maybe_token| -> DispatchResultWithPostInfo {
+				let token_info: &mut TokenInfoOf<T> = maybe_token.as_mut().ok_or(Error::<T>::TokenIdNotFound)?;
+				ensure!(who == token_info.owner, Error::<T>::NoPermission);
+				ensure!(who == token_info.data.royalty_beneficiary, Error::<T>::NoPermission);
+				token_info.data.royalty = charge_royalty.ok_or_else(|| -> Result<bool,DispatchError> {
+					let class_info: ClassInfoOf<T> = orml_nft::Pallet::<T>::classes(class_id).ok_or(Error::<T>::ClassIdNotFound)?;
+					Ok(class_info.data.properties.0.contains(ClassProperty::RoyaltiesChargeable))
+				}).or_else(core::convert::identity)?;
+				Ok(().into())
+			})
+		}
+
+		/// Update token royalty beneficiary.
+		#[pallet::weight(100_000)]
+		#[transactional]
+		pub fn update_token_royalty_beneficiary(
+			origin: OriginFor<T>,
+			#[pallet::compact] class_id: ClassIdOf<T>,
+			#[pallet::compact] token_id: TokenIdOf<T>,
+			to: <T::Lookup as StaticLookup>::Source,
+		) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+			orml_nft::Tokens::<T>::try_mutate(class_id, token_id, |maybe_token| -> DispatchResultWithPostInfo {
+				let token_info: &mut TokenInfoOf<T> = maybe_token.as_mut().ok_or(Error::<T>::TokenIdNotFound)?;
+				ensure!(who == token_info.data.royalty_beneficiary, Error::<T>::NoPermission);
+				let to = T::Lookup::lookup(to)?;
+				token_info.data.royalty_beneficiary = to;
+				Ok(().into())
+			})
+		}
+
 		/// Mint NFT token
 		///
 		/// - `to`: the token owner's account
@@ -738,8 +780,8 @@ pub mod module {
 				deposit,
 				create_block: <frame_system::Pallet<T>>::block_number(),
 				royalty: charge_royalty.unwrap_or_else(|| class_info.data.properties.0.contains(ClassProperty::RoyaltiesChargeable)),
-				creator: who.clone(),
-				royalty_beneficiary: who.clone(),
+				creator: to.clone(),
+				royalty_beneficiary: to.clone(),
 			};
 			for _ in 0..quantity {
 				orml_nft::Pallet::<T>::mint(&to, class_id, metadata.clone(), data.clone())?;

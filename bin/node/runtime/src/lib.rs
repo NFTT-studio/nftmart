@@ -1105,7 +1105,7 @@ impl orml_nft::Config for Runtime {
 	type ClassId = sp_core::constants_types::ClassId;
 	type TokenId = sp_core::constants_types::TokenId;
 	type ClassData = nftmart_nft::ClassData<BlockNumber>;
-	type TokenData = nftmart_nft::TokenData<BlockNumber>;
+	type TokenData = nftmart_nft::TokenData<AccountId, BlockNumber>;
 }
 
 parameter_types! {

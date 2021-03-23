@@ -3,7 +3,64 @@
 use super::*;
 use frame_support::{assert_noop, assert_ok};
 use crate::mock::{Event, *};
-use orml_nft::ClassInfoOf;
+use orml_nft::{ClassInfoOf};
+
+#[test]
+fn update_token_royalty() {
+	// royalty
+	ExtBuilder::default().build().execute_with(|| {
+		add_category();
+		ensure_min_order_deposit_a_unit();
+		ensure_bob_balances(ACCURACY * 4);
+		add_class(ALICE);
+		add_token(BOB);
+		assert_noop!(
+			Nftmart::update_token_royalty(Origin::signed(ALICE), CLASS_ID, TOKEN_ID_NOT_EXIST, Some(true)),
+			Error::<Runtime>::TokenIdNotFound,
+		);
+		assert_noop!(
+			Nftmart::update_token_royalty(Origin::signed(ALICE), CLASS_ID, TOKEN_ID, Some(true)),
+			Error::<Runtime>::NoPermission,
+		);
+		assert_eq!(orml_nft::Tokens::<Runtime>::get(CLASS_ID, TOKEN_ID).unwrap().data.royalty, false);
+
+		assert_ok!(Nftmart::update_token_royalty(Origin::signed(BOB), CLASS_ID, TOKEN_ID, Some(true)));
+		assert_eq!(orml_nft::Tokens::<Runtime>::get(CLASS_ID, TOKEN_ID).unwrap().data.royalty, true);
+
+		assert_ok!(Nftmart::update_token_royalty(Origin::signed(BOB), CLASS_ID, TOKEN_ID, Some(false)));
+		assert_eq!(orml_nft::Tokens::<Runtime>::get(CLASS_ID, TOKEN_ID).unwrap().data.royalty, false);
+
+		assert_ok!(Nftmart::update_token_royalty(Origin::signed(BOB), CLASS_ID, TOKEN_ID, Some(true)));
+		assert_eq!(orml_nft::Tokens::<Runtime>::get(CLASS_ID, TOKEN_ID).unwrap().data.royalty, true);
+
+		assert_ok!(Nftmart::update_token_royalty(Origin::signed(BOB), CLASS_ID, TOKEN_ID, None));
+		assert_eq!(orml_nft::Tokens::<Runtime>::get(CLASS_ID, TOKEN_ID).unwrap().data.royalty, false);
+
+		assert_ok!(Nftmart::update_token_royalty_beneficiary(Origin::signed(BOB), CLASS_ID, TOKEN_ID, ALICE));
+		assert_noop!(
+			Nftmart::update_token_royalty(Origin::signed(BOB), CLASS_ID, TOKEN_ID, Some(true)),
+			Error::<Runtime>::NoPermission,
+		);
+	});
+	// royalty beneficiary
+	ExtBuilder::default().build().execute_with(|| {
+		add_category();
+		ensure_min_order_deposit_a_unit();
+		ensure_bob_balances(ACCURACY * 4);
+		add_class(ALICE);
+		add_token(BOB);
+		assert_noop!(
+			Nftmart::update_token_royalty_beneficiary(Origin::signed(BOB), CLASS_ID, TOKEN_ID_NOT_EXIST, ALICE),
+			Error::<Runtime>::TokenIdNotFound,
+		);
+		assert_noop!(
+			Nftmart::update_token_royalty_beneficiary(Origin::signed(ALICE), CLASS_ID, TOKEN_ID, ALICE),
+			Error::<Runtime>::NoPermission,
+		);
+		assert_ok!(Nftmart::update_token_royalty_beneficiary(Origin::signed(BOB), CLASS_ID, TOKEN_ID, ALICE));
+		assert_ok!(Nftmart::update_token_royalty_beneficiary(Origin::signed(ALICE), CLASS_ID, TOKEN_ID, BOB));
+	});
+}
 
 #[test]
 fn take_order_should_work() {
