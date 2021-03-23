@@ -237,7 +237,7 @@ pub mod migrations {
 #[frame_support::pallet]
 pub mod module {
 	use super::*;
-	use orml_nft::TokenInfoOf;
+	use orml_nft::{TokenInfoOf, ClassInfoOf};
 	use sp_runtime::{PerU16};
 
 	#[pallet::config]
@@ -611,6 +611,8 @@ pub mod module {
 		// 	Ok(().into())
 		// }
 
+		// TODO: Change royalty beneficiary address.
+
 		/// Create a common category for trading NFT.
 		/// A Selling NFT should belong to a category.
 		///
@@ -722,11 +724,12 @@ pub mod module {
 			#[pallet::compact] class_id: ClassIdOf<T>,
 			metadata: NFTMetadata,
 			#[pallet::compact] quantity: u32,
+			charge_royalty: Option<bool>,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			let to = T::Lookup::lookup(to)?;
 			ensure!(quantity >= 1, Error::<T>::InvalidQuantity);
-			let class_info = orml_nft::Pallet::<T>::classes(class_id).ok_or(Error::<T>::ClassIdNotFound)?;
+			let class_info: ClassInfoOf<T> = orml_nft::Pallet::<T>::classes(class_id).ok_or(Error::<T>::ClassIdNotFound)?;
 			ensure!(who == class_info.owner, Error::<T>::NoPermission);
 			let (deposit, total_deposit) = Self::mint_token_deposit(metadata.len().saturated_into(), quantity);
 
@@ -734,7 +737,7 @@ pub mod module {
 			let data: TokenData<T::AccountId, BlockNumberOf<T>> = TokenData {
 				deposit,
 				create_block: <frame_system::Pallet<T>>::block_number(),
-				royalty: false,
+				royalty: charge_royalty.unwrap_or_else(|| class_info.data.properties.0.contains(ClassProperty::RoyaltiesChargeable)),
 				creator: who.clone(),
 				royalty_beneficiary: who.clone(),
 			};

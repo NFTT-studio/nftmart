@@ -288,6 +288,6 @@ pub fn add_token(who: AccountId) {
 			who,
 			CLASS_ID,
 			vec![1],
-			1
+			1, None,
 		));
 }
