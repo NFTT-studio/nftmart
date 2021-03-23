@@ -3,6 +3,7 @@
 use super::*;
 use frame_support::{assert_noop, assert_ok};
 use crate::mock::{Event, *};
+use orml_nft::ClassInfoOf;
 
 #[test]
 fn take_order_should_work() {
@@ -255,13 +256,19 @@ fn create_class_should_work() {
 		let metadata = vec![1];
 		let name = vec![1];
 		let description = vec![1];
-		assert_ok!(Nftmart::create_class(Origin::signed(ALICE), metadata.clone(), name.clone(), description.clone(), Default::default()));
+		assert_ok!(Nftmart::create_class(Origin::signed(ALICE), metadata.clone(), name.clone(), description.clone(),
+			Properties(ClassProperty::Transferable | ClassProperty::Burnable | ClassProperty::RoyaltiesChargeable)));
 
 		let event = Event::nftmart_nft(crate::Event::CreatedClass(class_id_account(), CLASS_ID));
 		assert_eq!(last_event(), event);
 
 		let reserved = Nftmart::create_class_deposit(metadata.len() as u32, name.len() as u32, description.len() as u32).1;
 		assert_eq!(reserved_balance(&class_id_account()), reserved);
+
+		let class: ClassInfoOf<Runtime> = OrmlNFT::classes(CLASS_ID).unwrap();
+		assert!(class.data.properties.0.contains(ClassProperty::Transferable));
+		assert!(class.data.properties.0.contains(ClassProperty::Burnable));
+		assert!(class.data.properties.0.contains(ClassProperty::RoyaltiesChargeable));
 	});
 }
 

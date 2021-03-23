@@ -159,7 +159,7 @@ impl orml_nft::Config for Runtime {
 	type ClassId = sp_core::constants_types::ClassId;
 	type TokenId = sp_core::constants_types::TokenId;
 	type ClassData = nftmart_nft::ClassData<BlockNumberOf<Self>>;
-	type TokenData = nftmart_nft::TokenData<BlockNumberOf<Self>>;
+	type TokenData = nftmart_nft::TokenData<<Self as frame_system::Config>::AccountId, BlockNumberOf<Self>>;
 }
 
 parameter_types! {

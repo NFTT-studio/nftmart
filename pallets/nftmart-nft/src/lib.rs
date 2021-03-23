@@ -90,12 +90,18 @@ pub struct ClassData<BlockNumber> {
 
 #[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub struct TokenData<BlockNumber> {
+pub struct TokenData<AccountId, BlockNumber> {
 	/// The minimum balance to create token
 	#[codec(compact)]
 	pub deposit: Balance,
 	#[codec(compact)]
 	pub create_block: BlockNumber,
+	/// Charge royalty
+	pub royalty: bool,
+	/// The token's creator
+	pub creator: AccountId,
+	/// Royalty beneficiary
+	pub royalty_beneficiary: AccountId,
 }
 
 #[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq)]
@@ -190,11 +196,14 @@ pub mod migrations {
 	}
 
 	impl OldTokenData {
-		fn upgraded<T>(self) -> TokenData<T> where T: AtLeast32BitUnsigned + Bounded + Copy + From<u32> {
+		fn upgraded<AccountId: Clone, T>(self, who: AccountId) -> TokenData<AccountId, T> where T: AtLeast32BitUnsigned + Bounded + Copy + From<u32> {
 			let create_block: T = One::one();
 			TokenData {
 				create_block: create_block * 3u32.into(),
 				deposit: self.deposit,
+				royalty: false,
+				creator: who.clone(),
+				royalty_beneficiary: who,
 			}
 		}
 	}
@@ -212,12 +221,12 @@ pub mod migrations {
 			Some(new_data)
 		});
 		type OldToken<T> = orml_nft::TokenInfo<<T as frame_system::Config>::AccountId, OldTokenData>;
-		type NewToken<T> = orml_nft::TokenInfo<<T as frame_system::Config>::AccountId, TokenData<BlockNumberOf<T>>>;
+		type NewToken<T> = orml_nft::TokenInfo<<T as frame_system::Config>::AccountId, TokenData<<T as frame_system::Config>::AccountId, BlockNumberOf<T>>>;
 		orml_nft::Tokens::<T>::translate::<OldToken<T>, _>(|_, _, p: OldToken<T>| {
 			let new_data: NewToken<T> = NewToken::<T> {
 				metadata: p.metadata,
-				owner: p.owner,
-				data: p.data.upgraded::<BlockNumberOf<T>>(),
+				owner: p.owner.clone(),
+				data: p.data.upgraded::<<T as frame_system::Config>::AccountId, BlockNumberOf<T>>(p.owner),
 			};
 			Some(new_data)
 		});
@@ -232,7 +241,7 @@ pub mod module {
 	use sp_runtime::{PerU16};
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config + orml_nft::Config<ClassData = ClassData<BlockNumberOf<Self>>, TokenData = TokenData<BlockNumberOf<Self>>> + pallet_proxy::Config {
+	pub trait Config: frame_system::Config + orml_nft::Config<ClassData = ClassData<BlockNumberOf<Self>>, TokenData = TokenData<<Self as frame_system::Config>::AccountId, BlockNumberOf<Self>>> + pallet_proxy::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 		/// The minimum balance to create class
@@ -722,9 +731,12 @@ pub mod module {
 			let (deposit, total_deposit) = Self::mint_token_deposit(metadata.len().saturated_into(), quantity);
 
 			<T as Config>::Currency::reserve(&class_info.owner, total_deposit.saturated_into())?;
-			let data: TokenData<BlockNumberOf<T>> = TokenData {
+			let data: TokenData<T::AccountId, BlockNumberOf<T>> = TokenData {
 				deposit,
 				create_block: <frame_system::Pallet<T>>::block_number(),
+				royalty: false,
+				creator: who.clone(),
+				royalty_beneficiary: who.clone(),
 			};
 			for _ in 0..quantity {
 				orml_nft::Pallet::<T>::mint(&to, class_id, metadata.clone(), data.clone())?;
