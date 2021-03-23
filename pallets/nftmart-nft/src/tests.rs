@@ -5,6 +5,29 @@ use frame_support::{assert_noop, assert_ok};
 use crate::mock::{Event, *};
 
 #[test]
+fn take_order_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		add_category();
+		ensure_min_order_deposit_a_unit();
+		ensure_bob_balances(ACCURACY * 4);
+		add_class(ALICE);
+		add_token(BOB);
+		add_token(ALICE);
+		assert_ok!(Nftmart::submit_order(Origin::signed(BOB), NATIVE_CURRENCY_ID, 50000, CATEGORY_ID, CLASS_ID, TOKEN_ID, ACCURACY + 3, DEADLINE + 1));
+		assert_ok!(Nftmart::take_order(Origin::signed(ALICE), CLASS_ID, TOKEN_ID, ACCURACY, BOB)); // may take BOB's token
+		assert_eq!(last_event(), Event::nftmart_nft(crate::Event::TakenOrder(CLASS_ID, TOKEN_ID, BOB)));
+		let mut alice_free = 100000 - 50000 - Nftmart::create_class_deposit(1, 1, 1).1;
+		assert_eq!(alice_free, free_balance(&ALICE));
+		const ALICE_TOKEN: <Runtime as orml_nft::Config>::TokenId = TOKEN_ID + 1;
+		assert_ok!(Nftmart::submit_order(Origin::signed(BOB), NATIVE_CURRENCY_ID, ACCURACY, CATEGORY_ID, CLASS_ID, ALICE_TOKEN, ACCURACY, DEADLINE + 1));
+		assert_ok!(Nftmart::take_order(Origin::signed(ALICE), CLASS_ID, ALICE_TOKEN, ACCURACY, BOB));
+		assert_eq!(last_event(), Event::nftmart_nft(crate::Event::TakenOrder(CLASS_ID, ALICE_TOKEN, BOB)));
+		alice_free += ACCURACY;
+		assert_eq!(alice_free, free_balance(&ALICE));
+	});
+}
+
+#[test]
 fn take_order_should_fail() {
 	ExtBuilder::default().build().execute_with(|| {
 		add_category();
