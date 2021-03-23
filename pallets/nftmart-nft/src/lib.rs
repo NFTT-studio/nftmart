@@ -359,6 +359,7 @@ pub mod module {
 		min_reference_deposit: Balance,
 		royalties_rate: PerU16,
 		max_distribution_reward: PerU16,
+		platform_fee_rate: PerU16,
 		_phantom: PhantomData<T>,
 	}
 
@@ -370,6 +371,7 @@ pub mod module {
 				min_reference_deposit: ACCURACY,
 				royalties_rate: PerU16::from_percent(5),
 				max_distribution_reward: PerU16::from_percent(100),
+				platform_fee_rate: PerU16::from_rational(1u32, 10000u32),
 				_phantom: Default::default(),
 			}
 		}
@@ -383,6 +385,7 @@ pub mod module {
 			RoyaltiesRate::<T>::put(self.royalties_rate);
 			MaxDistributionReward::<T>::put(self.max_distribution_reward);
 			MinReferenceDeposit::<T>::put(self.min_reference_deposit);
+			PlatformFeeRate::<T>::put(self.platform_fee_rate);
 		}
 	}
 
@@ -419,6 +422,11 @@ pub mod module {
 	#[pallet::storage]
 	#[pallet::getter(fn royalties_rate)]
 	pub type RoyaltiesRate<T: Config> = StorageValue<_, PerU16, ValueQuery>;
+
+	/// platform fee rate
+	#[pallet::storage]
+	#[pallet::getter(fn platform_fee_rate)]
+	pub type PlatformFeeRate<T: Config> = StorageValue<_, PerU16, ValueQuery>;
 
 	/// MaxDistributionReward
 	#[pallet::storage]
