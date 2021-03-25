@@ -1426,8 +1426,8 @@ impl_runtime_apis! {
 	}
 
 	impl nftmart_rpc_runtime_api::NFTMartApi<Block> for Runtime {
-		fn mint_token_deposit(metadata_len: u32, quantity: u32) -> (Balance, Balance) {
-			Nftmart::mint_token_deposit(metadata_len, quantity)
+		fn mint_token_deposit(metadata_len: u32) -> Balance {
+			Nftmart::mint_token_deposit(metadata_len)
 		}
 		fn add_class_admin_deposit(admin_count: u32) -> Balance {
 			Nftmart::add_class_admin_deposit(admin_count)

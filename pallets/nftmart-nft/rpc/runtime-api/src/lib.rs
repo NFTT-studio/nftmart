@@ -8,7 +8,7 @@ sp_api::decl_runtime_apis! {
 	/// The helper API to calculate deposit.
 	pub trait NFTMartApi {
 		/// mint_token_deposit
-		fn mint_token_deposit(metadata_len: u32, quantity: u32) -> (Balance, Balance);
+		fn mint_token_deposit(metadata_len: u32) -> Balance;
 		/// add_class_admin_deposit
 		fn add_class_admin_deposit(admin_count: u32) -> Balance;
 		/// create_class_deposit

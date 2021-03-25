@@ -210,8 +210,10 @@ pub const CATEGORY_ID: <Runtime as Config>::CategoryId = 0;
 pub const CATEGORY_ID_NOT_EXIST: <Runtime as Config>::CategoryId = 100;
 pub const CLASS_ID_NOT_EXIST: <Runtime as orml_nft::Config>::ClassId = 1;
 pub const TOKEN_ID: <Runtime as orml_nft::Config>::TokenId = 0;
+pub const TOKEN_ID2: <Runtime as orml_nft::Config>::TokenId = 1;
 pub const DEADLINE: BlockNumberOf<Runtime> = 2;
-pub const TOKEN_ID_NOT_EXIST: <Runtime as orml_nft::Config>::TokenId = 1;
+pub const TOKEN_ID_NOT_EXIST: <Runtime as orml_nft::Config>::TokenId = 100;
+pub const METADATA: &[u8] = b"A";
 
 pub struct ExtBuilder;
 impl Default for ExtBuilder {
@@ -279,15 +281,15 @@ pub fn add_class(who: AccountId) {
 	));
 }
 
-pub fn add_token(who: AccountId) {
+pub fn add_token(who: AccountId, quantity: TokenId, charge_royalty: Option<bool>) {
 	let metadata = vec![1];
-	let deposit = Nftmart::mint_token_deposit(metadata.len() as u32, 1).1;
+	let deposit = Nftmart::mint_token_deposit(metadata.len() as u32);
 	assert_eq!(Balances::deposit_into_existing(&class_id_account(), deposit).is_ok(), true);
 	assert_ok!(Nftmart::mint(
 			Origin::signed(class_id_account()),
 			who,
 			CLASS_ID,
 			vec![1],
-			1, None,
+			quantity, charge_royalty,
 		));
 }
