@@ -204,12 +204,12 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Transfer NFT(non fungible token) from `from` account to `to` account
-	pub fn transfer(from: &T::AccountId, to: &T::AccountId, token: (T::ClassId, T::TokenId), count: T::TokenId) -> DispatchResult {
+	pub fn transfer(from: &T::AccountId, to: &T::AccountId, token: (T::ClassId, T::TokenId), count: T::TokenId) -> Result<bool, DispatchError> {
 		if from == to || count.is_zero() {
 			// no change needed
-			return Ok(())
+			return Ok(false)
 		}
-		TokensByOwner::<T>::try_mutate_exists(from, token, |maybe_from_count| -> DispatchResult {
+		TokensByOwner::<T>::try_mutate_exists(from, token, |maybe_from_count| -> Result<bool, DispatchError> {
 			let mut from_count: T::TokenId = maybe_from_count.unwrap_or_else(Zero::zero);
 			from_count = from_count.checked_sub(&count).ok_or(Error::<T>::NumOverflow)?;
 
@@ -230,7 +230,7 @@ impl<T: Config> Pallet<T> {
 			} else {
 				*maybe_from_count = Some(from_count);
 			}
-			Ok(())
+			Ok(true)
 		})
 	}
 
@@ -265,12 +265,29 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Burn NFT(non fungible token) from `owner`
-	pub fn burn(owner: &T::AccountId, token: (T::ClassId, T::TokenId), count: T::TokenId) -> Result<bool, DispatchError> {
+	#[frame_support::transactional]
+	pub fn burn(owner: &T::AccountId, token: (T::ClassId, T::TokenId), count: T::TokenId) -> Result<Option<T::TokenId>, DispatchError> {
 		if count.is_zero() {
 			// no change needed
-			return Ok(false)
+			return Ok(None)
 		}
-		TokensByOwner::<T>::try_mutate_exists(owner, token, |maybe_owner_count| -> Result<bool, DispatchError> {
+		TokensByOwner::<T>::try_mutate_exists(owner, token, |maybe_owner_count| -> Result<Option<T::TokenId>, DispatchError> {
+			Classes::<T>::try_mutate(token.0, |class_info| -> DispatchResult {
+				let class_info = class_info.as_mut().ok_or(Error::<T>::ClassNotFound)?;
+				class_info.total_issuance = class_info.total_issuance.checked_sub(&count).ok_or(Error::<T>::NumOverflow)?;
+				Ok(())
+			})?;
+
+			let c = Tokens::<T>::try_mutate_exists(token.0, token.1, |maybe_token_info| -> Result<Option<T::TokenId>, DispatchError> {
+				let token_info = maybe_token_info.as_mut().ok_or(Error::<T>::TokenNotFound)?;
+				token_info.count = token_info.count.checked_sub(&count).ok_or(Error::<T>::NumOverflow)?;
+				let c = token_info.count.clone();
+				if c.is_zero() {
+					*maybe_token_info = None;
+				}
+				Ok(Some(c))
+			})?;
+
 			let mut owner_count: T::TokenId = maybe_owner_count.unwrap_or_else(Zero::zero);
 			owner_count = owner_count.checked_sub(&count).ok_or(Error::<T>::NumOverflow)?;
 			if owner_count.is_zero() {
@@ -279,21 +296,7 @@ impl<T: Config> Pallet<T> {
 				*maybe_owner_count = Some(owner_count);
 			}
 
-			Classes::<T>::try_mutate(token.0, |class_info| -> DispatchResult {
-				let class_info = class_info.as_mut().ok_or(Error::<T>::ClassNotFound)?;
-				class_info.total_issuance = class_info.total_issuance.checked_sub(&count).ok_or(Error::<T>::NumOverflow)?;
-				Ok(())
-			})?;
-
-			Tokens::<T>::try_mutate_exists(token.0, token.1, |maybe_token_info| -> Result<bool, DispatchError> {
-				let token_info = maybe_token_info.as_mut().ok_or(Error::<T>::TokenNotFound)?;
-				token_info.count = token_info.count.checked_sub(&count).ok_or(Error::<T>::NumOverflow)?;
-				let is_zero = token_info.count.is_zero();
-				if is_zero {
-					*maybe_token_info = None;
-				}
-				Ok(is_zero)
-			})
+			Ok(c)
 		})
 	}
 
