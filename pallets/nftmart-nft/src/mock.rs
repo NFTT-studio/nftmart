@@ -282,14 +282,13 @@ pub fn add_class(who: AccountId) {
 }
 
 pub fn add_token(who: AccountId, quantity: TokenId, charge_royalty: Option<bool>) {
-	let metadata = vec![1];
-	let deposit = Nftmart::mint_token_deposit(metadata.len() as u32);
+	let deposit = Nftmart::mint_token_deposit(METADATA.len() as u32);
 	assert_eq!(Balances::deposit_into_existing(&class_id_account(), deposit).is_ok(), true);
 	assert_ok!(Nftmart::mint(
 			Origin::signed(class_id_account()),
 			who,
 			CLASS_ID,
-			vec![1],
+			METADATA.to_vec(),
 			quantity, charge_royalty,
 		));
 }

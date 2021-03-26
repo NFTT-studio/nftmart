@@ -315,8 +315,8 @@ pub mod module {
 		NameTooLong,
 		/// DescriptionTooLong
 		DescriptionTooLong,
-		/// Not support for now
-		NotSupportForNow,
+		/// Not supported for now
+		NotSupportedForNow,
 	}
 
 	#[pallet::event]
@@ -328,8 +328,8 @@ pub mod module {
 		MintedToken(T::AccountId, T::AccountId, ClassIdOf<T>, TokenIdOf<T>),
 		/// Transferred NFT token. \[from, to, class_id, token_id, quantity\]
 		TransferredToken(T::AccountId, T::AccountId, ClassIdOf<T>, TokenIdOf<T>, TokenIdOf<T>),
-		/// Burned NFT token. \[owner, class_id, token_id, quantity\]
-		BurnedToken(T::AccountId, ClassIdOf<T>, TokenIdOf<T>, TokenIdOf<T>),
+		/// Burned NFT token. \[owner, class_id, token_id, quantity, unreserved\]
+		BurnedToken(T::AccountId, ClassIdOf<T>, TokenIdOf<T>, TokenIdOf<T>, Balance),
 		/// Destroyed NFT class. \[owner, class_id, dest\]
 		DestroyedClass(T::AccountId, ClassIdOf<T>, T::AccountId),
 		/// Created NFT common category. \[category_id\]
@@ -699,7 +699,7 @@ pub mod module {
 				ensure!(who == token_info.data.royalty_beneficiary, Error::<T>::NoPermission);
 
 				// TODO: Get ride of this limitation.
-				ensure!(token_info.quantity == One::one(), Error::<T>::NotSupportForNow);
+				ensure!(token_info.quantity == One::one(), Error::<T>::NotSupportedForNow);
 
 				token_info.data.royalty = charge_royalty.ok_or_else(|| -> Result<bool,DispatchError> {
 					let class_info: ClassInfoOf<T> = orml_nft::Pallet::<T>::classes(class_id).ok_or(Error::<T>::ClassIdNotFound)?;
@@ -763,7 +763,7 @@ pub mod module {
 
 			// TODO: Get ride of this limitation.
 			if quantity > One::one() {
-				ensure!(!data.royalty, Error::<T>::NotSupportForNow);
+				ensure!(!data.royalty, Error::<T>::NotSupportedForNow);
 			}
 
 			orml_nft::Pallet::<T>::mint(&to, class_id, metadata.clone(), data.clone(), quantity)?;
@@ -811,17 +811,18 @@ pub mod module {
 			ensure!(Self::is_burnable(class_id)?, Error::<T>::NonBurnable);
 			ensure!(quantity >= One::one(), Error::<T>::InvalidQuantity);
 
-			if let Some(remain) = orml_nft::Pallet::<T>::burn(&who, (class_id, token_id), quantity)? {
-				if remain.is_zero() {
+			if let Some(token_info) = orml_nft::Pallet::<T>::burn(&who, (class_id, token_id), quantity)? {
+				if token_info.quantity.is_zero() {
 					let class_owner: T::AccountId = T::ModuleId::get().into_sub_account(class_id);
-					let token_info: TokenInfoOf<T> = orml_nft::Pallet::<T>::tokens(class_id, token_id).ok_or(Error::<T>::TokenIdNotFound)?;
 					let data: TokenData<T::AccountId, T::BlockNumber> = token_info.data;
 					// `repatriate_reserved` will check `to` account exist and return `DeadAccount`.
 					// `transfer` not do this check.
 					<T as Config>::Currency::unreserve(&class_owner, data.deposit.saturated_into());
 					<T as Config>::Currency::transfer(&class_owner, &who, data.deposit.saturated_into(), KeepAlive)?;
+					Self::deposit_event(Event::BurnedToken(who, class_id, token_id, quantity, data.deposit));
+				} else {
+					Self::deposit_event(Event::BurnedToken(who, class_id, token_id, quantity, 0));
 				}
-				Self::deposit_event(Event::BurnedToken(who, class_id, token_id, quantity));
 			}
 			Ok(().into())
 		}

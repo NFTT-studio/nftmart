@@ -266,26 +266,26 @@ impl<T: Config> Pallet<T> {
 
 	/// Burn NFT(non fungible token) from `owner`
 	#[frame_support::transactional]
-	pub fn burn(owner: &T::AccountId, token: (T::ClassId, T::TokenId), quantity: T::TokenId) -> Result<Option<T::TokenId>, DispatchError> {
+	pub fn burn(owner: &T::AccountId, token: (T::ClassId, T::TokenId), quantity: T::TokenId) -> Result<Option<TokenInfoOf<T>>, DispatchError> {
 		if quantity.is_zero() {
 			// no change needed
 			return Ok(None)
 		}
-		TokensByOwner::<T>::try_mutate_exists(owner, token, |maybe_owner_count| -> Result<Option<T::TokenId>, DispatchError> {
+		TokensByOwner::<T>::try_mutate_exists(owner, token, |maybe_owner_count| -> Result<Option<TokenInfoOf<T>>, DispatchError> {
 			Classes::<T>::try_mutate(token.0, |class_info| -> DispatchResult {
 				let class_info = class_info.as_mut().ok_or(Error::<T>::ClassNotFound)?;
 				class_info.total_issuance = class_info.total_issuance.checked_sub(&quantity).ok_or(Error::<T>::NumOverflow)?;
 				Ok(())
 			})?;
 
-			let c = Tokens::<T>::try_mutate_exists(token.0, token.1, |maybe_token_info| -> Result<Option<T::TokenId>, DispatchError> {
+			let c = Tokens::<T>::try_mutate_exists(token.0, token.1, |maybe_token_info| -> Result<Option<TokenInfoOf<T>>, DispatchError> {
 				let token_info = maybe_token_info.as_mut().ok_or(Error::<T>::TokenNotFound)?;
 				token_info.quantity = token_info.quantity.checked_sub(&quantity).ok_or(Error::<T>::NumOverflow)?;
-				let c = token_info.quantity.clone();
-				if c.is_zero() {
+				let deep_copy = token_info.clone();
+				if token_info.quantity.is_zero() {
 					*maybe_token_info = None;
 				}
-				Ok(Some(c))
+				Ok(Some(deep_copy))
 			})?;
 
 			let mut owner_count: T::TokenId = maybe_owner_count.unwrap_or_else(Zero::zero);
