@@ -540,76 +540,53 @@ fn burn_should_work() {
 	});
 }
 
-// #[test]
-// fn burn_should_fail() {
-// 	let metadata = vec![1];
-// 	let name = vec![1];
-// 	let description = vec![1];
-// 	let deposit_token = Nftmart::mint_token_deposit(metadata.len() as u32, 1).1;
-// 	ExtBuilder::default().build().execute_with(|| {
-// 		assert_ok!(Nftmart::create_class(
-// 			Origin::signed(ALICE),
-// 			metadata.clone(), name.clone(), description.clone(),
-// 			Properties(ClassProperty::Transferable | ClassProperty::Burnable)
-// 		));
-// 		assert_eq!(Balances::deposit_into_existing(&class_id_account(), deposit_token).is_ok(), true);
-// 		assert_ok!(Nftmart::mint(
-// 			Origin::signed(class_id_account()),
-// 			BOB,
-// 			CLASS_ID,
-// 			vec![1],
-// 			1, None
-// 		));
-// 		assert_noop!(
-// 			Nftmart::burn(Origin::signed(BOB), CLASS_ID, TOKEN_ID_NOT_EXIST),
-// 			Error::<Runtime>::TokenIdNotFound
-// 		);
-//
-// 		assert_noop!(
-// 			Nftmart::burn(Origin::signed(ALICE), CLASS_ID, TOKEN_ID),
-// 			Error::<Runtime>::NoPermission
-// 		);
-//
-// 		orml_nft::Classes::<Runtime>::mutate(CLASS_ID, |class_info| {
-// 			class_info.as_mut().unwrap().total_issuance = 0;
-// 		});
-// 		assert_noop!(
-// 			Nftmart::burn(Origin::signed(BOB), CLASS_ID, TOKEN_ID),
-// 			orml_nft::Error::<Runtime>::NumOverflow
-// 		);
-//
-// 		// submit an order.
-// 		assert_ok!(Nftmart::create_category(Origin::root(), vec![1]));
-// 		assert_ok!(Nftmart::update_min_order_deposit(Origin::root(), 20));
-// 		assert_ok!(Currencies::deposit(NATIVE_CURRENCY_ID, &BOB, ACCURACY));
-// 		assert_ok!(Nftmart::submit_order(Origin::signed(BOB), NATIVE_CURRENCY_ID, ACCURACY, CATEGORY_ID,
-// 			CLASS_ID, TOKEN_ID, ACCURACY, DEADLINE));
-// 		assert_noop!(
-// 			Nftmart::burn(Origin::signed(BOB), CLASS_ID, TOKEN_ID),
-// 			Error::<Runtime>::OrderExists
-// 		);
-// 	});
-//
-// 	ExtBuilder::default().build().execute_with(|| {
-// 		assert_ok!(Nftmart::create_class(
-// 			Origin::signed(ALICE),
-// 			metadata.clone(), name.clone(), description.clone(),
-// 			Default::default()
-// 		));
-// 		assert_eq!(Balances::deposit_into_existing(&class_id_account(), deposit_token).is_ok(), true);
-// 		assert_ok!(Nftmart::mint(
-// 			Origin::signed(class_id_account()),
-// 			BOB,
-// 			CLASS_ID,
-// 			vec![1],
-// 			1, None
-// 		));
-// 		assert_noop!(
-// 			Nftmart::burn(Origin::signed(BOB), CLASS_ID, TOKEN_ID),
-// 			Error::<Runtime>::NonBurnable
-// 		);
-// 	});
-// }
+#[test]
+fn burn_should_fail() {
+	ExtBuilder::default().build().execute_with(|| {
+		add_class(ALICE);
+		add_token(BOB, 1, None);
+		assert_noop!(
+			Nftmart::burn(Origin::signed(BOB), CLASS_ID, TOKEN_ID_NOT_EXIST, 0),
+			Error::<Runtime>::InvalidQuantity
+		);
+		assert_noop!(
+			Nftmart::burn(Origin::signed(BOB), CLASS_ID_NOT_EXIST, TOKEN_ID, 1),
+			Error::<Runtime>::ClassIdNotFound,
+		);
+		assert_noop!(
+			Nftmart::burn(Origin::signed(BOB), CLASS_ID, TOKEN_ID_NOT_EXIST, 1),
+			orml_nft::Error::<Runtime>::TokenNotFound
+		);
+		assert_noop!(
+			Nftmart::burn(Origin::signed(ALICE), CLASS_ID, TOKEN_ID, 1),
+			orml_nft::Error::<Runtime>::NumOverflow
+		);
+		assert_noop!(
+			Nftmart::burn(Origin::signed(BOB), CLASS_ID, TOKEN_ID, 2),
+			orml_nft::Error::<Runtime>::NumOverflow
+		);
+		orml_nft::Classes::<Runtime>::mutate(CLASS_ID, |class_info| {
+			class_info.as_mut().unwrap().total_issuance = 0;
+		});
+		assert_noop!(
+			Nftmart::burn(Origin::signed(BOB), CLASS_ID, TOKEN_ID, 1),
+			orml_nft::Error::<Runtime>::NumOverflow
+		);
+	});
+
+	ExtBuilder::default().build().execute_with(|| {
+		assert_ok!(Nftmart::create_class(
+			Origin::signed(ALICE),
+			METADATA.to_vec(), METADATA.to_vec(), METADATA.to_vec(),
+			Default::default()
+		));
+		add_token(BOB, 1, None);
+		assert_noop!(
+			Nftmart::burn(Origin::signed(BOB), CLASS_ID, TOKEN_ID, 1),
+			Error::<Runtime>::NonBurnable
+		);
+	});
+}
 
 #[test]
 fn destroy_class_should_work() {
