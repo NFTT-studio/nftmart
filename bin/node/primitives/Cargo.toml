@@ -19,7 +19,7 @@ sp-runtime = { version = "3.0.0", default-features = false, path = "../../../pri
 
 [dev-dependencies]
 sp-serializer = { version = "3.0.0", path = "../../../primitives/serializer" }
-pretty_assertions = "0.6.1"
+pretty_assertions = "0.7.1"
 
 [features]
 default = ["std"]

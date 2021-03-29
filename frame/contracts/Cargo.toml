@@ -41,7 +41,7 @@ pallet-balances = { version = "3.0.0", path = "../balances" }
 pallet-timestamp = { version = "3.0.0", path = "../timestamp" }
 pallet-randomness-collective-flip = { version = "3.0.0", path = "../randomness-collective-flip" }
 paste = "1.0"
-pretty_assertions = "0.6.1"
+pretty_assertions = "0.7.1"
 wat = "1.0"
 
 [features]
