@@ -61,7 +61,7 @@ export function waitTx(moduleMetadata) {
 	];
 }
 
-export async function getApi(dest = 'ws://8.136.111.191:9944') {
+export async function getApi(dest) {
 	// https://github.com/elpheria/rpc-websockets/blob/master/API.md#new-websocketaddress-options---client
 	const ws = new WebSocket(dest, {max_reconnects: 0});
 	let connected = false;

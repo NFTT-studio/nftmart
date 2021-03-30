@@ -47,20 +47,22 @@ async function main() {
 	const ss58Format = 50;
 	const keyring = new Keyring({type: 'sr25519', ss58Format});
 	const program = new Command();
+	program.option('--ws <port>', 'node ws addr', 'ws://8.136.111.191:9944');
+
 	program.command('create-class <account>').action(async (account) => {
-		await demo_create_class(keyring, account);
+		await demo_create_class(program.opts().ws, keyring, account);
 	});
 	program.command('show-class-info').action(async () => {
-		await demo_show_class_info();
+		await demo_show_class_info(program.opts().ws);
 	});
 	program.command('add-class-admin <account>').action(async (account) => {
-		await demo_add_class_admin(keyring, account);
+		await demo_add_class_admin(program.opts().ws, keyring, account);
 	});
 	program.command('mint-nft <account> <classID>').action(async (account, classID) => {
-		await demo_mint_nft(keyring, account, classID);
+		await demo_mint_nft(program.opts().ws, keyring, account, classID);
 	});
 	program.command('show-all-nfts [classID]').action(async (classID) => {
-		await demo_show_all_nfts(classID);
+		await demo_show_all_nfts(program.opts().ws, classID);
 	});
 	program.command('query-nft <account>').action(async (account) => {
 		await demo_query_nft(keyring, account);
@@ -95,7 +97,7 @@ async function main() {
 	program.command('take-order <classID> <tokenID> <orderOwner> <account>').action(async (classID, tokenID, orderOwner, account) => {
 		await demo_take_order(keyring, classID, tokenID, orderOwner, account);
 	});
-	program.parse();
+	program.parseAsync(process.argv);
 }
 
 async function demo_take_order(keyring, classID, tokenID, orderOwner, account) {
@@ -343,8 +345,8 @@ async function show_all_nfts(api, classID) {
 	console.log(`The token count of class ${classID} is ${tokenCount}.`);
 }
 
-async function demo_show_all_nfts(classID) {
-	let api = await getApi();
+async function demo_show_all_nfts(ws, classID) {
+	let api = await getApi(ws);
 	if (classID === undefined) {
 		const allClasses = await api.query.ormlNft.classes.entries();
 		for (const c of allClasses) {
@@ -360,8 +362,8 @@ async function demo_show_all_nfts(classID) {
 	process.exit();
 }
 
-async function demo_mint_nft(keyring, account, classID) {
-	let api = await getApi();
+async function demo_mint_nft(ws, keyring, account, classID) {
+	let api = await getApi(ws);
 	let moduleMetadata = await getModules(api);
 	account = keyring.addFromUri(account);
 	const classInfo = await api.query.ormlNft.classes(classID);
@@ -390,8 +392,8 @@ async function demo_mint_nft(keyring, account, classID) {
 	process.exit();
 }
 
-async function demo_add_class_admin(keyring, account) {
-	let api = await getApi();
+async function demo_add_class_admin(ws, keyring, account) {
+	let api = await getApi(ws);
 	let moduleMetadata = await getModules(api);
 	const alice = keyring.addFromUri("//Alice");
 	const bob = keyring.addFromUri(account);
@@ -420,11 +422,12 @@ async function demo_add_class_admin(keyring, account) {
 	process.exit();
 }
 
-async function demo_show_class_info() {
-	let api = await getApi();
+async function demo_show_class_info(ws) {
+	let api = await getApi(ws);
 	let classCount = 0;
 
 	const allClasses = await api.query.ormlNft.classes.entries();
+	let all = [];
 	for (const c of allClasses) {
 		let key = c[0];
 		const len = key.length;
@@ -434,16 +437,17 @@ async function demo_show_class_info() {
 		clazz.metadata = hexToUtf8(clazz.metadata.slice(2));
 		clazz.classID = classID;
 		clazz.adminList = await api.query.proxy.proxies(clazz.owner);
-		console.log("%s", JSON.stringify(clazz));
+		all.push(JSON.stringify(clazz));
 		classCount++;
 	}
+	console.log("%s", all);
 	console.log("class count: %s", classCount);
 	console.log("nextClassId: %s", await api.query.ormlNft.nextClassId());
 	process.exit();
 }
 
-async function demo_create_class(keyring, account) {
-	let api = await getApi();
+async function demo_create_class(ws, keyring, account) {
+	let api = await getApi(ws);
 	let moduleMetadata = await getModules(api);
 	account = keyring.addFromUri(account);
 	let [a, b] = waitTx(moduleMetadata);
