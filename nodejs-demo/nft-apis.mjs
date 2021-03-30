@@ -65,43 +65,43 @@ async function main() {
 		await demo_show_all_nfts(program.opts().ws, classID);
 	});
 	program.command('query-nft <account>').action(async (account) => {
-		await demo_query_nft(keyring, account);
+		await demo_query_nft(program.opts().ws, keyring, account);
 	});
 	program.command('query-class <account>').action(async (account) => {
-		await demo_query_class(keyring, account);
+		await demo_query_class(program.opts().ws, keyring, account);
 	});
 	program.command('transfer-nft <classID> <tokenID> <from> <to>').action(async (classID, tokenID, from, to) => {
-		await demo_transfer_nft(keyring, classID, tokenID, from, to);
+		await demo_transfer_nft(program.opts().ws, keyring, classID, tokenID, from, to);
 	});
 	program.command('burn-nft <classID> <tokenID> <account>').action(async (classID, tokenID, account) => {
-		await demo_burn_nft(keyring, classID, tokenID, account);
+		await demo_burn_nft(program.opts().ws, keyring, classID, tokenID, account);
 	});
 	program.command('destroy-class <classID> <account>').action(async (classID, account) => {
-		await demo_destroy_class(keyring, classID, account);
+		await demo_destroy_class(program.opts().ws, keyring, classID, account);
 	});
 	program.command('show-create-class-deposit <metadata> <name> <description>').action(async (metadata, name, description) => {
-		await demo_show_create_class_deposit(metadata, name, description);
+		await demo_show_create_class_deposit(program.opts().ws, metadata, name, description);
 	});
 	program.command('create-category <metadata> <account>').action(async (metadata, account) => {
-		await demo_create_category(keyring, metadata, account);
+		await demo_create_category(program.opts().ws, keyring, metadata, account);
 	});
 	program.command('show-categories').action(async () => {
-		await demo_show_categories();
+		await demo_show_categories(program.opts().ws);
 	});
 	program.command('show-orders').action(async () => {
-		await demo_show_orders(keyring);
+		await demo_show_orders(program.opts().ws, keyring);
 	});
 	program.command('create-order <classID> <tokenID> <account>').action(async (classID, tokenID, account) => {
-		await demo_create_order(keyring, classID, tokenID, account);
+		await demo_create_order(program.opts().ws, keyring, classID, tokenID, account);
 	});
 	program.command('take-order <classID> <tokenID> <orderOwner> <account>').action(async (classID, tokenID, orderOwner, account) => {
-		await demo_take_order(keyring, classID, tokenID, orderOwner, account);
+		await demo_take_order(program.opts().ws, keyring, classID, tokenID, orderOwner, account);
 	});
 	program.parseAsync(process.argv);
 }
 
-async function demo_take_order(keyring, classID, tokenID, orderOwner, account) {
-	let api = await getApi();
+async function demo_take_order(ws, keyring, classID, tokenID, orderOwner, account) {
+	let api = await getApi(ws);
 	let moduleMetadata = await getModules(api);
 	account = keyring.addFromUri(account);
 	orderOwner = keyring.addFromUri(orderOwner).address;
@@ -120,8 +120,8 @@ async function demo_take_order(keyring, classID, tokenID, orderOwner, account) {
 
 const NativeCurrencyID = 0;
 
-async function demo_create_order(keyring, classID, tokenID, account) {
-	let api = await getApi();
+async function demo_create_order(ws, keyring, classID, tokenID, account) {
+	let api = await getApi(ws);
 	let moduleMetadata = await getModules(api);
 	account = keyring.addFromUri(account);
 	const price = unit.mul(bnToBn('20'));
@@ -145,8 +145,8 @@ async function demo_create_order(keyring, classID, tokenID, account) {
 	process.exit();
 }
 
-async function demo_show_orders(keyring) {
-	let api = await getApi();
+async function demo_show_orders(ws, keyring) {
+	let api = await getApi(ws);
 	let orderCount = 0;
 	const allOrders = await api.query.nftmart.orders.entries();
 	for (let order of allOrders) {
@@ -178,8 +178,8 @@ async function demo_show_orders(keyring) {
 	process.exit();
 }
 
-async function demo_show_categories() {
-	let api = await getApi();
+async function demo_show_categories(ws) {
+	let api = await getApi(ws);
 	let cateCount = 0;
 	const callCategories = await api.query.nftmart.categories.entries();
 	for (let category of callCategories) {
@@ -197,8 +197,8 @@ async function demo_show_categories() {
 	process.exit();
 }
 
-async function demo_create_category(keyring, metadata, account) {
-	let api = await getApi();
+async function demo_create_category(ws, keyring, metadata, account) {
+	let api = await getApi(ws);
 	let moduleMetadata = await getModules(api);
 	account = keyring.addFromUri(account);
 	const call = api.tx.sudo.sudo(api.tx.nftmart.createCategory(metadata));
@@ -210,15 +210,15 @@ async function demo_create_category(keyring, metadata, account) {
 	process.exit();
 }
 
-async function demo_show_create_class_deposit(metadata, name, description) {
-	let api = await getApi();
+async function demo_show_create_class_deposit(ws, metadata, name, description) {
+	let api = await getApi(ws);
 	const deposit = await classDeposit(api, metadata, name, description);
 	console.log(deposit.toString());
 	process.exit(0);
 }
 
-async function demo_destroy_class(keyring, classID, account) {
-	let api = await getApi();
+async function demo_destroy_class(ws, keyring, classID, account) {
+	let api = await getApi(ws);
 	let moduleMetadata = await getModules(api);
 	account = keyring.addFromUri(account);
 	let classInfo = await api.query.ormlNft.classes(classID);
@@ -234,8 +234,8 @@ async function demo_destroy_class(keyring, classID, account) {
 	process.exit();
 }
 
-async function demo_burn_nft(keyring, classID, tokenID, account) {
-	let api = await getApi();
+async function demo_burn_nft(ws, keyring, classID, tokenID, account) {
+	let api = await getApi(ws);
 	await showNft(api, classID, tokenID);
 
 	let moduleMetadata = await getModules(api);
@@ -252,8 +252,8 @@ async function demo_burn_nft(keyring, classID, tokenID, account) {
 	process.exit();
 }
 
-async function demo_transfer_nft(keyring, classID, tokenID, from, to) {
-	let api = await getApi();
+async function demo_transfer_nft(ws, keyring, classID, tokenID, from, to) {
+	let api = await getApi(ws);
 	await showNft(api, classID, tokenID);
 
 	let moduleMetadata = await getModules(api);
@@ -272,8 +272,8 @@ async function demo_transfer_nft(keyring, classID, tokenID, from, to) {
 	process.exit();
 }
 
-async function demo_query_class(keyring, account) {
-	let api = await getApi();
+async function demo_query_class(ws, keyring, account) {
+	let api = await getApi(ws);
 	const address = keyring.addFromUri(account).address;
 	const allClasses = await api.query.ormlNft.classes.entries();
 	for (const c of allClasses) {
@@ -299,8 +299,8 @@ function u32ToU64(tokenIDLow32, tokenIDHigh32) {
 	return tokenIDLow32;
 }
 
-async function demo_query_nft(keyring, account) {
-	let api = await getApi();
+async function demo_query_nft(ws, keyring, account) {
+	let api = await getApi(ws);
 	const address = keyring.addFromUri(account).address;
 	const nfts = await api.query.ormlNft.tokensByOwner.entries(address);
 	for (let clzToken of nfts) {
