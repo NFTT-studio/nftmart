@@ -1,5 +1,8 @@
 # NFTMART
 
+## Architecture overview
+![architecture overview](docs/nftmart-architecture-overview.jpeg)
+
 ## Installation
 
 ### Prerequisite
@@ -92,7 +95,7 @@ docker run -d --restart unless-stopped --name dev-node1 \
  --ws-max-connections=10000
 ```
 
-## Using Nodejs to access nftmart blockchain
+## Use Nodejs to access nftmart blockchain
 
 ```shell
 git clone https://github.com/NFTT-studio/nftmart
