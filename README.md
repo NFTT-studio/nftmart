@@ -96,26 +96,23 @@ docker run -d --restart unless-stopped --name dev-node1 \
 ```
 
 
-## nftmart-fontend 
-
+## nftmart-fontend
 ```
 docker run -d --restart unless-stopped \
 	--publish 18001:5000 \
-  --name nftmart-fontend \
+	--name nftmart-fontend \
 	-e REACT_APP_WS_URL=ws://127.0.0.1:9944 \
-  maomaotp/nftmart-fontend:040201 sh /start.sh
+	maomaotp/nftmart-fontend:040201 sh /start.sh
 ```
 
 ## polkadot-js-apps
-
 ```
 docker run -d  \
-		--name polkadot-ui  \
-		-e WS_URL=ws://127.0.0.1:9944  \
-		-p 18002:80  \
-		jacogr/polkadot-js-apps
+	--name polkadot-ui  \
+	-e WS_URL=ws://127.0.0.1:9944  \
+	-p 18002:80  \
+	jacogr/polkadot-js-apps
 ```
-
 
 
 
