@@ -25,20 +25,20 @@ mod tests;
 pub use module::*;
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode, RuntimeDebug)]
-pub enum AuctionKind {
-	/// None
-	None,
+pub enum OrderKind {
+	/// Normal
+	Normal,
+	/// Offer
+	Offer,
 	/// British
 	British,
 	/// Dutch
 	Dutch,
-	/// Candle
-	Candle,
 }
 
-impl Default for AuctionKind {
+impl Default for OrderKind {
 	fn default() -> Self {
-		Self::None
+		Self::Normal
 	}
 }
 
@@ -419,6 +419,7 @@ pub mod module {
 	#[pallet::storage]
 	#[pallet::getter(fn orders)]
 	pub type Orders<T: Config> = StorageDoubleMap<_, Blake2_128Concat, (ClassIdOf<T>, TokenIdOf<T>), Blake2_128Concat, T::AccountId, OrderData<T>>;
+	// pub type BatchOrders<T: Config> = StorageDoubleMap<_, Blake2_128Concat, T::AccountId, orderID, BatchOrderData<T>>;
 
 	/// Latest order price
 	#[pallet::storage]
@@ -511,7 +512,7 @@ pub mod module {
 		// 	}
 		// 	Ok(().into())
 		// }
-		//
+
 		// /// Create an NFT order. Create only.
 		// ///
 		// /// - `currency_id`: currency id
@@ -568,7 +569,7 @@ pub mod module {
 		// 	Self::deposit_event(Event::CreatedOrder(class_id, token_id, who));
 		// 	Ok(().into())
 		// }
-		//
+
 		// /// remove an order by order owner.
 		// ///
 		// /// - `class_id`: class id
