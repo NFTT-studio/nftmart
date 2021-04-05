@@ -78,71 +78,96 @@ fn session_keys(
 }
 
 fn staging_testnet_config_genesis() -> GenesisConfig {
-	// stash, controller, session-key
-	// generated with secret:
-	// for i in 1 2 3 4 ; do for j in stash controller; do subkey inspect "$secret"/fir/$j/$i; done; done
-	// and
-	// for i in 1 2 3 4 ; do for j in session; do subkey --ed25519 inspect "$secret"//fir//$j//$i; done; done
-
-	let initial_authorities: Vec<(AccountId, AccountId, GrandpaId, BabeId, ImOnlineId, AuthorityDiscoveryId)> = vec![(
-		// 5Fbsd6WXDGiLTxunqeK5BATNiocfCqu9bS1yArVjCgeBLkVy
-		hex!["9c7a2ee14e565db0c69f78c7b4cd839fbf52b607d867e9e9c5a79042898a0d12"].into(),
-		// 5EnCiV7wSHeNhjW3FSUwiJNkcc2SBkPLn5Nj93FmbLtBjQUq
-		hex!["781ead1e2fa9ccb74b44c19d29cb2a7a4b5be3972927ae98cd3877523976a276"].into(),
-		// 5Fb9ayurnxnaXj56CjmyQLBiadfRCqUbL2VWNbbe1nZU6wiC
-		hex!["9becad03e6dcac03cee07edebca5475314861492cdfc96a2144a67bbe9699332"].unchecked_into(),
-		// 5EZaeQ8djPcq9pheJUhgerXQZt9YaHnMJpiHMRhwQeinqUW8
-		hex!["6e7e4eb42cbd2e0ab4cae8708ce5509580b8c04d11f6758dbf686d50fe9f9106"].unchecked_into(),
-		// 5EZaeQ8djPcq9pheJUhgerXQZt9YaHnMJpiHMRhwQeinqUW8
-		hex!["6e7e4eb42cbd2e0ab4cae8708ce5509580b8c04d11f6758dbf686d50fe9f9106"].unchecked_into(),
-		// 5EZaeQ8djPcq9pheJUhgerXQZt9YaHnMJpiHMRhwQeinqUW8
-		hex!["6e7e4eb42cbd2e0ab4cae8708ce5509580b8c04d11f6758dbf686d50fe9f9106"].unchecked_into(),
-	),(
-		// 5ERawXCzCWkjVq3xz1W5KGNtVx2VdefvZ62Bw1FEuZW4Vny2
-		hex!["68655684472b743e456907b398d3a44c113f189e56d1bbfd55e889e295dfde78"].into(),
-		// 5Gc4vr42hH1uDZc93Nayk5G7i687bAQdHHc9unLuyeawHipF
-		hex!["c8dc79e36b29395413399edaec3e20fcca7205fb19776ed8ddb25d6f427ec40e"].into(),
-		// 5EockCXN6YkiNCDjpqqnbcqd4ad35nU4RmA1ikM4YeRN4WcE
-		hex!["7932cff431e748892fa48e10c63c17d30f80ca42e4de3921e641249cd7fa3c2f"].unchecked_into(),
-		// 5DhLtiaQd1L1LU9jaNeeu9HJkP6eyg3BwXA7iNMzKm7qqruQ
-		hex!["482dbd7297a39fa145c570552249c2ca9dd47e281f0c500c971b59c9dcdcd82e"].unchecked_into(),
-		// 5DhLtiaQd1L1LU9jaNeeu9HJkP6eyg3BwXA7iNMzKm7qqruQ
-		hex!["482dbd7297a39fa145c570552249c2ca9dd47e281f0c500c971b59c9dcdcd82e"].unchecked_into(),
-		// 5DhLtiaQd1L1LU9jaNeeu9HJkP6eyg3BwXA7iNMzKm7qqruQ
-		hex!["482dbd7297a39fa145c570552249c2ca9dd47e281f0c500c971b59c9dcdcd82e"].unchecked_into(),
-	),(
-		// 5DyVtKWPidondEu8iHZgi6Ffv9yrJJ1NDNLom3X9cTDi98qp
-		hex!["547ff0ab649283a7ae01dbc2eb73932eba2fb09075e9485ff369082a2ff38d65"].into(),
-		// 5FeD54vGVNpFX3PndHPXJ2MDakc462vBCD5mgtWRnWYCpZU9
-		hex!["9e42241d7cd91d001773b0b616d523dd80e13c6c2cab860b1234ef1b9ffc1526"].into(),
-		// 5E1jLYfLdUQKrFrtqoKgFrRvxM3oQPMbf6DfcsrugZZ5Bn8d
-		hex!["5633b70b80a6c8bb16270f82cca6d56b27ed7b76c8fd5af2986a25a4788ce440"].unchecked_into(),
-		// 5DhKqkHRkndJu8vq7pi2Q5S3DfftWJHGxbEUNH43b46qNspH
-		hex!["482a3389a6cf42d8ed83888cfd920fec738ea30f97e44699ada7323f08c3380a"].unchecked_into(),
-		// 5DhKqkHRkndJu8vq7pi2Q5S3DfftWJHGxbEUNH43b46qNspH
-		hex!["482a3389a6cf42d8ed83888cfd920fec738ea30f97e44699ada7323f08c3380a"].unchecked_into(),
-		// 5DhKqkHRkndJu8vq7pi2Q5S3DfftWJHGxbEUNH43b46qNspH
-		hex!["482a3389a6cf42d8ed83888cfd920fec738ea30f97e44699ada7323f08c3380a"].unchecked_into(),
-	),(
-		// 5HYZnKWe5FVZQ33ZRJK1rG3WaLMztxWrrNDb1JRwaHHVWyP9
-		hex!["f26cdb14b5aec7b2789fd5ca80f979cef3761897ae1f37ffb3e154cbcc1c2663"].into(),
-		// 5EPQdAQ39WQNLCRjWsCk5jErsCitHiY5ZmjfWzzbXDoAoYbn
-		hex!["66bc1e5d275da50b72b15de072a2468a5ad414919ca9054d2695767cf650012f"].into(),
-		// 5DMa31Hd5u1dwoRKgC4uvqyrdK45RHv3CpwvpUC1EzuwDit4
-		hex!["3919132b851ef0fd2dae42a7e734fe547af5a6b809006100f48944d7fae8e8ef"].unchecked_into(),
-		// 5C4vDQxA8LTck2xJEy4Yg1hM9qjDt4LvTQaMo4Y8ne43aU6x
-		hex!["00299981a2b92f878baaf5dbeba5c18d4e70f2a1fcd9c61b32ea18daf38f4378"].unchecked_into(),
-		// 5C4vDQxA8LTck2xJEy4Yg1hM9qjDt4LvTQaMo4Y8ne43aU6x
-		hex!["00299981a2b92f878baaf5dbeba5c18d4e70f2a1fcd9c61b32ea18daf38f4378"].unchecked_into(),
-		// 5C4vDQxA8LTck2xJEy4Yg1hM9qjDt4LvTQaMo4Y8ne43aU6x
-		hex!["00299981a2b92f878baaf5dbeba5c18d4e70f2a1fcd9c61b32ea18daf38f4378"].unchecked_into(),
-	)];
-
-	// generated with secret: subkey inspect "$secret"/fir
-	let root_key: AccountId = hex![
-		// 5Ff3iXP75ruzroPWRP2FYBHWnmGGBSb63857BgnzCoXNxfPo
-		"9ee5e5bdc0ec239eb164f865ecc345ce4c88e76ee002e0f7e318097347471809"
-	].into();
+	/*
+#root: {"accountId":"0x04c9ad9d268df4cf71e4ca98d3d4ba84f1e17c6eeee190180dd89c1ada821f52","publicKey":"0x04c9ad9d268df4cf71e4ca98d3d4ba84f1e17c6eeee190180dd89c1ada821f52","secretPhrase":"trophy brush claw east grid grief pact brain common vehicle rare carpet","secretSeed":"0x02d709290f59204c7f6e3bd047f39d01a403b13844a27b996ca0bb89ad303030","ss58Address":"5zUG2YnhDNZ9a8fyyNvU1ebf7bMt2yP7dxhhG5jvhGecNatw"}
+#stash1: {"accountId":"0xc0fa20c97586101d479a70a3881f6c9012b55ef2f3cd07ebb0b8f6b8cb1fde3f","publicKey":"0xc0fa20c97586101d479a70a3881f6c9012b55ef2f3cd07ebb0b8f6b8cb1fde3f","secretKeyUri":"trophy brush claw east grid grief pact brain common vehicle rare carpet//nftmart/stash/1","secretSeed":"n/a","ss58Address":"64j1RTQ5yWNDE4sCRYZxWzJafwS8VMKDnj1yD4pwtyqLDyBu"}
+#controller1: {"accountId":"0x1a92ecf4f212293c8588af4d6bfb351624a145594840c68096c5d9d95a99f87b","publicKey":"0x1a92ecf4f212293c8588af4d6bfb351624a145594840c68096c5d9d95a99f87b","secretKeyUri":"trophy brush claw east grid grief pact brain common vehicle rare carpet//nftmart/controller/1","secretSeed":"n/a","ss58Address":"5zxppHV1d6W32Y5tekm8tJyKUW2uJZVBGycQ5K3Vg6ZbzatU"}
+#stash2: {"accountId":"0xb4eb5293dc20e64dec2de27a284961c143b7a3bfdaeee85c5fc48f797e425d73","publicKey":"0xb4eb5293dc20e64dec2de27a284961c143b7a3bfdaeee85c5fc48f797e425d73","secretKeyUri":"trophy brush claw east grid grief pact brain common vehicle rare carpet//nftmart/stash/2","secretSeed":"n/a","ss58Address":"64TCT2zwe86oT4EFLY4FBsVCYmWccWAbswVLVLnoNjbBsG5X"}
+#controller2: {"accountId":"0x56be3faef9ec04c2742e7570deeb7400c3086fee44d624fcf401f99a1dcfc746","publicKey":"0x56be3faef9ec04c2742e7570deeb7400c3086fee44d624fcf401f99a1dcfc746","secretKeyUri":"trophy brush claw east grid grief pact brain common vehicle rare carpet//nftmart/controller/2","secretSeed":"n/a","ss58Address":"62KiZN5jayad35D6dHRp3GsFsQxK2r5mYFMPWcBzAJPo3UEp"}
+#stash3: {"accountId":"0x0af3e045a8b2ac53106aeada5859063b7b337ee7b0bbe7ca675fe1412f909d62","publicKey":"0x0af3e045a8b2ac53106aeada5859063b7b337ee7b0bbe7ca675fe1412f909d62","secretKeyUri":"trophy brush claw east grid grief pact brain common vehicle rare carpet//nftmart/stash/3","secretSeed":"n/a","ss58Address":"5zcLrGLxWfu4FHz2116Cbhk78PS8XhUNiMapPG96oHPKGTL2"}
+#controller3: {"accountId":"0x383e4059667d36df8b122377a1fd00442a50ba18585352affa4d3625b28aa858","publicKey":"0x383e4059667d36df8b122377a1fd00442a50ba18585352affa4d3625b28aa858","secretKeyUri":"trophy brush claw east grid grief pact brain common vehicle rare carpet//nftmart/controller/3","secretSeed":"n/a","ss58Address":"61dj6hcc19UytcnyzrsopHwpSRc3rsZD87fdf2LmpaGHsuWF"}
+#stash4: {"accountId":"0x92e2c73f83a9bd90271962e689174dfc453b4671d629b13fce4bda407633d628","publicKey":"0x92e2c73f83a9bd90271962e689174dfc453b4671d629b13fce4bda407633d628","secretKeyUri":"trophy brush claw east grid grief pact brain common vehicle rare carpet//nftmart/stash/4","secretSeed":"n/a","ss58Address":"63gaHPimxJ9FVvjKiPXwZ8odhJzjYf1DsjhTye3uhq6KQ8ht"}
+#controller4: {"accountId":"0x688bbc0e7c4f01bfe5c65e12597fac23ef5578a765a4120fe70b9a616d2d5b5b","publicKey":"0x688bbc0e7c4f01bfe5c65e12597fac23ef5578a765a4120fe70b9a616d2d5b5b","secretKeyUri":"trophy brush claw east grid grief pact brain common vehicle rare carpet//nftmart/controller/4","secretSeed":"n/a","ss58Address":"62j4R1whrXuHCVQgY3WvDV6dpsf6Zv6cMkC36tiUcvRFWhvE"}
+local ip_of_node1=11.22.33.41
+local ip_of_node2=11.22.33.42
+local ip_of_node3=11.22.33.43
+local ip_of_node4=11.22.33.44
+#grandpa1: {"accountId":"0xa1f84dd2eb7b959aca9c80bedae5e01a66aad76105f92b651df17b7638a5b772","publicKey":"0xa1f84dd2eb7b959aca9c80bedae5e01a66aad76105f92b651df17b7638a5b772","secretKeyUri":"trophy brush claw east grid grief pact brain common vehicle rare carpet//nftmart//grandpa//1","secretSeed":"0x468c7fe28d9afc194be5931ba9b21015a216c295dc73b678a4c1157637253a4e","ss58Address":"642MPvxmGF75GNqjDcBV2LawhHPzfiDKS2jeuDKQR2XH3sQ6"}
+#babe1: {"accountId":"0x10d9d0032df78215fda4b8abba286ba87f8beff50a384024b04144d69fe9625c","publicKey":"0x10d9d0032df78215fda4b8abba286ba87f8beff50a384024b04144d69fe9625c","secretKeyUri":"trophy brush claw east grid grief pact brain common vehicle rare carpet//nftmart//babe//1","secretSeed":"0xfa8d14db7d9864f2e939be79f800d2eabb94768a50a2f114a5ccc27f010324ce","ss58Address":"5zk5Ps9HaP82z5HBkrphwgsPfoKEkfHqCDbvq3spgtfMTYxv"}
+ssh -o IdentitiesOnly=yes root@$ip_of_node1 <<'EOF'
+curl --header "Content-Type:application/json;charset=utf-8" --request POST --data '{"jsonrpc":"2.0", "id":1, "method":"author_insertKey", "params": ["gran", "trophy brush claw east grid grief pact brain common vehicle rare carpet//nftmart//grandpa//1", "0xa1f84dd2eb7b959aca9c80bedae5e01a66aad76105f92b651df17b7638a5b772"]}' http://localhost:9933
+curl --header "Content-Type:application/json;charset=utf-8" --request POST --data '{"jsonrpc":"2.0", "id":1, "method":"author_insertKey", "params": ["babe", "trophy brush claw east grid grief pact brain common vehicle rare carpet//nftmart//babe//1", "0x10d9d0032df78215fda4b8abba286ba87f8beff50a384024b04144d69fe9625c"]}' http://localhost:9933
+curl --header "Content-Type:application/json;charset=utf-8" --request POST --data '{"jsonrpc":"2.0", "id":1, "method":"author_insertKey", "params": ["imon", "trophy brush claw east grid grief pact brain common vehicle rare carpet//nftmart//babe//1", "0x10d9d0032df78215fda4b8abba286ba87f8beff50a384024b04144d69fe9625c"]}' http://localhost:9933
+curl --header "Content-Type:application/json;charset=utf-8" --request POST --data '{"jsonrpc":"2.0", "id":1, "method":"author_insertKey", "params": ["audi", "trophy brush claw east grid grief pact brain common vehicle rare carpet//nftmart//babe//1", "0x10d9d0032df78215fda4b8abba286ba87f8beff50a384024b04144d69fe9625c"]}' http://localhost:9933
+EOF
+#grandpa2: {"accountId":"0x79b613d7f69c651548a6e3c55de81341597885c2cc00ec2f3c06a1ec22fce802","publicKey":"0x79b613d7f69c651548a6e3c55de81341597885c2cc00ec2f3c06a1ec22fce802","secretKeyUri":"trophy brush claw east grid grief pact brain common vehicle rare carpet//nftmart//grandpa//2","secretSeed":"0xd0e83caea28c17dc5dc2274bfb30bfbc3f37f230a15324b498da1f09c487aa49","ss58Address":"637ZonMtzvyUUfQX2Jj1RWYCrFfFUBbYTTSQQfzDLHDS2j86"}
+#babe2: {"accountId":"0xfa7c03a0da328ee334901fcc286907a4aa0f8ba17680f793e8b9d922f8caa005","publicKey":"0xfa7c03a0da328ee334901fcc286907a4aa0f8ba17680f793e8b9d922f8caa005","secretKeyUri":"trophy brush claw east grid grief pact brain common vehicle rare carpet//nftmart//babe//2","secretSeed":"0xa0d41fed16c57d3ba684bca25f0a2927378bab39353f38b383cb2010d991d77b","ss58Address":"662QjeYigW8dMgin5ts36vjmL8jbHtDFkncXACZ3Ra8Z9jJs"}
+ssh -o IdentitiesOnly=yes root@$ip_of_node2 <<'EOF'
+curl --header "Content-Type:application/json;charset=utf-8" --request POST --data '{"jsonrpc":"2.0", "id":1, "method":"author_insertKey", "params": ["gran", "trophy brush claw east grid grief pact brain common vehicle rare carpet//nftmart//grandpa//2", "0x79b613d7f69c651548a6e3c55de81341597885c2cc00ec2f3c06a1ec22fce802"]}' http://localhost:9933
+curl --header "Content-Type:application/json;charset=utf-8" --request POST --data '{"jsonrpc":"2.0", "id":1, "method":"author_insertKey", "params": ["babe", "trophy brush claw east grid grief pact brain common vehicle rare carpet//nftmart//babe//2", "0xfa7c03a0da328ee334901fcc286907a4aa0f8ba17680f793e8b9d922f8caa005"]}' http://localhost:9933
+curl --header "Content-Type:application/json;charset=utf-8" --request POST --data '{"jsonrpc":"2.0", "id":1, "method":"author_insertKey", "params": ["imon", "trophy brush claw east grid grief pact brain common vehicle rare carpet//nftmart//babe//2", "0xfa7c03a0da328ee334901fcc286907a4aa0f8ba17680f793e8b9d922f8caa005"]}' http://localhost:9933
+curl --header "Content-Type:application/json;charset=utf-8" --request POST --data '{"jsonrpc":"2.0", "id":1, "method":"author_insertKey", "params": ["audi", "trophy brush claw east grid grief pact brain common vehicle rare carpet//nftmart//babe//2", "0xfa7c03a0da328ee334901fcc286907a4aa0f8ba17680f793e8b9d922f8caa005"]}' http://localhost:9933
+EOF
+#grandpa3: {"accountId":"0xdadc465a4f4619289f161acf3728be6e414b12189cc530c5429421dd609a6962","publicKey":"0xdadc465a4f4619289f161acf3728be6e414b12189cc530c5429421dd609a6962","secretKeyUri":"trophy brush claw east grid grief pact brain common vehicle rare carpet//nftmart//grandpa//3","secretSeed":"0x59859e565d8711c4b8a4bca0ebe1345e799c9f9e061f4e78b6b0512facf0491f","ss58Address":"65JwoJj3x9hJJJRcKHzsEbzUuY8BTHBWx1M9mY2jsCQ7HeYh"}
+#babe3: {"accountId":"0x1c6051d240e885f89f8829c1fa7d5f4c7ee6b7864828633cea7c008c653e944a","publicKey":"0x1c6051d240e885f89f8829c1fa7d5f4c7ee6b7864828633cea7c008c653e944a","secretKeyUri":"trophy brush claw east grid grief pact brain common vehicle rare carpet//nftmart//babe//3","secretSeed":"0xa6daadac3b17c63319e784da12f0268c23291cc404ec9e2cf6948ce1c7c0a547","ss58Address":"611BsvENC8Zet78pT2Yyqb2Lr1SwTcoPbpeynnypNoRJxDPn"}
+ssh -o IdentitiesOnly=yes root@$ip_of_node3 <<'EOF'
+curl --header "Content-Type:application/json;charset=utf-8" --request POST --data '{"jsonrpc":"2.0", "id":1, "method":"author_insertKey", "params": ["gran", "trophy brush claw east grid grief pact brain common vehicle rare carpet//nftmart//grandpa//3", "0xdadc465a4f4619289f161acf3728be6e414b12189cc530c5429421dd609a6962"]}' http://localhost:9933
+curl --header "Content-Type:application/json;charset=utf-8" --request POST --data '{"jsonrpc":"2.0", "id":1, "method":"author_insertKey", "params": ["babe", "trophy brush claw east grid grief pact brain common vehicle rare carpet//nftmart//babe//3", "0x1c6051d240e885f89f8829c1fa7d5f4c7ee6b7864828633cea7c008c653e944a"]}' http://localhost:9933
+curl --header "Content-Type:application/json;charset=utf-8" --request POST --data '{"jsonrpc":"2.0", "id":1, "method":"author_insertKey", "params": ["imon", "trophy brush claw east grid grief pact brain common vehicle rare carpet//nftmart//babe//3", "0x1c6051d240e885f89f8829c1fa7d5f4c7ee6b7864828633cea7c008c653e944a"]}' http://localhost:9933
+curl --header "Content-Type:application/json;charset=utf-8" --request POST --data '{"jsonrpc":"2.0", "id":1, "method":"author_insertKey", "params": ["audi", "trophy brush claw east grid grief pact brain common vehicle rare carpet//nftmart//babe//3", "0x1c6051d240e885f89f8829c1fa7d5f4c7ee6b7864828633cea7c008c653e944a"]}' http://localhost:9933
+EOF
+#grandpa4: {"accountId":"0xee7e1001addf9b060c83920c8e013f4063474dd32225a878051834c8f0d3cb60","publicKey":"0xee7e1001addf9b060c83920c8e013f4063474dd32225a878051834c8f0d3cb60","secretKeyUri":"trophy brush claw east grid grief pact brain common vehicle rare carpet//nftmart//grandpa//4","secretSeed":"0x3b11af913c74341aa1a01c2bb04f6ef27b707aa463f224fdef407e21fcaaa968","ss58Address":"65kgmcVRQ6HYRHx8Pycrs73yXy8ocjSmEuy7qSyTx17ZpDXt"}
+#babe4: {"accountId":"0x2820c1a44a60beb0fed206d5c6853f567bf5e6d4b596953f6fe71400aa773807","publicKey":"0x2820c1a44a60beb0fed206d5c6853f567bf5e6d4b596953f6fe71400aa773807","secretKeyUri":"trophy brush claw east grid grief pact brain common vehicle rare carpet//nftmart//babe//4","secretSeed":"0x60fc0c71cf528202468633b5e82b436fd87280a6a72a60db3653a60cf982398f","ss58Address":"61Gba5UDx489DCE1CruypdvS33NVpv7wqBHxcSFuCYNqsN8f"}
+ssh -o IdentitiesOnly=yes root@$ip_of_node4 <<'EOF'
+curl --header "Content-Type:application/json;charset=utf-8" --request POST --data '{"jsonrpc":"2.0", "id":1, "method":"author_insertKey", "params": ["gran", "trophy brush claw east grid grief pact brain common vehicle rare carpet//nftmart//grandpa//4", "0xee7e1001addf9b060c83920c8e013f4063474dd32225a878051834c8f0d3cb60"]}' http://localhost:9933
+curl --header "Content-Type:application/json;charset=utf-8" --request POST --data '{"jsonrpc":"2.0", "id":1, "method":"author_insertKey", "params": ["babe", "trophy brush claw east grid grief pact brain common vehicle rare carpet//nftmart//babe//4", "0x2820c1a44a60beb0fed206d5c6853f567bf5e6d4b596953f6fe71400aa773807"]}' http://localhost:9933
+curl --header "Content-Type:application/json;charset=utf-8" --request POST --data '{"jsonrpc":"2.0", "id":1, "method":"author_insertKey", "params": ["imon", "trophy brush claw east grid grief pact brain common vehicle rare carpet//nftmart//babe//4", "0x2820c1a44a60beb0fed206d5c6853f567bf5e6d4b596953f6fe71400aa773807"]}' http://localhost:9933
+curl --header "Content-Type:application/json;charset=utf-8" --request POST --data '{"jsonrpc":"2.0", "id":1, "method":"author_insertKey", "params": ["audi", "trophy brush claw east grid grief pact brain common vehicle rare carpet//nftmart//babe//4", "0x2820c1a44a60beb0fed206d5c6853f567bf5e6d4b596953f6fe71400aa773807"]}' http://localhost:9933
+EOF
+p2p node1:
+12D3KooWPzJJesMBHMY7UrkD85RpzLphjmJ3QVoCuVR5nB4VthQ7
+5accac8d4366c9d486e438ffd840c7a89eaf163eabdb74fefdfbb08ca9eabd63
+p2p node2:
+12D3KooWF4MDrHwB5D1k6d7dyj6xm6p4cuuaJmQk75CX3CQwTKh2
+eefd9269e5aed3115fd7da0e024609ccb542e8966efada26426181563356a779
+p2p node3:
+12D3KooWC9hPJjizMhvEaro2W1u5vG2yds9wGXoR5Pua6GcBRqYU
+26d1e75399b5546090d0af427537e0f971c2830972b092c3670d429b4ab4e10e
+p2p node4:
+12D3KooWE3Fzq3HHPNmVmMn2EXxLzDzjqXucqAvxagZrCwqCuxLU
+f88110820f61d324e06f1961ba17e125b451030678ced732c4e48b7f0e217af3
+*/
+	let root_key: AccountId = hex!["04c9ad9d268df4cf71e4ca98d3d4ba84f1e17c6eeee190180dd89c1ada821f52"].into(); // 5zUG2YnhDNZ9a8fyyNvU1ebf7bMt2yP7dxhhG5jvhGecNatw
+	let stash1: AccountId = hex!["c0fa20c97586101d479a70a3881f6c9012b55ef2f3cd07ebb0b8f6b8cb1fde3f"].into(); // 64j1RTQ5yWNDE4sCRYZxWzJafwS8VMKDnj1yD4pwtyqLDyBu
+	let controller1: AccountId = hex!["1a92ecf4f212293c8588af4d6bfb351624a145594840c68096c5d9d95a99f87b"].into(); // 5zxppHV1d6W32Y5tekm8tJyKUW2uJZVBGycQ5K3Vg6ZbzatU
+	let stash2: AccountId = hex!["b4eb5293dc20e64dec2de27a284961c143b7a3bfdaeee85c5fc48f797e425d73"].into(); // 64TCT2zwe86oT4EFLY4FBsVCYmWccWAbswVLVLnoNjbBsG5X
+	let controller2: AccountId = hex!["56be3faef9ec04c2742e7570deeb7400c3086fee44d624fcf401f99a1dcfc746"].into(); // 62KiZN5jayad35D6dHRp3GsFsQxK2r5mYFMPWcBzAJPo3UEp
+	let stash3: AccountId = hex!["0af3e045a8b2ac53106aeada5859063b7b337ee7b0bbe7ca675fe1412f909d62"].into(); // 5zcLrGLxWfu4FHz2116Cbhk78PS8XhUNiMapPG96oHPKGTL2
+	let controller3: AccountId = hex!["383e4059667d36df8b122377a1fd00442a50ba18585352affa4d3625b28aa858"].into(); // 61dj6hcc19UytcnyzrsopHwpSRc3rsZD87fdf2LmpaGHsuWF
+	let stash4: AccountId = hex!["92e2c73f83a9bd90271962e689174dfc453b4671d629b13fce4bda407633d628"].into(); // 63gaHPimxJ9FVvjKiPXwZ8odhJzjYf1DsjhTye3uhq6KQ8ht
+	let controller4: AccountId = hex!["688bbc0e7c4f01bfe5c65e12597fac23ef5578a765a4120fe70b9a616d2d5b5b"].into(); // 62j4R1whrXuHCVQgY3WvDV6dpsf6Zv6cMkC36tiUcvRFWhvE
+	let initial_authorities: Vec<(AccountId, AccountId, GrandpaId, BabeId, ImOnlineId, AuthorityDiscoveryId)> = vec![
+		(stash1, controller1,
+		 hex!["a1f84dd2eb7b959aca9c80bedae5e01a66aad76105f92b651df17b7638a5b772"].unchecked_into(), // 642MPvxmGF75GNqjDcBV2LawhHPzfiDKS2jeuDKQR2XH3sQ6
+		 hex!["10d9d0032df78215fda4b8abba286ba87f8beff50a384024b04144d69fe9625c"].unchecked_into(), // 5zk5Ps9HaP82z5HBkrphwgsPfoKEkfHqCDbvq3spgtfMTYxv
+		 hex!["10d9d0032df78215fda4b8abba286ba87f8beff50a384024b04144d69fe9625c"].unchecked_into(), // 5zk5Ps9HaP82z5HBkrphwgsPfoKEkfHqCDbvq3spgtfMTYxv
+		 hex!["10d9d0032df78215fda4b8abba286ba87f8beff50a384024b04144d69fe9625c"].unchecked_into(),), // 5zk5Ps9HaP82z5HBkrphwgsPfoKEkfHqCDbvq3spgtfMTYxv
+		(stash2, controller2,
+		 hex!["79b613d7f69c651548a6e3c55de81341597885c2cc00ec2f3c06a1ec22fce802"].unchecked_into(), // 637ZonMtzvyUUfQX2Jj1RWYCrFfFUBbYTTSQQfzDLHDS2j86
+		 hex!["fa7c03a0da328ee334901fcc286907a4aa0f8ba17680f793e8b9d922f8caa005"].unchecked_into(), // 662QjeYigW8dMgin5ts36vjmL8jbHtDFkncXACZ3Ra8Z9jJs
+		 hex!["fa7c03a0da328ee334901fcc286907a4aa0f8ba17680f793e8b9d922f8caa005"].unchecked_into(), // 662QjeYigW8dMgin5ts36vjmL8jbHtDFkncXACZ3Ra8Z9jJs
+		 hex!["fa7c03a0da328ee334901fcc286907a4aa0f8ba17680f793e8b9d922f8caa005"].unchecked_into(),), // 662QjeYigW8dMgin5ts36vjmL8jbHtDFkncXACZ3Ra8Z9jJs
+		(stash3, controller3,
+		 hex!["dadc465a4f4619289f161acf3728be6e414b12189cc530c5429421dd609a6962"].unchecked_into(), // 65JwoJj3x9hJJJRcKHzsEbzUuY8BTHBWx1M9mY2jsCQ7HeYh
+		 hex!["1c6051d240e885f89f8829c1fa7d5f4c7ee6b7864828633cea7c008c653e944a"].unchecked_into(), // 611BsvENC8Zet78pT2Yyqb2Lr1SwTcoPbpeynnypNoRJxDPn
+		 hex!["1c6051d240e885f89f8829c1fa7d5f4c7ee6b7864828633cea7c008c653e944a"].unchecked_into(), // 611BsvENC8Zet78pT2Yyqb2Lr1SwTcoPbpeynnypNoRJxDPn
+		 hex!["1c6051d240e885f89f8829c1fa7d5f4c7ee6b7864828633cea7c008c653e944a"].unchecked_into(),), // 611BsvENC8Zet78pT2Yyqb2Lr1SwTcoPbpeynnypNoRJxDPn
+		(stash4, controller4,
+		 hex!["ee7e1001addf9b060c83920c8e013f4063474dd32225a878051834c8f0d3cb60"].unchecked_into(), // 65kgmcVRQ6HYRHx8Pycrs73yXy8ocjSmEuy7qSyTx17ZpDXt
+		 hex!["2820c1a44a60beb0fed206d5c6853f567bf5e6d4b596953f6fe71400aa773807"].unchecked_into(), // 61Gba5UDx489DCE1CruypdvS33NVpv7wqBHxcSFuCYNqsN8f
+		 hex!["2820c1a44a60beb0fed206d5c6853f567bf5e6d4b596953f6fe71400aa773807"].unchecked_into(), // 61Gba5UDx489DCE1CruypdvS33NVpv7wqBHxcSFuCYNqsN8f
+		 hex!["2820c1a44a60beb0fed206d5c6853f567bf5e6d4b596953f6fe71400aa773807"].unchecked_into(),), // 61Gba5UDx489DCE1CruypdvS33NVpv7wqBHxcSFuCYNqsN8f
+	];
 
 	let endowed_accounts: Vec<AccountId> = vec![root_key.clone()];
 
@@ -156,17 +181,22 @@ fn staging_testnet_config_genesis() -> GenesisConfig {
 
 /// Staging testnet config.
 pub fn staging_testnet_config() -> ChainSpec {
-	let boot_nodes = vec![];
+	let mut prop = sc_service::Properties::new();
+	prop.insert("tokenDecimals".to_string(), 12.into());
+	prop.insert("tokenSymbol".to_string(), "NMT".into()); // NFT Mart Token
+	let boot_nodes = vec![
+
+	];
 	ChainSpec::from_genesis(
-		"Staging Testnet",
-		"staging_testnet",
+		"Nftmart Staging",
+		"nftmart_staging",
 		ChainType::Live,
 		staging_testnet_config_genesis,
 		boot_nodes,
 		Some(TelemetryEndpoints::new(vec![(STAGING_TELEMETRY_URL.to_string(), 0)])
 			.expect("Staging telemetry url is valid; qed")),
-		None,
-		None,
+		Some("nftmart"),
+		Some(prop),
 		Default::default(),
 	)
 }
