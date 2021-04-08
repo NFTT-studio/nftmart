@@ -79,23 +79,25 @@ fn session_keys(
 }
 
 fn staging_testnet_config_genesis() -> GenesisConfig {
-	let root_key: AccountId = hex!["fc8c5106c6d1b56df9ee507f7a7a4f88256f54bd228112520042e80e078a3d13"].into(); // 6657g5uwo58sKb1AM3rC3MsDemDxKHqzfEVL6oe6Mb6cTUW6
-	let stash1: AccountId = hex!["e6f930da969042c59250db39cd9c39804139987fc3d25df2c79f90aafeaccf29"].into(); // 65apxqzr3eMQqauYha1SThyLsuP1N24TKg7VZQtiQVuAD2jj
-	let controller1: AccountId = hex!["526ba4021b7d8591790659c774eba08be35ca4bc8041ada9d3784a083fca622f"].into(); // 62E3px5k1uPFJkHNeKEwNGYvj89WToyTkeck3su61Gd5bDm8
-	let stash2: AccountId = hex!["94912dd08fa89e0215546359e53e1be078016a09c8ae11a50fee9f94dc305a5c"].into(); // 63in92J1aXAoRmQWKeRxe3TDLMSE2XuEU48aUEfCR3YiHiMq
-	let controller2: AccountId = hex!["c86bc175eb8e0b378a6bb3737b9e5f8c320971039af885d409d234d885fb2b46"].into(); // 64tmWeytT2BgL68aWPPF5UvBEEKWtYXFKu5ssACDzQyYaRWC
-	let initial_authorities: Vec<(AccountId, AccountId, GrandpaId, BabeId, ImOnlineId, AuthorityDiscoveryId)> = vec![
-		(stash1, controller1,
-		 hex!["f998a33fe6edd224107e9de96622fc9a65e2c739102753f349960c4533948a98"].unchecked_into(), // 661FC3RhqQVk7fWbCNNnf3vN2DCsupxAmUf3KyWrsLSZjqxV
-		 hex!["a2d76db1e6ee58b2bd42bb1dbd0b8060bf0b2ed5aba92f88ead886e17bdd0f67"].unchecked_into(), // 643VgH1FyXUQepCmLXWedq5ahtoH1StFeDizVYhXMoqWQWNH
-		 hex!["a2d76db1e6ee58b2bd42bb1dbd0b8060bf0b2ed5aba92f88ead886e17bdd0f67"].unchecked_into(), // 643VgH1FyXUQepCmLXWedq5ahtoH1StFeDizVYhXMoqWQWNH
-		 hex!["a2d76db1e6ee58b2bd42bb1dbd0b8060bf0b2ed5aba92f88ead886e17bdd0f67"].unchecked_into(),), // 643VgH1FyXUQepCmLXWedq5ahtoH1StFeDizVYhXMoqWQWNH
-		(stash2, controller2,
-		 hex!["f69607190573755756d1af4f0b7adec164fe71b956d39abc93b11f0ee11a326e"].unchecked_into(), // 65wJGjzLP4MrhKaRf2Ma4BB4eqFrSFNB5CwFbRRTPpwZZK2e
-		 hex!["720a4d12614cee86079a69c583600e49f73145d195981ea9e84851ddf8b4b625"].unchecked_into(), // 62wWShgtWs2BXrx7NBQKTD9pc8Qx6pVGh1Q196Vab3ARtQVm
-		 hex!["720a4d12614cee86079a69c583600e49f73145d195981ea9e84851ddf8b4b625"].unchecked_into(), // 62wWShgtWs2BXrx7NBQKTD9pc8Qx6pVGh1Q196Vab3ARtQVm
-		 hex!["720a4d12614cee86079a69c583600e49f73145d195981ea9e84851ddf8b4b625"].unchecked_into(),), // 62wWShgtWs2BXrx7NBQKTD9pc8Qx6pVGh1Q196Vab3ARtQVm
-	];
+  let root_key: AccountId = hex!["12970155d02df21b7e39e289593065d0bbb67d5d38f36dd1b9d617614a006d00"].into(); // 5znMeMdGsDrENMFg9wvLMveuYdCSVCCGdaXE6HAU4UwTksei
+  let initial_authorities: Vec<(AccountId, AccountId, GrandpaId, BabeId, ImOnlineId, AuthorityDiscoveryId)> = vec![
+    (
+      hex!["d0a9b0c9ac0a3dc0432cb66f288c1ffc9bd159ca52739d994f789003b08b6630"].into(),              // 655aHzD3sX1QpZVxStEHPV4TVCqKVcfwfxrsX8spZndPfabe
+      hex!["c43b6cda18d09359fe32ea27014601c6d723e17e2cc8ca14496f210595f95a26"].into(),              // 64oGxqAX2AW26AWQDx9vNNb7aTF741QMTn1n35qFRty6FaLc
+      hex!["184f5672c5f405f12476c29ba35ab22fdf44f4e50d671802cb271f06adb5cb3f"].unchecked_into(),    // 5zureDa91LCdspDmqxkPUnGg9WLHPJQLs1XZ9uqmkUEcK3Ca
+      hex!["2020fdf7ad624a75cb35367c68782984cd28e9d9cb93f37397b34602da766b60"].unchecked_into(),    // 6167FvHPZP7MrPZbJKkwXbxZSupoRmDcAt5RhC1B2NuC2D6G
+      hex!["2020fdf7ad624a75cb35367c68782984cd28e9d9cb93f37397b34602da766b60"].unchecked_into(),    // 6167FvHPZP7MrPZbJKkwXbxZSupoRmDcAt5RhC1B2NuC2D6G
+      hex!["2020fdf7ad624a75cb35367c68782984cd28e9d9cb93f37397b34602da766b60"].unchecked_into(),    // 6167FvHPZP7MrPZbJKkwXbxZSupoRmDcAt5RhC1B2NuC2D6G
+    ),
+    (
+      hex!["5e7704ab35a8a08fda1ca9ddca87013849daf02744e81cc5fb03d7395030744c"].into(),              // 62VqnJu5Xwc5qaNsQoeS8UAEA8rFFf8U6UeyeKgYQGfi23us
+      hex!["c23b0e2abab64d27c630028830d5a3afc4785f0dd02ce069af8b3f2118bc682c"].into(),              // 64kekuPLYqkAHwwbeYjVUDkPFoc27VNGib3ezJrXCTY2qWSm
+      hex!["b46c28b4f0db186814fe579e63d2e9b7c3dbb6c1f28dfe541a6cc11ccfc5fa3e"].unchecked_into(),    // 64SYg4L1MbtsREC8Qcrd42bMidA8bXq9jmNBYDwAg1fcuBm4
+      hex!["0478a4baa1b4a9b85470a4070738abf190734a2bb2af77dad6ae5fda182da773"].unchecked_into(),    // 5zTqxMT5SG1gsH7SrM5dn8nmi1Cp8R3U9sBU6E1jBKfLLzrv
+      hex!["0478a4baa1b4a9b85470a4070738abf190734a2bb2af77dad6ae5fda182da773"].unchecked_into(),    // 5zTqxMT5SG1gsH7SrM5dn8nmi1Cp8R3U9sBU6E1jBKfLLzrv
+      hex!["0478a4baa1b4a9b85470a4070738abf190734a2bb2af77dad6ae5fda182da773"].unchecked_into(),    // 5zTqxMT5SG1gsH7SrM5dn8nmi1Cp8R3U9sBU6E1jBKfLLzrv
+    ),
+  ];
 
 	let endowed_accounts: Vec<AccountId> = vec![root_key.clone()];
 
