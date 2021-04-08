@@ -29,3 +29,53 @@ btwiuse@penguin:~/nftmart/.maintain$ bash nftmart-keygen 1 2
 
 [INFO] 18:21:43 (main->gen_summary) generating summary (summary.txt, summary.html)
 ```
+
+After having these files generated, modify ./bin/node/cli/src/chain_spec.rs to match the content of `chain_spec.rs`, then recompile your node binary, copy the binary to `.maintain/docker` and build a new docker image `btwiuse/nftmart:beta` using files under the directory
+
+```
+btwiuse@penguin:~/nftmart/.maintain$ make
+```
+
+Now start the first genesis node, the --node-key flag's value is take from `node1_p2p_key` file
+```
+. "$(dirname "$(realpath $0)")/common/nftmart"
+
+node1(){                                                                                                                                            
+  export PORT=30333                                                                                                                                
+  export WS_PORT=9944                                                                                                                               
+  export RPC_PORT=9933                                                                                                                              
+  nftmart \                                                                                                                                        
+    -d state/node1 \                                                                                                                                
+    --node-key d1383db85a2175fcd7edd04a36dbf3f2522f15cdd6992508d36ac80b31fde4e5 \                                                                   
+    --port "${PORT}" \                                                                                                                             
+    --ws-port "${WS_PORT}" \                                                                                                                        
+    --rpc-port "${RPC_PORT}"                                                                                                                        
+}
+
+node1
+```
+
+Then start the second genesis node, for this time, --node-key flag's value is take from `node2_p2p_key` file, while the last part of the --bootnodes flag's value is taken from `node1_p2p_peer_id`
+```
+. "$(dirname "$(realpath $0)")/common/nftmart"
+
+node2(){
+  export PORT=30334
+  export WS_PORT=9945
+  export RPC_PORT=9934
+  nftmart \
+    -d state/node2 \
+    --node-key e44deb139bcd180f2010ee3afc0678f765a3cf9ff26862330d12c5e4fb65ed2e \
+    --bootnodes /ip4/127.0.0.1/tcp/30333/p2p/12D3KooWP44EhEGK9pp33nr19p3xKqUbnRWawgapeJ8Bbq3y4QmX \
+    --port "${PORT}" \
+    --ws-port "${WS_PORT}" \
+    --rpc-port "${RPC_PORT}"
+}
+
+node2
+```
+
+TODO:
+- inject keys
+- restart genesis nodes
+- add validator node
