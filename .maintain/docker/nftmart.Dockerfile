@@ -1,4 +1,5 @@
-FROM ubuntu:20.10
+# FROM ubuntu:20.10
+FROM debian:buster
 
 RUN apt update && apt install -y curl
 
