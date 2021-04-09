@@ -3,7 +3,7 @@
 set -e
 
 # Make sure we are in the right place
-export BASE="$(git rev-parse --show-toplevel)"
+export BASE="$(cd "$(dirname "$(realpath $0)")"; git rev-parse --show-toplevel)"
 
 export GREY='1;30'
 export RED='1;31'
@@ -18,8 +18,14 @@ nftmart-key(){
   docker run -i btwiuse/nftmart:beta key "$@"
 }
 
+nftmart-build-spec(){
+  docker run -i btwiuse/nftmart:beta build-spec "$@"
+}
+
 nftmart(){
-  docker run -p $PORT:$PORT -p $WS_PORT:$WS_PORT -p $RPC_PORT:$RPC_PORT -it -v $BASE/state/:/data/state/ btwiuse/nftmart:beta \
+# -e PORT -e WS_PORT -e RPC_PORT 
+# -p $PORT:$PORT -p $WS_PORT:$WS_PORT -p $RPC_PORT:$RPC_PORT 
+  docker run --rm --name "${FUNCNAME[1]}" -e PORT -e WS_PORT -e RPC_PORT --net host -it -v $BASE/state/:/data/state/ btwiuse/nftmart:beta \
     -lruntime=debug \
     --execution=NativeElseWasm \
     --rpc-cors=all \

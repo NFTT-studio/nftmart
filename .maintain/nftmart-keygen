@@ -24,12 +24,12 @@ DEBUG=
 
 gen_root_and_session_keys(){
   info "generating root key (root.json)"
-  nftmart-key generate --network nftmart --output-type Json | jq . > root.json
+  nftmart-key generate --network nftmart --output-type Json --scheme Sr25519 | jq . > root.json
   debug_json root.json
   while read k v; do root["$k"]="$v"; done < <(cat root.json | jq -r 'to_entries[]|"\(.key) \(.value)"')
 
   info "generating session key (session.json)"
-  nftmart-key generate --network nftmart --output-type Json | jq . > session.json
+  nftmart-key generate --network nftmart --output-type Json --scheme Sr25519 | jq . > session.json
   debug_json session.json
   while read k v; do session["$k"]="$v"; done < <(cat session.json | jq -r 'to_entries[]|"\(.key) \(.value)"')
 }
@@ -37,13 +37,13 @@ gen_root_and_session_keys(){
 gen_stash_and_controller_keys(){
   for i in $@; do
     info "generating stash key for genesis node $i (stash$i.json)"
-    nftmart-key inspect-key --network nftmart "${root[secretPhrase]}//nftmart/stash/$i" --output-type Json | jq . > "stash$i.json"
+    nftmart-key inspect-key --network nftmart "${root[secretPhrase]}//nftmart/stash/$i" --output-type Json --scheme Sr25519 | jq . > "stash$i.json"
   # debug "nftmart-key inspect-key --network nftmart "${root["secretPhrase"]}"//nftmart/"$x"/"$i" --output-type Json"
     debug_json "stash$i.json"
     while read k v; do stash["$i$k"]="$v"; done < <(cat stash$i.json | jq -r 'to_entries[]|"\(.key) \(.value)"')
 
     info "generating controller key for genesis node $i (controller$i.json)"
-    nftmart-key inspect-key --network nftmart "${root[secretPhrase]}//nftmart/controller/$i" --output-type Json | jq . > "controller$i.json"
+    nftmart-key inspect-key --network nftmart "${root[secretPhrase]}//nftmart/controller/$i" --output-type Json --scheme Sr25519 | jq . > "controller$i.json"
   # debug "nftmart-key inspect-key --network nftmart "${root["secretPhrase"]}"//nftmart/"$x"/"$i" --output-type Json"
     debug_json "controller$i.json"
     while read k v; do controller["$i$k"]="$v"; done < <(cat controller$i.json | jq -r 'to_entries[]|"\(.key) \(.value)"')
@@ -176,6 +176,16 @@ main(){
 
   br
   gen_summary
+
+# br
+# gen_spec
+}
+
+gen_spec(){
+  nftmart-build-spec --disable-default-bootnode --chain staging > staging_spec.json
+  # cat staging_spec.json | nftmart-build-spec --disable-default-bootnode --chain=/dev/stdin --raw > staging_spec_raw.json
+  #  nftmart-build-spec --disable-default-bootnode --chain staging --raw > staging_spec_raw.json
+  ../target/release/substrate build-spec --disable-default-bootnode --chain staging_spec.json --raw > staging_spec_raw.json
 }
 
 main "$@"
