@@ -1,0 +1,58 @@
+# Docker compose file to start a multi node local test network.
+#
+# # Nodes
+#
+# - Validator node A
+# - Validator node B
+# - Light client C
+#
+# # Auxiliary nodes
+#
+# - Prometheus monitoring each node.
+# - Grafana pointed at the Prometheus node, configured with all dashboards.
+#
+# # Usage
+#
+# 1. Build `target/release/substrate` binary: `cargo build --release`
+# 2. Start networks and containers:
+#    `sudo docker-compose -f .maintain/sentry-node/docker-compose.yml up`
+# 3. Connect to nodes:
+#   - validator-a: localhost:9944
+#   - validator-b: localhost:9945
+#   - light-c: localhost:9946
+#   - via polkadot.js/apps: https://polkadot.js.org/apps/?rpc=ws%3A%2F%2Flocalhost%3A<NODE_PORT>#/explorer
+#   - grafana: localhost:3001
+#   - prometheus: localhost:9090
+
+
+version: "3.7"
+services:
+
+  node1:
+    env:
+    - PORT=30333
+    - WS_PORT=9944
+    - RPC_PORT=9933
+    image: btwiuse/nftmart:beta
+    command:
+    - nftmart
+    - -d state/node1
+    - --node-key d1383db85a2175fcd7edd04a36dbf3f2522f15cdd6992508d36ac80b31fde4e5
+    - --port 30333
+    - --ws-port 9944
+    - --rpc-port 9933
+
+  node2:
+    env:
+    - PORT=30334
+    - WS_PORT=9945
+    - RPC_PORT=9934
+    image: btwiuse/nftmart:beta
+    command:
+    - nftmart
+    - -d state/node2
+    - --node-key e44deb139bcd180f2010ee3afc0678f765a3cf9ff26862330d12c5e4fb65ed2e
+    - --bootnodes /ip4/127.0.0.1/tcp/30333/p2p/12D3KooWP44EhEGK9pp33nr19p3xKqUbnRWawgapeJ8Bbq3y4QmX
+    - --port 30334
+    - --ws-port 9945
+    - --rpc-port 9934
