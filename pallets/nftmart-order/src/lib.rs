@@ -24,6 +24,24 @@ mod tests;
 
 pub use module::*;
 
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode, RuntimeDebug)]
+pub enum OrderKind {
+	/// Normal
+	Normal,
+	/// Offer
+	Offer,
+	/// British
+	British,
+	/// Dutch
+	Dutch,
+}
+
+impl Default for OrderKind {
+	fn default() -> Self {
+		Self::Normal
+	}
+}
+
 #[repr(u8)]
 #[derive(Encode, Decode, Clone, Copy, BitFlags, RuntimeDebug, PartialEq, Eq)]
 pub enum ClassProperty {
@@ -94,6 +112,39 @@ pub struct CategoryData {
 	/// The number of NFTs in this category.
 	#[codec(compact)]
 	pub nft_count: Balance,
+}
+
+#[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub struct OrderData<T: Config> {
+	/// currency ID.
+	#[codec(compact)]
+	pub currency_id: CurrencyIdOf<T>,
+	/// Price of this order.
+	#[codec(compact)]
+	pub price: Balance,
+	/// The balances to create an order
+	#[codec(compact)]
+	pub deposit: Balance,
+	/// This order will be invalidated after `deadline` block number.
+	#[codec(compact)]
+	pub deadline: BlockNumberOf<T>,
+	/// Category of this order.
+	#[codec(compact)]
+	pub category_id: CategoryIdOf<T>,
+	/// True, if the order was submitted by the token owner.
+	pub by_token_owner: bool,
+	/// The quantity of token.
+	#[codec(compact)]
+	pub quantity: TokenIdOf<T>,
+}
+
+#[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub struct OrderHistory {
+	/// Price of this order.
+	#[codec(compact)]
+	pub price: Balance,
 }
 
 pub type NFTMetadata = Vec<u8>;
@@ -228,6 +279,8 @@ pub mod module {
 		ClassIdNotFound,
 		/// TokenId not found
 		TokenIdNotFound,
+		/// Order not found
+		OrderNotFound,
 		/// Category not found
 		CategoryNotFound,
 		/// The operator is not the owner of the token and has no permission
@@ -246,6 +299,18 @@ pub mod module {
 		CannotDestroyClass,
 		/// No available category ID
 		NoAvailableCategoryId,
+		/// Order price too high.
+		CanNotAfford,
+		/// Price too low to accept.
+		PriceTooLow,
+		/// Duplicated order.
+		DuplicatedOrder,
+		/// Not allow to take own order.
+		TakeOwnOrder,
+		/// Cannot transfer NFT while order existing.
+		OrderExists,
+		/// Order expired
+		OrderExpired,
 		/// NameTooLong
 		NameTooLong,
 		/// DescriptionTooLong
@@ -271,6 +336,16 @@ pub mod module {
 		CreatedCategory(CategoryIdOf<T>),
 		/// Updated NFT common category. \[category_id\]
 		UpdatedCategory(CategoryIdOf<T>),
+		/// Created a NFT Order. \[class_id, token_id, order_owner\]
+		CreatedOrder(ClassIdOf<T>, TokenIdOf<T>, T::AccountId),
+		/// Removed a NFT Order. \[class_id, token_id, order_owner, unreserved\]
+		RemovedOrder(ClassIdOf<T>, TokenIdOf<T>, T::AccountId, Balance),
+		/// An order had been taken. \[class_id, token_id, order_owner\]
+		TakenOrder(ClassIdOf<T>, TokenIdOf<T>, T::AccountId),
+		/// Price updated \[class_id, token_id, order_owner, price\]
+		UpdatedOrderPrice(ClassIdOf<T>, TokenIdOf<T>, T::AccountId, Balance),
+		/// OrderMinDeposit updated \[old, new\]
+		UpdatedMinOrderDeposit(Balance, Balance),
 	}
 
 	#[pallet::pallet]
@@ -292,6 +367,10 @@ pub mod module {
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
+		min_order_deposit: Balance,
+		min_reference_deposit: Balance,
+		royalties_rate: PerU16,
+		max_distribution_reward: PerU16,
 		platform_fee_rate: PerU16,
 		_phantom: PhantomData<T>,
 	}
@@ -300,6 +379,10 @@ pub mod module {
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
 			Self {
+				min_order_deposit: ACCURACY,
+				min_reference_deposit: ACCURACY,
+				royalties_rate: PerU16::from_percent(5),
+				max_distribution_reward: PerU16::from_percent(100),
 				platform_fee_rate: PerU16::from_rational(1u32, 10000u32),
 				_phantom: Default::default(),
 			}
@@ -310,6 +393,10 @@ pub mod module {
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
 			<StorageVersion<T>>::put(Releases::default());
+			MinOrderDeposit::<T>::put(self.min_order_deposit);
+			RoyaltiesRate::<T>::put(self.royalties_rate);
+			MaxDistributionReward::<T>::put(self.max_distribution_reward);
+			MinReferenceDeposit::<T>::put(self.min_reference_deposit);
 			PlatformFeeRate::<T>::put(self.platform_fee_rate);
 		}
 	}
@@ -359,7 +446,7 @@ pub mod module {
 	#[pallet::getter(fn max_distribution_reward)]
 	pub type MaxDistributionReward<T: Config> = StorageValue<_, PerU16, ValueQuery>;
 
-	/// MinReferenceDeposit
+	/// The min deposit a beneficiary who will paid for distribution should have.
 	#[pallet::storage]
 	#[pallet::getter(fn min_reference_deposit)]
 	pub type MinReferenceDeposit<T: Config> = StorageValue<_, Balance, ValueQuery>;
