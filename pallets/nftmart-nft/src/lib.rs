@@ -19,8 +19,8 @@ use sp_runtime::{
 };
 use codec::FullCodec;
 
-mod mock;
-mod tests;
+// mod mock;
+// mod tests;
 
 pub use module::*;
 
@@ -328,22 +328,6 @@ pub mod module {
 	#[pallet::getter(fn categories)]
 	pub type Categories<T: Config> = StorageMap<_, Identity, T::CategoryId, CategoryData>;
 
-	/// An index mapping from token to order.
-	#[pallet::storage]
-	#[pallet::getter(fn orders)]
-	pub type Orders<T: Config> = StorageDoubleMap<_, Blake2_128Concat, (ClassIdOf<T>, TokenIdOf<T>), Blake2_128Concat, T::AccountId, OrderData<T>>;
-	// pub type BatchOrders<T: Config> = StorageDoubleMap<_, Blake2_128Concat, T::AccountId, orderID, BatchOrderData<T>>;
-
-	/// Latest order price
-	#[pallet::storage]
-	#[pallet::getter(fn latest_order_prices)]
-	pub type LatestOrderPrices<T: Config> = StorageMap<_, Blake2_128Concat, (ClassIdOf<T>, TokenIdOf<T>, CurrencyIdOf<T>), OrderHistory>;
-
-	/// Order deposit config
-	#[pallet::storage]
-	#[pallet::getter(fn min_order_deposit)]
-	pub type MinOrderDeposit<T: Config> = StorageValue<_, Balance, ValueQuery>;
-
 	/// Royalties rate, which can be set by council or sudo.
 	#[pallet::storage]
 	#[pallet::getter(fn royalties_rate)]
@@ -366,140 +350,6 @@ pub mod module {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		// /// Take an NFT order.
-		// ///
-		// /// - `class_id`: class id
-		// /// - `token_id`: token id
-		// /// - `price`: The max/min price to take an order. Usually it is set to the price of the target order.
-		// #[pallet::weight(100_000)]
-		// #[transactional]
-		// pub fn take_order(
-		// 	origin: OriginFor<T>,
-		// 	#[pallet::compact] class_id: ClassIdOf<T>,
-		// 	#[pallet::compact] token_id: TokenIdOf<T>,
-		// 	#[pallet::compact] price: Balance,
-		// 	order_owner: <T::Lookup as StaticLookup>::Source,
-		// ) -> DispatchResultWithPostInfo {
-		// 	let who = ensure_signed(origin)?;
-		// 	let order_owner = T::Lookup::lookup(order_owner)?;
-		// 	// Simplify the logic, to make life easier.
-		// 	ensure!(order_owner != who, Error::<T>::TakeOwnOrder);
-		// 	let token_owner = orml_nft::Pallet::<T>::tokens(class_id, token_id).ok_or(Error::<T>::TokenIdNotFound)?.owner;
-		//
-		// 	let order: OrderData<T> = {
-		// 		let order = Self::orders((class_id, token_id), &order_owner);
-		// 		ensure!(order.is_some(), Error::<T>::OrderNotFound);
-		// 		let order = order.unwrap();
-		// 		ensure!(<frame_system::Pallet<T>>::block_number() <= order.deadline, Error::<T>::OrderExpired);
-		// 		order
-		// 	};
-		//
-		// 	match (order_owner == token_owner, token_owner == who) {
-		// 		(true, false) => {
-		// 			ensure!(price >= order.price, Error::<T>::CanNotAfford);
-		// 			// `who` will take the order submitting by `order_owner`/`token_owner`
-		// 			Self::delete_order(class_id, token_id, &order_owner)?;
-		// 			// Try to delete another order for safety.
-		// 			// Because `who` may have already submitted an order to the same token.
-		// 			Self::try_delete_order(class_id, token_id, &who);
-		// 			// `order_owner` transfers this NFT to `who`
-		// 			Self::do_transfer(&order_owner, &who, class_id, token_id)?;
-		// 			T::MultiCurrency::transfer(order.currency_id, &who, &order_owner, order.price)?;
-		// 			// TODO: T::MultiCurrency::transfer(order.currency_id, &order_owner, some_account,platform-fee)?;
-		// 			Self::deposit_event(Event::TakenOrder(class_id, token_id, order_owner));
-		// 		},
-		// 		(false, true) => {
-		// 			ensure!(price <= order.price, Error::<T>::PriceTooLow);
-		// 			// `who`/`token_owner` will accept the order submitted by `order_owner`
-		// 			Self::delete_order(class_id, token_id, &order_owner)?;
-		// 			Self::try_delete_order(class_id, token_id, &who);
-		// 			// `order_owner` transfers this NFT to `who`
-		// 			Self::do_transfer(&who, &order_owner, class_id, token_id)?;
-		// 			T::MultiCurrency::transfer(order.currency_id, &order_owner, &who, order.price)?;
-		// 			// TODO: T::MultiCurrency::transfer(order.currency_id, &who, some_account,platform-fee)?;
-		// 			Self::deposit_event(Event::TakenOrder(class_id, token_id, order_owner));
-		// 		},
-		// 		_ => {
-		// 			return Err(Error::<T>::NoPermission.into());
-		// 		},
-		// 	}
-		// 	Ok(().into())
-		// }
-
-		// /// Create an NFT order. Create only.
-		// ///
-		// /// - `currency_id`: currency id
-		// /// - `price`: price
-		// /// - `category_id`: category id
-		// /// - `class_id`: class id
-		// /// - `token_id`: token id
-		// /// - `deposit`: The balances to create an order
-		// /// - `deadline`: deadline
-		// #[pallet::weight(100_000)]
-		// #[transactional]
-		// pub fn submit_order(
-		// 	origin: OriginFor<T>,
-		// 	#[pallet::compact] currency_id: CurrencyIdOf<T>,
-		// 	#[pallet::compact] price: Balance,
-		// 	#[pallet::compact] category_id: CategoryIdOf<T>,
-		// 	#[pallet::compact] class_id: ClassIdOf<T>,
-		// 	#[pallet::compact] token_id: TokenIdOf<T>,
-		// 	#[pallet::compact] deposit: Balance,
-		// 	#[pallet::compact] deadline: BlockNumberOf<T>,
-		// ) -> DispatchResultWithPostInfo {
-		// 	let who = ensure_signed(origin)?;
-		// 	ensure!(currency_id == NATIVE_CURRENCY_ID.saturated_into(), Error::<T>::NativeCurrencyOnlyForNow); // TODO: remove this limitation.
-		//
-		// 	let token: TokenInfoOf<T> = orml_nft::Pallet::<T>::tokens(class_id, token_id).ok_or(Error::<T>::TokenIdNotFound)?;
-		//
-		// 	ensure!(Self::orders((class_id, token_id), &who).is_none(), Error::<T>::DuplicatedOrder);
-		// 	ensure!(<frame_system::Pallet<T>>::block_number() < deadline, Error::<T>::InvalidDeadline);
-		// 	Categories::<T>::try_mutate(category_id, |maybe_category| -> DispatchResult {
-		// 		let category = maybe_category.as_mut().ok_or(Error::<T>::CategoryNotFound)?;
-		// 		category.nft_count = category.nft_count.saturating_add(One::one());
-		// 		Ok(())
-		// 	})?;
-		//
-		// 	ensure!(deposit >= Self::min_order_deposit(), Error::<T>::InvalidDeposit);
-		// 	// Reserve native currency.
-		// 	<T as Config>::Currency::reserve(&who, deposit.saturated_into())?;
-		//
-		// 	if token.owner != who {
-		// 		// Reserve specified currency.
-		// 		T::MultiCurrency::reserve(currency_id, &who, price.saturated_into())?;
-		// 	}
-		//
-		// 	let order: OrderData<T> = OrderData {
-		// 		currency_id,
-		// 		price,
-		// 		deposit,
-		// 		deadline,
-		// 		category_id,
-		// 		by_token_owner: token.owner == who,
-		// 	};
-		// 	Orders::<T>::insert((class_id, token_id), &who, order);
-		//
-		// 	Self::deposit_event(Event::CreatedOrder(class_id, token_id, who));
-		// 	Ok(().into())
-		// }
-
-		// /// remove an order by order owner.
-		// ///
-		// /// - `class_id`: class id
-		// /// - `token_id`: token id
-		// #[pallet::weight(100_000)]
-		// #[transactional]
-		// pub fn remove_order(
-		// 	origin: OriginFor<T>,
-		// 	#[pallet::compact] class_id: ClassIdOf<T>,
-		// 	#[pallet::compact] token_id: TokenIdOf<T>,
-		// ) -> DispatchResultWithPostInfo {
-		// 	let who = ensure_signed(origin)?;
-		// 	Self::delete_order(class_id, token_id, &who)?;
-		// 	Ok(().into())
-		// }
-
-		// TODO: Update order price
 
 		/// Create a common category for trading NFT.
 		/// A Selling NFT should belong to a category.
@@ -542,19 +392,6 @@ pub mod module {
 				Categories::<T>::insert(category_id, info);
 				Self::deposit_event(Event::UpdatedCategory(category_id));
 			}
-			Ok(().into())
-		}
-
-		/// Update the `MinOrderDeposit` storage.
-		#[pallet::weight(100_000)]
-		#[transactional]
-		pub fn update_min_order_deposit(origin: OriginFor<T>, new_deposit: Balance) -> DispatchResultWithPostInfo {
-			ensure_root(origin)?;
-			MinOrderDeposit::<T>::mutate(|d|{
-				let old = *d;
-				*d = new_deposit;
-				Self::deposit_event(Event::UpdatedMinOrderDeposit(old, new_deposit));
-			});
 			Ok(().into())
 		}
 

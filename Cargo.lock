@@ -4039,6 +4039,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "nftmart-order"
+version = "3.0.0"
+dependencies = [
+ "enumflags2",
+ "frame-support",
+ "frame-system",
+ "nftmart-nft",
+ "orml-currencies",
+ "orml-nft",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-balances",
+ "pallet-proxy",
+ "pallet-timestamp",
+ "pallet-utility",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "nftmart-rpc"
 version = "3.0.0"
 dependencies = [
@@ -4333,6 +4357,7 @@ dependencies = [
  "hex-literal",
  "log",
  "nftmart-nft",
+ "nftmart-order",
  "nftmart-rpc-runtime-api",
  "node-primitives",
  "orml-currencies",
