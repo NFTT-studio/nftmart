@@ -29,25 +29,27 @@ version: "3.7"
 services:
 
   node1:
+    restart: always
     env_file: env_file
     image: btwiuse/nftmart:beta
-    tty: true
-    entrypoint: [ "bash", "--rcfile", "/entrypoint.rc", "-ic" ]
     network_mode: host
     volumes:
     - ./entrypoint.rc:/entrypoint.rc
     - ./state/node1:/data/state/node1
-    command: node1
+    entrypoint: [ "bash", "-c" ]
+    command:
+    - source /entrypoint.rc && node1
     container_name: node1
 
   node2:
+    restart: always
     env_file: env_file
     image: btwiuse/nftmart:beta
-    tty: true
-    entrypoint: [ "bash", "--rcfile", "/entrypoint.rc", "-ic" ]
     network_mode: host
     volumes:
     - ./entrypoint.rc:/entrypoint.rc
     - ./state/node2:/data/state/node2
-    command: node2
+    entrypoint: [ "bash", "-c" ]
+    command:
+    - source /entrypoint.rc && node2
     container_name: node2

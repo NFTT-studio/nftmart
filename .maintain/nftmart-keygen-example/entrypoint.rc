@@ -16,6 +16,7 @@ exec_nftmart(){
 }
 
 node1(){
+  insertkey1 &
   exec_nftmart \
     -d /data/state/node1 \
     --node-key d1383db85a2175fcd7edd04a36dbf3f2522f15cdd6992508d36ac80b31fde4e5 \
@@ -25,6 +26,7 @@ node1(){
 }
 
 node2(){
+  insertkey2 &
   exec_nftmart \
     -d /data/state/node2 \
     --node-key e44deb139bcd180f2010ee3afc0678f765a3cf9ff26862330d12c5e4fb65ed2e \
@@ -34,18 +36,62 @@ node2(){
     --rpc-port "${RPC_PORT2}"
 }
 
-post(){ curl "$1" -X POST --header "Content-Type:application/json;charset=utf-8" --data "$2"; }
+post(){ curl -s -f -m 1 "$1" -X POST --header "Content-Type:application/json;charset=utf-8" --data "$2"; }
+
+is_healthy(){
+# echo "checking if $1 is healthy"
+# curl -s -f -m 1 "$1"
+  post "$1" --data '{"jsonrpc":"2.0","id":2,"method":"system_health","params":[]}' &>/dev/null || {
+    sleep 1 && false
+  }
+}
+
+wait_for(){
+  echo "waiting for $1 to become healthy"
+  until is_healthy "$1"; do :; done
+  echo "$1 is ready"
+}
+
+haskey1(){
+  local URL="http://127.0.0.1:$RPC_PORT1"
+  post "$URL" '{"jsonrpc":"2.0","id":1,"method":"author_hasKey","params":["0x184f5672c5f405f12476c29ba35ab22fdf44f4e50d671802cb271f06adb5cb3f","gran"]}'
+  post "$URL" '{"jsonrpc":"2.0","id":1,"method":"author_hasKey","params":["0x2020fdf7ad624a75cb35367c68782984cd28e9d9cb93f37397b34602da766b60","babe"]}'
+  post "$URL" '{"jsonrpc":"2.0","id":1,"method":"author_hasKey","params":["0x2020fdf7ad624a75cb35367c68782984cd28e9d9cb93f37397b34602da766b60","imon"]}'
+  post "$URL" '{"jsonrpc":"2.0","id":1,"method":"author_hasKey","params":["0x2020fdf7ad624a75cb35367c68782984cd28e9d9cb93f37397b34602da766b60","audi"]}'
+}
+
+haskey2(){
+  local URL="http://127.0.0.1:$RPC_PORT2"
+  post "$URL" '{"jsonrpc":"2.0","id":1,"method":"author_hasKey","params":["0xb46c28b4f0db186814fe579e63d2e9b7c3dbb6c1f28dfe541a6cc11ccfc5fa3e","gran"]}'
+  post "$URL" '{"jsonrpc":"2.0","id":1,"method":"author_hasKey","params":["0x0478a4baa1b4a9b85470a4070738abf190734a2bb2af77dad6ae5fda182da773","babe"]}'
+  post "$URL" '{"jsonrpc":"2.0","id":1,"method":"author_hasKey","params":["0x0478a4baa1b4a9b85470a4070738abf190734a2bb2af77dad6ae5fda182da773","imon"]}'
+  post "$URL" '{"jsonrpc":"2.0","id":1,"method":"author_hasKey","params":["0x0478a4baa1b4a9b85470a4070738abf190734a2bb2af77dad6ae5fda182da773","audi"]}'
+}
 
 insertkey1(){
-  post "http://127.0.0.1:$RPC_PORT1" '{"jsonrpc":"2.0","id":1,"method":"author_insertKey","params":["gran","include holiday snap brave almost drift grain list short dust hollow poet//nftmart//grandpa//1","0x184f5672c5f405f12476c29ba35ab22fdf44f4e50d671802cb271f06adb5cb3f"]}'
-  post "http://127.0.0.1:$RPC_PORT1" '{"jsonrpc":"2.0","id":1,"method":"author_insertKey","params":["babe","include holiday snap brave almost drift grain list short dust hollow poet//nftmart//babe//1","0x2020fdf7ad624a75cb35367c68782984cd28e9d9cb93f37397b34602da766b60"]}'
-  post "http://127.0.0.1:$RPC_PORT1" '{"jsonrpc":"2.0","id":1,"method":"author_insertKey","params":["imon","include holiday snap brave almost drift grain list short dust hollow poet//nftmart//babe//1","0x2020fdf7ad624a75cb35367c68782984cd28e9d9cb93f37397b34602da766b60"]}'
-  post "http://127.0.0.1:$RPC_PORT1" '{"jsonrpc":"2.0","id":1,"method":"author_insertKey","params":["audi","include holiday snap brave almost drift grain list short dust hollow poet//nftmart//babe//1","0x2020fdf7ad624a75cb35367c68782984cd28e9d9cb93f37397b34602da766b60"]}'
+  local URL="http://127.0.0.1:$RPC_PORT1"
+  wait_for "$URL"
+  if [[ $(haskey1 | grep -c true) == "4" ]]; then return; fi
+  echo "inserting keys to $URL"
+  sleep 5
+  post "$URL" '{"jsonrpc":"2.0","id":1,"method":"author_insertKey","params":["gran","include holiday snap brave almost drift grain list short dust hollow poet//nftmart//grandpa//1","0x184f5672c5f405f12476c29ba35ab22fdf44f4e50d671802cb271f06adb5cb3f"]}'
+  post "$URL" '{"jsonrpc":"2.0","id":1,"method":"author_insertKey","params":["babe","include holiday snap brave almost drift grain list short dust hollow poet//nftmart//babe//1","0x2020fdf7ad624a75cb35367c68782984cd28e9d9cb93f37397b34602da766b60"]}'
+  post "$URL" '{"jsonrpc":"2.0","id":1,"method":"author_insertKey","params":["imon","include holiday snap brave almost drift grain list short dust hollow poet//nftmart//babe//1","0x2020fdf7ad624a75cb35367c68782984cd28e9d9cb93f37397b34602da766b60"]}'
+  post "$URL" '{"jsonrpc":"2.0","id":1,"method":"author_insertKey","params":["audi","include holiday snap brave almost drift grain list short dust hollow poet//nftmart//babe//1","0x2020fdf7ad624a75cb35367c68782984cd28e9d9cb93f37397b34602da766b60"]}'
+  haskey1
+  sleep 5 && kill 1
 }
 
 insertkey2(){
-  post "http://127.0.0.1:$RPC_PORT2" '{"jsonrpc":"2.0","id":1,"method":"author_insertKey","params":["gran","include holiday snap brave almost drift grain list short dust hollow poet//nftmart//grandpa//2","0xb46c28b4f0db186814fe579e63d2e9b7c3dbb6c1f28dfe541a6cc11ccfc5fa3e"]}'
-  post "http://127.0.0.1:$RPC_PORT2" '{"jsonrpc":"2.0","id":1,"method":"author_insertKey","params":["babe","include holiday snap brave almost drift grain list short dust hollow poet//nftmart//babe//2","0x0478a4baa1b4a9b85470a4070738abf190734a2bb2af77dad6ae5fda182da773"]}'
-  post "http://127.0.0.1:$RPC_PORT2" '{"jsonrpc":"2.0","id":1,"method":"author_insertKey","params":["imon","include holiday snap brave almost drift grain list short dust hollow poet//nftmart//babe//2","0x0478a4baa1b4a9b85470a4070738abf190734a2bb2af77dad6ae5fda182da773"]}'
-  post "http://127.0.0.1:$RPC_PORT2" '{"jsonrpc":"2.0","id":1,"method":"author_insertKey","params":["audi","include holiday snap brave almost drift grain list short dust hollow poet//nftmart//babe//2","0x0478a4baa1b4a9b85470a4070738abf190734a2bb2af77dad6ae5fda182da773"]}'
+  local URL="http://127.0.0.1:$RPC_PORT2"
+  wait_for "$URL"
+  if [[ $(haskey1 | grep -c true) == "4" ]]; then return; fi
+  echo "inserting keys to $URL"
+  sleep 5
+  post "$URL" '{"jsonrpc":"2.0","id":1,"method":"author_insertKey","params":["gran","include holiday snap brave almost drift grain list short dust hollow poet//nftmart//grandpa//2","0xb46c28b4f0db186814fe579e63d2e9b7c3dbb6c1f28dfe541a6cc11ccfc5fa3e"]}'
+  post "$URL" '{"jsonrpc":"2.0","id":1,"method":"author_insertKey","params":["babe","include holiday snap brave almost drift grain list short dust hollow poet//nftmart//babe//2","0x0478a4baa1b4a9b85470a4070738abf190734a2bb2af77dad6ae5fda182da773"]}'
+  post "$URL" '{"jsonrpc":"2.0","id":1,"method":"author_insertKey","params":["imon","include holiday snap brave almost drift grain list short dust hollow poet//nftmart//babe//2","0x0478a4baa1b4a9b85470a4070738abf190734a2bb2af77dad6ae5fda182da773"]}'
+  post "$URL" '{"jsonrpc":"2.0","id":1,"method":"author_insertKey","params":["audi","include holiday snap brave almost drift grain list short dust hollow poet//nftmart//babe//2","0x0478a4baa1b4a9b85470a4070738abf190734a2bb2af77dad6ae5fda182da773"]}'
+  haskey2
+  sleep 5 && kill 1
 }
