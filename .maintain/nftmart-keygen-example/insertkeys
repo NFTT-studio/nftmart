@@ -1,3 +1,0 @@
-#!/usr/bin/env bash
-docker exec -it node1 bash --rcfile /entrypoint.rc -ic insertkey1
-docker exec -it node2 bash --rcfile /entrypoint.rc -ic insertkey2
