@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+
+exec_nftmart(){
+  exec nftmart \
+    -lruntime=debug \
+    --execution=NativeElseWasm \
+    --rpc-cors=all \
+    --rpc-methods=Unsafe \
+    --unsafe-ws-external \
+    --chain staging_spec_raw.json \
+    --validator \
+    --wasm-execution Interpreted \
+    --ws-max-connections=10000 \
+    --no-prometheus \
+    "$@"
+}
+
+node1(){
+  exec_nftmart \
+    -d /data/state/node1 \
+    --node-key d1383db85a2175fcd7edd04a36dbf3f2522f15cdd6992508d36ac80b31fde4e5 \
+    --port "${PORT1}" \
+    --ws-port "${WS_PORT1}" \
+    --rpc-port "${RPC_PORT1}"
+}
+
+node2(){
+  exec_nftmart \
+    -d /data/state/node2 \
+    --node-key e44deb139bcd180f2010ee3afc0678f765a3cf9ff26862330d12c5e4fb65ed2e \
+    --bootnodes /ip4/${IP1:-127.0.0.1}/tcp/${PORT1}/p2p/${NODE_PEER_ID1} \
+    --port "${PORT2}" \
+    --ws-port "${WS_PORT2}" \
+    --rpc-port "${RPC_PORT2}"
+}
+
+post(){ curl "$1" -X POST --header "Content-Type:application/json;charset=utf-8" --data "$2"; }
+
+insertkey1(){
+  post "http://127.0.0.1:$RPC_PORT1" '{"jsonrpc":"2.0","id":1,"method":"author_insertKey","params":["gran","include holiday snap brave almost drift grain list short dust hollow poet//nftmart//grandpa//1","0x184f5672c5f405f12476c29ba35ab22fdf44f4e50d671802cb271f06adb5cb3f"]}'
+  post "http://127.0.0.1:$RPC_PORT1" '{"jsonrpc":"2.0","id":1,"method":"author_insertKey","params":["babe","include holiday snap brave almost drift grain list short dust hollow poet//nftmart//babe//1","0x2020fdf7ad624a75cb35367c68782984cd28e9d9cb93f37397b34602da766b60"]}'
+  post "http://127.0.0.1:$RPC_PORT1" '{"jsonrpc":"2.0","id":1,"method":"author_insertKey","params":["imon","include holiday snap brave almost drift grain list short dust hollow poet//nftmart//babe//1","0x2020fdf7ad624a75cb35367c68782984cd28e9d9cb93f37397b34602da766b60"]}'
+  post "http://127.0.0.1:$RPC_PORT1" '{"jsonrpc":"2.0","id":1,"method":"author_insertKey","params":["audi","include holiday snap brave almost drift grain list short dust hollow poet//nftmart//babe//1","0x2020fdf7ad624a75cb35367c68782984cd28e9d9cb93f37397b34602da766b60"]}'
+}
+
+insertkey2(){
+  post "http://127.0.0.1:$RPC_PORT2" '{"jsonrpc":"2.0","id":1,"method":"author_insertKey","params":["gran","include holiday snap brave almost drift grain list short dust hollow poet//nftmart//grandpa//2","0xb46c28b4f0db186814fe579e63d2e9b7c3dbb6c1f28dfe541a6cc11ccfc5fa3e"]}'
+  post "http://127.0.0.1:$RPC_PORT2" '{"jsonrpc":"2.0","id":1,"method":"author_insertKey","params":["babe","include holiday snap brave almost drift grain list short dust hollow poet//nftmart//babe//2","0x0478a4baa1b4a9b85470a4070738abf190734a2bb2af77dad6ae5fda182da773"]}'
+  post "http://127.0.0.1:$RPC_PORT2" '{"jsonrpc":"2.0","id":1,"method":"author_insertKey","params":["imon","include holiday snap brave almost drift grain list short dust hollow poet//nftmart//babe//2","0x0478a4baa1b4a9b85470a4070738abf190734a2bb2af77dad6ae5fda182da773"]}'
+  post "http://127.0.0.1:$RPC_PORT2" '{"jsonrpc":"2.0","id":1,"method":"author_insertKey","params":["audi","include holiday snap brave almost drift grain list short dust hollow poet//nftmart//babe//2","0x0478a4baa1b4a9b85470a4070738abf190734a2bb2af77dad6ae5fda182da773"]}'
+}

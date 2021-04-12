@@ -29,32 +29,25 @@ version: "3.7"
 services:
 
   node1:
-    environment:
-    - PORT=30333
-    - WS_PORT=9944
-    - RPC_PORT=9933
+    env_file: env_file
     image: btwiuse/nftmart:beta
-    command:
-    - nftmart
-    - -d state/node1
-    - --node-key d1383db85a2175fcd7edd04a36dbf3f2522f15cdd6992508d36ac80b31fde4e5
-    - --port 30333
-    - --ws-port 9944
-    - --rpc-port 9933
+    tty: true
+    entrypoint: [ "bash", "--rcfile", "/entrypoint.rc", "-ic" ]
     network_mode: host
+    volumes:
+    - ./entrypoint.rc:/entrypoint.rc
+    - ./state/node1:/data/state/node1
+    command: node1
+    container_name: node1
 
   node2:
-    environment:
-    - PORT=30334
-    - WS_PORT=9945
-    - RPC_PORT=9934
+    env_file: env_file
     image: btwiuse/nftmart:beta
-    command:
-    - nftmart
-    - -d state/node2
-    - --node-key e44deb139bcd180f2010ee3afc0678f765a3cf9ff26862330d12c5e4fb65ed2e
-    - --bootnodes /ip4/127.0.0.1/tcp/30333/p2p/12D3KooWP44EhEGK9pp33nr19p3xKqUbnRWawgapeJ8Bbq3y4QmX
-    - --port 30334
-    - --ws-port 9945
-    - --rpc-port 9934
+    tty: true
+    entrypoint: [ "bash", "--rcfile", "/entrypoint.rc", "-ic" ]
     network_mode: host
+    volumes:
+    - ./entrypoint.rc:/entrypoint.rc
+    - ./state/node2:/data/state/node2
+    command: node2
+    container_name: node2
