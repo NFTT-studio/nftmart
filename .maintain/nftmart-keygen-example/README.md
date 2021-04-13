@@ -43,15 +43,14 @@ and build a new docker image `btwiuse/nftmart:beta` using files under the direct
 btwiuse@penguin:~/nftmart/.maintain$ make
 ```
 
-Now start the genesis nodes
+Now start the nodes
 ```
 $ docker-compose up
 ```
 
 Wait a moment for your nodes to be up and running, (you can check their status from the prometheus console served at http://localhost:9090/targets), then open http://localhost:3000/ to view your grafana monitoring dashboards:
-- [Substrate Networking](http://localhost:3000/d/substrate-networking/substrate-networking?orgId=1&refresh=1m&from=now-5m&to=now&var-nodename=node1:9615&var-nodename=node2:9616&var-notif_protocol=All&var-request_protocol=All&var-data_source=Prometheus&var-metric_namespace=substrate)
-- [Substrate Service Tasks](http://localhost:3000/d/substrate-service-tasks/substrate-service-tasks?orgId=1&var-nodename=node1:9615&var-nodename=node2:9616&var-metric_namespace=substrate&var-data_source=Prometheus&from=now-5m&to=now)
+- [Substrate Networking](http://localhost:3000/d/substrate-networking/substrate-networking?orgId=1&refresh=1m&from=now-5m&to=now&var-nodename=node1:9615&var-nodename=node2:9616&var-nodename=node3:9617&var-notif_protocol=All&var-request_protocol=All&var-data_source=Prometheus&var-metric_namespace=substrate)
+- [Substrate Service Tasks](http://localhost:3000/d/substrate-service-tasks/substrate-service-tasks?orgId=1&var-nodename=node1:9615&var-nodename=node2:9616&var-nodename=node3:9617&var-metric_namespace=substrate&var-data_source=Prometheus&from=now-5m&to=now)
 
 TODO:
 - connect to polkadot ui
-- add light node

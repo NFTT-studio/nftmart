@@ -11,9 +11,15 @@ scrape_configs:
         labels:
           network: dev
       - targets:
-      # - 'node1.127.0.0.1.xip.io:9616'
+      # - 'node2.127.0.0.1.xip.io:9616'
       # - 127.0.0.1:9616
         - node2:9616
+        labels:
+          network: dev
+      - targets:
+      # - 'node3.127.0.0.1.xip.io:9617'
+      # - 127.0.0.1:9617
+        - node3:9617
         labels:
           network: dev
     # - targets: ['light-c:9615']
