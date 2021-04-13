@@ -2,9 +2,9 @@
 #
 # # Nodes
 #
-# - Validator node A
-# - Validator node B
-# - Light client C
+# - Validator node A (node1)
+# - Validator node B (node2)
+# - Light client C   (node3)
 #
 # # Auxiliary nodes
 #
@@ -17,11 +17,11 @@
 # 2. Start networks and containers:
 #    `sudo docker-compose -f .maintain/sentry-node/docker-compose.yml up`
 # 3. Connect to nodes:
-#   - validator-a: localhost:9944
-#   - validator-b: localhost:9945
-#   - light-c: localhost:9946
+#   - node1: localhost:9944
+#   - node2: localhost:9945
+#   - node3: localhost:9946
 #   - via polkadot.js/apps: https://polkadot.js.org/apps/?rpc=ws%3A%2F%2Flocalhost%3A<NODE_PORT>#/explorer
-#   - grafana: localhost:3001
+#   - grafana: localhost:3000
 #   - prometheus: localhost:9090
 
 
@@ -30,47 +30,60 @@ services:
 
   node1:
     restart: always
-    env_file: env_file
+    env_file: .env
     image: btwiuse/nftmart:beta
-    network_mode: host
     volumes:
     - ./entrypoint.rc:/entrypoint.rc
     - ./state/node1:/data/state/node1
+    ports:
+    - "${WS_PORT1}:${WS_PORT1}"
     entrypoint: [ "bash", "-c" ]
     command:
     - source /entrypoint.rc && node1
-    container_name: node1
 
   node2:
     restart: always
-    env_file: env_file
+    env_file: .env
     image: btwiuse/nftmart:beta
-    network_mode: host
     volumes:
     - ./entrypoint.rc:/entrypoint.rc
     - ./state/node2:/data/state/node2
+    ports:
+    - "${WS_PORT2}:${WS_PORT2}"
     entrypoint: [ "bash", "-c" ]
     command:
     - source /entrypoint.rc && node2
-    container_name: node2
+
+  node3:
+    restart: always
+    env_file: .env
+    image: btwiuse/nftmart:beta
+    volumes:
+    - ./entrypoint.rc:/entrypoint.rc
+    - ./state/node3:/data/state/node3
+    ports:
+    - "${WS_PORT3}:${WS_PORT3}"
+    entrypoint: [ "bash", "-c" ]
+    command:
+    - source /entrypoint.rc && node3
 
   prometheus:
-    image: prom/prometheus
-  # ports:
-  #   - 9090:9090
-    volumes:
-      - ./prometheus/:/etc/prometheus/
     restart: always
-    network_mode: host
+    image: prom/prometheus
+    user: root
+    volumes:
+    - ./prometheus/:/etc/prometheus/
+    - ./state/prometheus/:/prometheus/
+    ports:
+    - 9090:9090
 
   grafana:
-    image: grafana/grafana
-    user: "104"
-  # ports:
-  #   - 3001:3000
-    volumes:
-      - ./grafana/provisioning/:/etc/grafana/provisioning
-      - ../monitoring/grafana-dashboards/:/etc/grafana/provisioning/dashboard-definitions
     restart: always
-    network_mode: host
+    image: grafana/grafana
+    user: root
+    volumes:
+    - ./grafana/:/etc/grafana/
+    - ./state/grafana/:/var/lib/grafana/
+    ports:
+    - 3000:3000
 

@@ -4,10 +4,22 @@ global:
 scrape_configs:
   - job_name: 'substrate-nodes'
     static_configs:
-      - targets: ['127.0.0.1:9615']
+      - targets:
+      # - 'node1.127.0.0.1.xip.io:9615'
+      # - 127.0.0.1:9615
+        - node1:9615
         labels:
           network: dev
-      - targets: ['127.0.0.1:9616']
+      - targets:
+      # - 'node2.127.0.0.1.xip.io:9616'
+      # - 127.0.0.1:9616
+        - node2:9616
+        labels:
+          network: dev
+      - targets:
+      # - 'node3.127.0.0.1.xip.io:9617'
+      # - 127.0.0.1:9617
+        - node3:9617
         labels:
           network: dev
     # - targets: ['light-c:9615']
