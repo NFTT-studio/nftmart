@@ -9,7 +9,7 @@ exec_nftmart(){
     --prometheus-external \
     --unsafe-ws-external \
     --chain staging_spec_raw.json \
-    --validator \
+    --no-telemetry \
     --wasm-execution Interpreted \
     --ws-max-connections=10000 \
     "$@"
@@ -19,7 +19,9 @@ node1(){
   insertkey1 &
   exec_nftmart \
     -d /data/state/node1 \
-    --node-key d1383db85a2175fcd7edd04a36dbf3f2522f15cdd6992508d36ac80b31fde4e5 \
+    --validator \
+    --node-key ${NODE_KEY1} \
+    --bootnodes /dns/${IP2}/tcp/${PORT2}/p2p/${NODE_PEER_ID2} \
     --prometheus-port "${PROM_PORT1}" \
     --port "${PORT1}" \
     --ws-port "${WS_PORT1}" \
@@ -30,8 +32,9 @@ node2(){
   insertkey2 &
   exec_nftmart \
     -d /data/state/node2 \
-    --node-key e44deb139bcd180f2010ee3afc0678f765a3cf9ff26862330d12c5e4fb65ed2e \
-    --bootnodes /ip4/${IP1:-127.0.0.1}/tcp/${PORT1}/p2p/${NODE_PEER_ID1} \
+    --validator \
+    --node-key ${NODE_KEY2} \
+    --bootnodes /dns/${IP1}/tcp/${PORT1}/p2p/${NODE_PEER_ID1} \
     --prometheus-port "${PROM_PORT2}" \
     --port "${PORT2}" \
     --ws-port "${WS_PORT2}" \
@@ -49,9 +52,9 @@ is_healthy(){
 }
 
 wait_for(){
-  echo "waiting for $1 to become healthy"
+# echo "waiting for $1 to become healthy"
   until is_healthy "$1"; do :; done
-  echo "$1 is ready"
+# echo "$1 is ready"
 }
 
 haskey1(){
@@ -72,28 +75,43 @@ haskey2(){
 
 insertkey1(){
   local URL="http://127.0.0.1:$RPC_PORT1"
+  local RELOAD_KEYS=
+
   wait_for "$URL"
-  if [[ $(haskey1 | grep -c true) == "4" ]]; then return; fi
-  echo "inserting keys to $URL"
-  sleep 5
-  post "$URL" '{"jsonrpc":"2.0","id":1,"method":"author_insertKey","params":["gran","include holiday snap brave almost drift grain list short dust hollow poet//nftmart//grandpa//1","0x184f5672c5f405f12476c29ba35ab22fdf44f4e50d671802cb271f06adb5cb3f"]}'
-  post "$URL" '{"jsonrpc":"2.0","id":1,"method":"author_insertKey","params":["babe","include holiday snap brave almost drift grain list short dust hollow poet//nftmart//babe//1","0x2020fdf7ad624a75cb35367c68782984cd28e9d9cb93f37397b34602da766b60"]}'
-  post "$URL" '{"jsonrpc":"2.0","id":1,"method":"author_insertKey","params":["imon","include holiday snap brave almost drift grain list short dust hollow poet//nftmart//babe//1","0x2020fdf7ad624a75cb35367c68782984cd28e9d9cb93f37397b34602da766b60"]}'
-  post "$URL" '{"jsonrpc":"2.0","id":1,"method":"author_insertKey","params":["audi","include holiday snap brave almost drift grain list short dust hollow poet//nftmart//babe//1","0x2020fdf7ad624a75cb35367c68782984cd28e9d9cb93f37397b34602da766b60"]}'
-  haskey1
-  sleep 5 && kill 1
+
+  until [[ $(haskey1 | grep -c true) == "4" ]]; do
+    RELOAD_KEYS=1
+    echo "[INFO] inserting keys to node1 ($URL)."
+    echo "The node will restart shortly after the keys are inserted"
+    post "$URL" '{"jsonrpc":"2.0","id":1,"method":"author_insertKey","params":["gran","include holiday snap brave almost drift grain list short dust hollow poet//nftmart//grandpa//1","0x184f5672c5f405f12476c29ba35ab22fdf44f4e50d671802cb271f06adb5cb3f"]}'
+    post "$URL" '{"jsonrpc":"2.0","id":1,"method":"author_insertKey","params":["babe","include holiday snap brave almost drift grain list short dust hollow poet//nftmart//babe//1","0x2020fdf7ad624a75cb35367c68782984cd28e9d9cb93f37397b34602da766b60"]}'
+    post "$URL" '{"jsonrpc":"2.0","id":1,"method":"author_insertKey","params":["imon","include holiday snap brave almost drift grain list short dust hollow poet//nftmart//babe//1","0x2020fdf7ad624a75cb35367c68782984cd28e9d9cb93f37397b34602da766b60"]}'
+    post "$URL" '{"jsonrpc":"2.0","id":1,"method":"author_insertKey","params":["audi","include holiday snap brave almost drift grain list short dust hollow poet//nftmart//babe//1","0x2020fdf7ad624a75cb35367c68782984cd28e9d9cb93f37397b34602da766b60"]}'
+  done
+
+  if [[ -n "${RELOAD_KEYS}" ]]; then shutdown_node_to_reload_inserted_keys; fi
 }
 
 insertkey2(){
   local URL="http://127.0.0.1:$RPC_PORT2"
+  local RELOAD_KEYS=
+
   wait_for "$URL"
-  if [[ $(haskey1 | grep -c true) == "4" ]]; then return; fi
-  echo "inserting keys to $URL"
-  sleep 5
-  post "$URL" '{"jsonrpc":"2.0","id":1,"method":"author_insertKey","params":["gran","include holiday snap brave almost drift grain list short dust hollow poet//nftmart//grandpa//2","0xb46c28b4f0db186814fe579e63d2e9b7c3dbb6c1f28dfe541a6cc11ccfc5fa3e"]}'
-  post "$URL" '{"jsonrpc":"2.0","id":1,"method":"author_insertKey","params":["babe","include holiday snap brave almost drift grain list short dust hollow poet//nftmart//babe//2","0x0478a4baa1b4a9b85470a4070738abf190734a2bb2af77dad6ae5fda182da773"]}'
-  post "$URL" '{"jsonrpc":"2.0","id":1,"method":"author_insertKey","params":["imon","include holiday snap brave almost drift grain list short dust hollow poet//nftmart//babe//2","0x0478a4baa1b4a9b85470a4070738abf190734a2bb2af77dad6ae5fda182da773"]}'
-  post "$URL" '{"jsonrpc":"2.0","id":1,"method":"author_insertKey","params":["audi","include holiday snap brave almost drift grain list short dust hollow poet//nftmart//babe//2","0x0478a4baa1b4a9b85470a4070738abf190734a2bb2af77dad6ae5fda182da773"]}'
-  haskey2
-  sleep 5 && kill 1
+
+  until [[ $(haskey2 | grep -c true) == "4" ]]; do
+    RELOAD_KEYS=1
+    echo "[INFO] inserting keys to node2 ($URL)"
+    post "$URL" '{"jsonrpc":"2.0","id":1,"method":"author_insertKey","params":["gran","include holiday snap brave almost drift grain list short dust hollow poet//nftmart//grandpa//2","0xb46c28b4f0db186814fe579e63d2e9b7c3dbb6c1f28dfe541a6cc11ccfc5fa3e"]}'
+    post "$URL" '{"jsonrpc":"2.0","id":1,"method":"author_insertKey","params":["babe","include holiday snap brave almost drift grain list short dust hollow poet//nftmart//babe//2","0x0478a4baa1b4a9b85470a4070738abf190734a2bb2af77dad6ae5fda182da773"]}'
+    post "$URL" '{"jsonrpc":"2.0","id":1,"method":"author_insertKey","params":["imon","include holiday snap brave almost drift grain list short dust hollow poet//nftmart//babe//2","0x0478a4baa1b4a9b85470a4070738abf190734a2bb2af77dad6ae5fda182da773"]}'
+    post "$URL" '{"jsonrpc":"2.0","id":1,"method":"author_insertKey","params":["audi","include holiday snap brave almost drift grain list short dust hollow poet//nftmart//babe//2","0x0478a4baa1b4a9b85470a4070738abf190734a2bb2af77dad6ae5fda182da773"]}'
+  done
+
+  if [[ -n "${RELOAD_KEYS}" ]]; then shutdown_node_to_reload_inserted_keys; fi
+}
+
+shutdown_node_to_reload_inserted_keys(){
+    echo "[INFO] node will shutdown shortly to reload inserted keys."
+    sleep 3
+    kill 1
 }
