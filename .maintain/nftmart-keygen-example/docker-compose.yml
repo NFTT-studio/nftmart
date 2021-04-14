@@ -67,6 +67,19 @@ services:
     command:
     - source /entrypoint.rc && node3
 
+  node4:
+    restart: always
+    env_file: .env
+    image: btwiuse/nftmart:beta
+    volumes:
+    - ./entrypoint.rc:/entrypoint.rc
+    - ./state/node4:/data/state/node4
+    ports:
+    - "${WS_PORT4}:${WS_PORT4}"
+    entrypoint: [ "bash", "-c" ]
+    command:
+    - source /entrypoint.rc && node4
+
   prometheus:
     restart: always
     image: prom/prometheus

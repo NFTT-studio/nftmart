@@ -54,6 +54,18 @@ node3(){
     --rpc-port "${RPC_PORT3}"
 }
 
+node4(){
+  exec_nftmart \
+    -d /data/state/node4 \
+    --node-key ${NODE_KEY4} \
+    --bootnodes /dns/${IP1}/tcp/${PORT1}/p2p/${NODE_PEER_ID1} \
+    --bootnodes /dns/${IP2}/tcp/${PORT2}/p2p/${NODE_PEER_ID2} \
+    --prometheus-port "${PROM_PORT4}" \
+    --port "${PORT4}" \
+    --ws-port "${WS_PORT4}" \
+    --rpc-port "${RPC_PORT4}"
+}
+
 post(){ curl -s -f -m 1 "$1" -X POST --header "Content-Type:application/json;charset=utf-8" --data "$2"; }
 
 is_healthy(){
