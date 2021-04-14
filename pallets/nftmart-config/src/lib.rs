@@ -65,7 +65,7 @@ pub mod module {
 	/// Whitelist for class creation
 	#[pallet::storage]
 	#[pallet::getter(fn account_whitelist)]
-	pub type AccountWhitelist<T: Config> = StorageMap<_, Identity, T::AccountId, ()>;
+	pub type AccountWhitelist<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, ()>;
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {

@@ -97,7 +97,39 @@ async function main() {
 	program.command('take-order <classID> <tokenID> <orderOwner> <account>').action(async (classID, tokenID, orderOwner, account) => {
 		await demo_take_order(program.opts().ws, keyring, classID, tokenID, orderOwner, account);
 	});
-	program.parseAsync(process.argv);
+	program.command('add-whitelist <sudo> <account>').action(async (sudo, account) => {
+		await demo_add_whitelist(program.opts().ws, keyring, sudo, account);
+	});
+	program.command('show-whitelist').action(async () => {
+		await demo_show_whitelist(program.opts().ws, keyring);
+	});
+	await program.parseAsync(process.argv);
+}
+
+async function demo_show_whitelist(ws, keyring) {
+	let api = await getApi(ws);
+	const all = await api.query.config.accountWhitelist.entries();
+	for (const account of all) {
+		let key = account[0];
+		const len = key.length;
+		key = key.buffer.slice(len - 32, len);
+		const addr = keyring.encodeAddress(new Uint8Array(key));
+		console.log("%s", addr);
+	}
+}
+
+async function demo_add_whitelist(ws, keyring, sudo, account) {
+	let api = await getApi(ws);
+	let moduleMetadata = await getModules(api);
+	sudo = keyring.addFromUri(sudo);
+	account = keyring.addFromUri(account);
+	// const call = api.tx.sudo.sudo(api.tx.config.removeWhitelist(account.address));
+	const call = api.tx.sudo.sudo(api.tx.config.addWhitelist(account.address));
+	const feeInfo = await call.paymentInfo(account);
+	console.log("The fee of the call: %s.", feeInfo.partialFee / unit);
+	let [a, b] = waitTx(moduleMetadata);
+	await call.signAndSend(sudo, a);
+	await b();
 }
 
 async function demo_take_order(ws, keyring, classID, tokenID, orderOwner, account) {
@@ -462,4 +494,9 @@ async function demo_create_class(ws, keyring, account) {
 	process.exit();
 }
 
-main()
+main().then(r => {
+	console.log("ok");
+	process.exit();
+}).catch(err => {
+	console.log(err);
+});
