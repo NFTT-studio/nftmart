@@ -43,16 +43,19 @@ impl frame_system::Config for Runtime {
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
 	type SS58Prefix = ();
+	type OnSetCode = ();
 }
+
 parameter_types! {
 	pub const ExistentialDeposit: Balance = 1;
 }
+
 impl pallet_balances::Config for Runtime {
 	type Balance = Balance;
 	type Event = Event;
 	type DustRemoval = ();
 	type ExistentialDeposit = ExistentialDeposit;
-	type AccountStore = frame_system::Module<Runtime>;
+	type AccountStore = frame_system::Pallet<Runtime>;
 	type MaxLocks = ();
 	type WeightInfo = ();
 }
@@ -133,11 +136,11 @@ construct_runtime!(
 		NodeBlock = Block,
 		UncheckedExtrinsic = UncheckedExtrinsic
 	{
-		System: frame_system::{Module, Call, Config, Storage, Event<T>},
-		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
-		Proxy: pallet_proxy::{Module, Call, Storage, Event<T>},
-		Utility: pallet_utility::{Module, Call, Event},
-		NftmartConfig: nftmart_config::{Module, Call, Event<T>},
+		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+		Proxy: pallet_proxy::{Pallet, Call, Storage, Event<T>},
+		Utility: pallet_utility::{Pallet, Call, Event},
+		NftmartConfig: nftmart_config::{Pallet, Call, Event<T>},
 	}
 );
 
@@ -171,7 +174,7 @@ impl ExtBuilder {
 }
 
 pub fn last_event() -> Event {
-	frame_system::Module::<Runtime>::events()
+	frame_system::Pallet::<Runtime>::events()
 		.pop()
 		.expect("Event expected")
 		.event
