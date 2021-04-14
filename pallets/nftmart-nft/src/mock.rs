@@ -181,6 +181,10 @@ impl nftmart_nft::Config for Runtime {
 	type CategoryId = sp_core::constants_types::CategoryId;
 }
 
+impl nftmart_config::Config for Runtime {
+	type Event = Event;
+}
+
 use frame_system::Call as SystemCall;
 
 pub type Block = sp_runtime::generic::Block<Header, UncheckedExtrinsic>;
@@ -199,6 +203,7 @@ construct_runtime!(
 		Tokens: orml_tokens::{Pallet, Storage, Event<T>, Config<T>},
 		Currencies: orml_currencies::{Pallet, Call, Event<T>},
 		OrmlNFT: orml_nft::{Pallet, Storage, Config<T>},
+		NftmartConfig: nftmart_config::{Pallet, Call, Event<T>},
 		Nftmart: nftmart_nft::{Pallet, Call, Event<T>},
 	}
 );
@@ -236,7 +241,11 @@ impl ExtBuilder {
 		.unwrap();
 
 		let mut ext = sp_io::TestExternalities::new(t);
-		ext.execute_with(|| System::set_block_number(1));
+		ext.execute_with(|| {
+			System::set_block_number(1);
+			NftmartConfig::add_whitelist(Origin::root(), ALICE);
+			NftmartConfig::add_whitelist(Origin::root(), BOB);
+		});
 		ext
 	}
 }

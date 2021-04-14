@@ -193,7 +193,11 @@ pub mod module {
 	use sp_runtime::{PerU16};
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config + orml_nft::Config<ClassData = ClassData<BlockNumberOf<Self>>, TokenData = TokenData<<Self as frame_system::Config>::AccountId, BlockNumberOf<Self>>> + pallet_proxy::Config {
+	pub trait Config: frame_system::Config +
+		orml_nft::Config<ClassData = ClassData<BlockNumberOf<Self>>, TokenData = TokenData<<Self as frame_system::Config>::AccountId, BlockNumberOf<Self>>> +
+		pallet_proxy::Config +
+		nftmart_config::Config
+	{
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 		/// The minimum balance to create class
@@ -250,6 +254,8 @@ pub mod module {
 		NameTooLong,
 		/// DescriptionTooLong
 		DescriptionTooLong,
+		/// account not in whitelist
+		AccountNotInWhitelist,
 		/// Not supported for now
 		NotSupportedForNow,
 	}
@@ -405,6 +411,7 @@ pub mod module {
 		#[transactional]
 		pub fn create_class(origin: OriginFor<T>, metadata: NFTMetadata, name: Vec<u8>, description: Vec<u8>, properties: Properties) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
+			ensure!(nftmart_config::Pallet::<T>::account_whitelist(&who).is_some(), Error::<T>::AccountNotInWhitelist);
 
 			ensure!(name.len() <= 20, Error::<T>::NameTooLong);// TODO: pass configurations from runtime configuration.
 			ensure!(description.len() <= 256, Error::<T>::DescriptionTooLong);// TODO: pass configurations from runtime configuration.
@@ -498,6 +505,8 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			let to = T::Lookup::lookup(to)?;
+			ensure!(nftmart_config::Pallet::<T>::account_whitelist(&to).is_some(), Error::<T>::AccountNotInWhitelist);
+
 			ensure!(quantity >= One::one(), Error::<T>::InvalidQuantity);
 			let class_info: ClassInfoOf<T> = orml_nft::Pallet::<T>::classes(class_id).ok_or(Error::<T>::ClassIdNotFound)?;
 			ensure!(who == class_info.owner, Error::<T>::NoPermission);

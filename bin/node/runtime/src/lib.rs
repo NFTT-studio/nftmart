@@ -1146,6 +1146,10 @@ impl nftmart_nft::Config for Runtime {
 	type CategoryId = sp_core::constants_types::CategoryId;
 }
 
+impl nftmart_config::Config for Runtime {
+	type Event = Event;
+}
+
 construct_runtime!(
 	pub enum Runtime where
 		Block = Block,
@@ -1194,6 +1198,7 @@ construct_runtime!(
 		Currencies: orml_currencies::{Pallet, Call, Event<T>},
 		OrmlNFT: orml_nft::{Pallet, Storage, Config<T>},
 		Nftmart: nftmart_nft::{Pallet, Call, Storage, Event<T>, Config<T>},
+		Config: nftmart_config::{Pallet, Call, Storage, Event<T>},
 	}
 );
 

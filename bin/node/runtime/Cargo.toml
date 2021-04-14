@@ -95,6 +95,7 @@ orml-traits = { path = "../../../pallets/orml-traits", default-features = false 
 orml-nft = { path = "../../../pallets/orml-nft", default-features = false }
 nftmart-nft = { path = "../../../pallets/nftmart-nft", default-features = false }
 nftmart-order = { path = "../../../pallets/nftmart-order", default-features = false }
+nftmart-config = { path = "../../../pallets/nftmart-config", default-features = false }
 nftmart-rpc-runtime-api = { default-features = false, path = "../../../pallets/nftmart-nft/rpc/runtime-api" }
 
 [build-dependencies]
@@ -176,6 +177,7 @@ std = [
 	"orml-nft/std",
 	"nftmart-nft/std",
 	"nftmart-order/std",
+	"nftmart-config/std",
 	"nftmart-rpc-runtime-api/std",
 ]
 runtime-benchmarks = [
