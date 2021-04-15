@@ -36,7 +36,7 @@ services:
     - ./entrypoint.rc:/entrypoint.rc
     - ./state/node1:/data/state/node1
     ports:
-    - "${WS_PORT1}:${WS_PORT1}"
+    - "${PORT1}:${PORT1}"
     entrypoint: [ "bash", "-c" ]
     command:
     - source /entrypoint.rc && node1
@@ -49,7 +49,7 @@ services:
     - ./entrypoint.rc:/entrypoint.rc
     - ./state/node2:/data/state/node2
     ports:
-    - "${WS_PORT2}:${WS_PORT2}"
+    - "${PORT2}:${PORT2}"
     entrypoint: [ "bash", "-c" ]
     command:
     - source /entrypoint.rc && node2
@@ -62,6 +62,8 @@ services:
     - ./entrypoint.rc:/entrypoint.rc
     - ./state/node3:/data/state/node3
     ports:
+    - "${PORT3}:${PORT3}"
+    - "${RPC_PORT3}:${RPC_PORT3}"
     - "${WS_PORT3}:${WS_PORT3}"
     entrypoint: [ "bash", "-c" ]
     command:
@@ -75,6 +77,8 @@ services:
     - ./entrypoint.rc:/entrypoint.rc
     - ./state/node4:/data/state/node4
     ports:
+    - "${PORT4}:${PORT4}"
+    - "${RPC_PORT4}:${RPC_PORT4}"
     - "${WS_PORT4}:${WS_PORT4}"
     entrypoint: [ "bash", "-c" ]
     command:
