@@ -1,24 +1,11 @@
 #!/usr/bin/env bash
 
-exec_nftmart(){
-  exec nftmart \
-    -lruntime=debug \
-    --execution=NativeElseWasm \
-    --rpc-cors=all \
-    --rpc-methods=Unsafe \
-    --prometheus-external \
-    --unsafe-ws-external \
-    --chain staging_spec_raw.json \
-    --no-telemetry \
-    --wasm-execution Interpreted \
-    --ws-max-connections=10000 \
-    "$@"
-}
+# generated functions
 
 node1(){
   insertkey1 &
   exec_nftmart \
-    -d /data/state/node1 \
+    --base-path /data/state/node1 \
     --validator \
     --node-key ${NODE_KEY1} \
     --bootnodes /dns/${IP2}/tcp/${PORT2}/p2p/${NODE_PEER_ID2} \
@@ -31,7 +18,7 @@ node1(){
 node2(){
   insertkey2 &
   exec_nftmart \
-    -d /data/state/node2 \
+    --base-path /data/state/node2 \
     --validator \
     --node-key ${NODE_KEY2} \
     --bootnodes /dns/${IP1}/tcp/${PORT1}/p2p/${NODE_PEER_ID1} \
@@ -43,7 +30,8 @@ node2(){
 
 node3(){
   exec_nftmart \
-    -d /data/state/node3 \
+    --base-path /data/state/node3 \
+    --no-telemetry \
     --light \
     --node-key ${NODE_KEY3} \
     --bootnodes /dns/${IP1}/tcp/${PORT1}/p2p/${NODE_PEER_ID1} \
@@ -54,20 +42,28 @@ node3(){
     --rpc-port "${RPC_PORT3}"
 }
 
-post(){ curl -s -f -m 1 "$1" -X POST --header "Content-Type:application/json;charset=utf-8" --data "$2"; }
-
-is_healthy(){
-# echo "checking if $1 is healthy"
-# curl -s -f -m 1 "$1"
-  post "$1" --data '{"jsonrpc":"2.0","id":2,"method":"system_health","params":[]}' &>/dev/null || {
-    sleep 1 && false
-  }
+node4(){
+  exec_nftmart \
+    --base-path /data/state/node4 \
+    --node-key ${NODE_KEY4} \
+    --bootnodes /dns/${IP1}/tcp/${PORT1}/p2p/${NODE_PEER_ID1} \
+    --bootnodes /dns/${IP2}/tcp/${PORT2}/p2p/${NODE_PEER_ID2} \
+    --prometheus-port "${PROM_PORT4}" \
+    --port "${PORT4}" \
+    --ws-port "${WS_PORT4}" \
+    --rpc-port "${RPC_PORT4}"
 }
 
-wait_for(){
-# echo "waiting for $1 to become healthy"
-  until is_healthy "$1"; do :; done
-# echo "$1 is ready"
+node5(){
+  exec_nftmart \
+    --base-path /data/state/node5 \
+    --validator \
+    --bootnodes /dns/${IP1}/tcp/${PORT1}/p2p/${NODE_PEER_ID1} \
+    --bootnodes /dns/${IP2}/tcp/${PORT2}/p2p/${NODE_PEER_ID2} \
+    --prometheus-port "${PROM_PORT5}" \
+    --port "${PORT5}" \
+    --ws-port "${WS_PORT5}" \
+    --rpc-port "${RPC_PORT5}"
 }
 
 haskey1(){
@@ -123,8 +119,39 @@ insertkey2(){
   if [[ -n "${RELOAD_KEYS}" ]]; then shutdown_node_to_reload_inserted_keys; fi
 }
 
+# util funcs
+
+exec_nftmart(){
+  exec nftmart \
+    --telemetry-url="wss://telemetry.polkadot.io/submit/ 0" \
+    --name="${FUNCNAME[1]}" \
+    --log=runtime=debug \
+    --execution=NativeElseWasm \
+    --rpc-cors=all \
+    --rpc-methods=Unsafe \
+    --prometheus-external \
+    --unsafe-ws-external \
+    --chain=staging_spec_raw.json \
+    --wasm-execution=Interpreted \
+    --ws-max-connections=10000 \
+    "$@"
+}
+
 shutdown_node_to_reload_inserted_keys(){
     echo "[INFO] node will shutdown shortly to reload inserted keys."
     sleep 3
     kill 1
 }
+
+post(){ curl -s -f -m 1 "$1" -X POST --header "Content-Type:application/json;charset=utf-8" --data "$2"; }
+
+is_healthy(){
+  post "$1" --data '{"jsonrpc":"2.0","id":2,"method":"system_health","params":[]}' &>/dev/null || {
+    sleep 1 && false
+  }
+}
+
+wait_for(){
+  until is_healthy "$1"; do :; done
+}
+
