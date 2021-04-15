@@ -20,3 +20,7 @@ scrape_configs:
         - node4:9618
         labels:
           network: dev
+      - targets:
+        - node5:9619
+        labels:
+          network: dev

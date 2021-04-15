@@ -54,6 +54,18 @@ node4(){
     --rpc-port "${RPC_PORT4}"
 }
 
+node5(){
+  exec_nftmart \
+    --base-path /data/state/node5 \
+    --validator \
+    --bootnodes /dns/${IP1}/tcp/${PORT1}/p2p/${NODE_PEER_ID1} \
+    --bootnodes /dns/${IP2}/tcp/${PORT2}/p2p/${NODE_PEER_ID2} \
+    --prometheus-port "${PROM_PORT5}" \
+    --port "${PORT5}" \
+    --ws-port "${WS_PORT5}" \
+    --rpc-port "${RPC_PORT5}"
+}
+
 haskey1(){
   local URL="http://127.0.0.1:$RPC_PORT1"
   post "$URL" '{"jsonrpc":"2.0","id":1,"method":"author_hasKey","params":["0x184f5672c5f405f12476c29ba35ab22fdf44f4e50d671802cb271f06adb5cb3f","gran"]}'
