@@ -119,13 +119,17 @@ async function demo_show_whitelist(ws, keyring) {
 }
 
 async function demo_add_whitelist(ws, keyring, sudo, account) {
+	// usage: node nft-apis.mjs add-whitelist //Alice 63dHdZZMdgFeHs544yboqnVvrnAaTRdPWPC1u2aZjpC5HTqx
 	let api = await getApi(ws);
 	let moduleMetadata = await getModules(api);
 	sudo = keyring.addFromUri(sudo);
-	account = keyring.addFromUri(account);
+	if(account.length !== '62qUEaQwPx7g4vDz88cT36XXuEUQmYo3Y5dxnxScsiDkb8wy'.length){
+		account = keyring.addFromUri(account);
+		account = account.address;
+	}
 	// const call = api.tx.sudo.sudo(api.tx.config.removeWhitelist(account.address));
-	const call = api.tx.sudo.sudo(api.tx.config.addWhitelist(account.address));
-	const feeInfo = await call.paymentInfo(account);
+	const call = api.tx.sudo.sudo(api.tx.config.addWhitelist(account));
+	const feeInfo = await call.paymentInfo(sudo.address);
 	console.log("The fee of the call: %s.", feeInfo.partialFee / unit);
 	let [a, b] = waitTx(moduleMetadata);
 	await call.signAndSend(sudo, a);
