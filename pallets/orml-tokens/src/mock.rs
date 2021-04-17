@@ -69,9 +69,6 @@ thread_local! {
 
 pub struct TenToFourteen;
 impl Contains<AccountId> for TenToFourteen {
-	fn sorted_members() -> Vec<AccountId> {
-		TEN_TO_FOURTEEN.with(|v| v.borrow().clone())
-	}
 	#[cfg(feature = "runtime-benchmarks")]
 	fn add(new: &AccountId) {
 		TEN_TO_FOURTEEN.with(|v| {
@@ -79,6 +76,10 @@ impl Contains<AccountId> for TenToFourteen {
 			members.push(*new);
 			members.sort();
 		})
+	}
+
+	fn contains(t: &AccountId) -> bool {
+		TEN_TO_FOURTEEN.with(|v| v.borrow().contains(t))
 	}
 }
 
@@ -96,12 +97,12 @@ parameter_types! {
 	pub const ProposalBondMinimum: u64 = 1;
 	pub const SpendPeriod: u64 = 2;
 	pub const Burn: Permill = Permill::from_percent(50);
-	pub const TreasuryModuleId: ModuleId = ModuleId(*b"py/trsry");
+	pub const TreasuryModuleId: PalletId = PalletId(*b"py/trsry");
 	pub const GetTokenId: CurrencyId = DOT;
 }
 
 impl pallet_treasury::Config for Runtime {
-	type ModuleId = TreasuryModuleId;
+	type PalletId = TreasuryModuleId;
 	type Currency = CurrencyAdapter<Runtime, GetTokenId>;
 	type ApproveOrigin = frame_system::EnsureRoot<AccountId>;
 	type RejectOrigin = frame_system::EnsureRoot<AccountId>;
@@ -176,7 +177,7 @@ parameter_types! {
 }
 
 impl pallet_elections_phragmen::Config for Runtime {
-	type ModuleId = ElectionsPhragmenModuleId;
+	type PalletId = ElectionsPhragmenModuleId;
 	type Event = Event;
 	type Currency = CurrencyAdapter<Runtime, GetTokenId>;
 	type CurrencyToVote = SaturatingCurrencyToVote;
@@ -204,7 +205,7 @@ parameter_type_with_key! {
 }
 
 parameter_types! {
-	pub DustAccount: AccountId = ModuleId(*b"orml/dst").into_account();
+	pub DustAccount: AccountId = PalletId(*b"orml/dst").into_account();
 }
 
 impl Config for Runtime {

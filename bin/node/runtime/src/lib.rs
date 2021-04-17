@@ -1138,7 +1138,7 @@ parameter_types! {
 	pub const CreateClassDeposit: Balance = 2 * CENTS;
 	pub const CreateTokenDeposit: Balance = 1 * CENTS;
 	pub const MetaDataByteDeposit: Balance = 10 * MILLICENTS;
-	pub const NftModuleId: ModuleId = ModuleId(*b"nftmart*");
+	pub const NftModuleId: PalletId = PalletId(*b"nftmart*");
 }
 
 impl nftmart_nft::Config for Runtime {

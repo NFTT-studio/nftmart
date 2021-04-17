@@ -4,7 +4,7 @@ use enumflags2::BitFlags;
 use frame_support::{
 	pallet_prelude::*,
 	traits::{Currency, ReservableCurrency, ExistenceRequirement::KeepAlive},
-	transactional, dispatch::DispatchResult
+	transactional, dispatch::DispatchResult, PalletId,
 };
 use sp_std::vec::Vec;
 use frame_system::pallet_prelude::*;
@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 use sp_runtime::{
 	traits::{CheckedAdd, Bounded, CheckedSub,
 			 AccountIdConversion, StaticLookup, Zero, One, AtLeast32BitUnsigned},
-	ModuleId, RuntimeDebug, SaturatedConversion,
+	RuntimeDebug, SaturatedConversion,
 };
 use codec::FullCodec;
 
@@ -214,7 +214,7 @@ pub mod module {
 
 		/// The NFT's module id
 		#[pallet::constant]
-		type ModuleId: Get<ModuleId>;
+		type ModuleId: Get<PalletId>;
 
 		/// MultiCurrency type for trading
 		type MultiCurrency: MultiReservableCurrency<Self::AccountId, Balance = Balance>;
