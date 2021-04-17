@@ -14,6 +14,8 @@ pub use module::*;
 #[frame_support::pallet]
 pub mod module {
 	use super::*;
+	use sp_runtime::PerU16;
+	use sp_core::constants_types::{Balance, ACCURACY};
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
@@ -38,6 +40,10 @@ pub mod module {
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
+		royalties_rate: PerU16,
+		platform_fee_rate: PerU16,
+		max_distribution_reward: PerU16,
+		min_reference_deposit: Balance,
 		_phantom: PhantomData<T>,
 	}
 
@@ -45,6 +51,10 @@ pub mod module {
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
 			Self {
+				platform_fee_rate: PerU16::from_rational(1u32, 10000u32),
+				royalties_rate: PerU16::from_percent(5),
+				max_distribution_reward: PerU16::from_percent(100),
+				min_reference_deposit: ACCURACY,
 				_phantom: Default::default(),
 			}
 		}
@@ -66,6 +76,42 @@ pub mod module {
 	#[pallet::storage]
 	#[pallet::getter(fn account_whitelist)]
 	pub type AccountWhitelist<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, ()>;
+
+	/// Royalties rate, which can be set by council or sudo.
+	///
+	/// **Incentive:** In order to reward creators of nfts.
+	/// A small part of trading price will be paid to the nft creator.
+	///
+	/// Royalty = Price * `RoyaltiesRate`
+	#[pallet::storage]
+	#[pallet::getter(fn royalties_rate)]
+	pub type RoyaltiesRate<T: Config> = StorageValue<_, PerU16, ValueQuery>;
+
+	/// Platform fee rate for trading nfts.
+	/// After deals, it will transfer a small amount of price into the treasury.
+	///
+	/// PlatformFee = Price * `PlatformFeeRate`
+	#[pallet::storage]
+	#[pallet::getter(fn platform_fee_rate)]
+	pub type PlatformFeeRate<T: Config> = StorageValue<_, PerU16, ValueQuery>;
+
+	/// max distribution reward
+	///
+	/// Reward = (Price - Royalty - PlatformFee) * `distributionReward`
+	/// It will pay the `Reward` to the secondary retailer.
+	///
+	/// The max `distributionReward` is `MaxDistributionReward`
+	#[pallet::storage]
+	#[pallet::getter(fn max_distribution_reward)]
+	pub type MaxDistributionReward<T: Config> = StorageValue<_, PerU16, ValueQuery>;
+
+	/// min reference deposit
+	///
+	/// The secondary retailer who will get reward from helping selling
+	/// should keep at least `MinReferenceDeposit` balances.
+	#[pallet::storage]
+	#[pallet::getter(fn min_reference_deposit)]
+	pub type MinReferenceDeposit<T: Config> = StorageValue<_, Balance, ValueQuery>;
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {

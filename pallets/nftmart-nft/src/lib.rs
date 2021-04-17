@@ -316,7 +316,6 @@ pub mod module {
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
 			<StorageVersion<T>>::put(Releases::default());
-			PlatformFeeRate::<T>::put(self.platform_fee_rate);
 		}
 	}
 
@@ -333,26 +332,6 @@ pub mod module {
 	#[pallet::storage]
 	#[pallet::getter(fn categories)]
 	pub type Categories<T: Config> = StorageMap<_, Identity, T::CategoryId, CategoryData>;
-
-	/// Royalties rate, which can be set by council or sudo.
-	#[pallet::storage]
-	#[pallet::getter(fn royalties_rate)]
-	pub type RoyaltiesRate<T: Config> = StorageValue<_, PerU16, ValueQuery>;
-
-	/// platform fee rate
-	#[pallet::storage]
-	#[pallet::getter(fn platform_fee_rate)]
-	pub type PlatformFeeRate<T: Config> = StorageValue<_, PerU16, ValueQuery>;
-
-	/// MaxDistributionReward
-	#[pallet::storage]
-	#[pallet::getter(fn max_distribution_reward)]
-	pub type MaxDistributionReward<T: Config> = StorageValue<_, PerU16, ValueQuery>;
-
-	/// MinReferenceDeposit
-	#[pallet::storage]
-	#[pallet::getter(fn min_reference_deposit)]
-	pub type MinReferenceDeposit<T: Config> = StorageValue<_, Balance, ValueQuery>;
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
