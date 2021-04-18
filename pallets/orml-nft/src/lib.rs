@@ -138,6 +138,8 @@ pub mod module {
 		StorageDoubleMap<_, Twox64Concat, T::ClassId, Twox64Concat, T::TokenId, TokenInfoOf<T>>;
 
 	/// Token existence check by owner and class ID.
+	///         k1                k2               value
+	/// map: AccountId -> (classId, tokenId) -> token_count.
 	#[pallet::storage]
 	#[pallet::getter(fn tokens_by_owner)]
 	pub type TokensByOwner<T: Config> =

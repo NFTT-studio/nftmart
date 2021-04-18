@@ -10,7 +10,6 @@ fn update_token_royalty() {
 	// royalty
 	ExtBuilder::default().build().execute_with(|| {
 		add_category();
-		ensure_min_order_deposit_a_unit();
 		ensure_bob_balances(ACCURACY * 4);
 		add_class(ALICE);
 		add_token(BOB, 1, None);
@@ -54,7 +53,6 @@ fn update_token_royalty() {
 	// royalty beneficiary erc1155
 	ExtBuilder::default().build().execute_with(|| {
 		add_category();
-		ensure_min_order_deposit_a_unit();
 		ensure_bob_balances(ACCURACY * 4);
 		add_class(ALICE);
 		add_token(BOB, 2, None);
@@ -71,215 +69,24 @@ fn update_token_royalty() {
 	});
 }
 
-// #[test]
-// fn take_order_should_work() {
-// 	ExtBuilder::default().build().execute_with(|| {
-// 		add_category();
-// 		ensure_min_order_deposit_a_unit();
-// 		ensure_bob_balances(ACCURACY * 4);
-// 		add_class(ALICE);
-// 		add_token(BOB);
-// 		add_token(ALICE);
-// 		assert_ok!(Nftmart::submit_order(Origin::signed(BOB), NATIVE_CURRENCY_ID, 50000, CATEGORY_ID, CLASS_ID, TOKEN_ID, ACCURACY + 3, DEADLINE + 1));
-// 		assert_ok!(Nftmart::take_order(Origin::signed(ALICE), CLASS_ID, TOKEN_ID, ACCURACY, BOB)); // may take BOB's token
-// 		assert_eq!(last_event(), Event::nftmart_nft(crate::Event::TakenOrder(CLASS_ID, TOKEN_ID, BOB)));
-// 		let mut alice_free = 100000 - 50000 - Nftmart::create_class_deposit(1, 1, 1).1;
-// 		assert_eq!(alice_free, free_balance(&ALICE));
-// 		const ALICE_TOKEN: <Runtime as orml_nft::Config>::TokenId = TOKEN_ID + 1;
-// 		assert_ok!(Nftmart::submit_order(Origin::signed(BOB), NATIVE_CURRENCY_ID, ACCURACY, CATEGORY_ID, CLASS_ID, ALICE_TOKEN, ACCURACY, DEADLINE + 1));
-// 		assert_ok!(Nftmart::take_order(Origin::signed(ALICE), CLASS_ID, ALICE_TOKEN, ACCURACY, BOB));
-// 		assert_eq!(last_event(), Event::nftmart_nft(crate::Event::TakenOrder(CLASS_ID, ALICE_TOKEN, BOB)));
-// 		alice_free += ACCURACY;
-// 		assert_eq!(alice_free, free_balance(&ALICE));
-// 	});
-// }
-//
-// #[test]
-// fn take_order_should_fail() {
-// 	ExtBuilder::default().build().execute_with(|| {
-// 		add_category();
-// 		ensure_min_order_deposit_a_unit();
-// 		ensure_bob_balances(ACCURACY * 4);
-// 		add_class(ALICE);
-// 		add_token(BOB);
-// 		add_token(ALICE);
-// 		assert_noop!(
-// 			Nftmart::take_order(Origin::signed(BOB), CLASS_ID, TOKEN_ID + 2, ACCURACY, BOB),
-// 			Error::<Runtime>::TakeOwnOrder,
-// 		);
-// 		assert_noop!(
-// 			Nftmart::take_order(Origin::signed(ALICE), CLASS_ID, TOKEN_ID + 2, ACCURACY, BOB),
-// 			Error::<Runtime>::TokenIdNotFound,
-// 		);
-// 		assert_noop!(
-// 			Nftmart::take_order(Origin::signed(ALICE), CLASS_ID, TOKEN_ID, ACCURACY, CHARLIE),
-// 			Error::<Runtime>::OrderNotFound,
-// 		);
-// 		assert_ok!(Nftmart::submit_order(Origin::signed(BOB), NATIVE_CURRENCY_ID, ACCURACY, CATEGORY_ID, CLASS_ID, TOKEN_ID, ACCURACY + 3, DEADLINE + 1));
-// 		System::set_block_number(10);
-// 		assert_noop!(
-// 			Nftmart::take_order(Origin::signed(ALICE), CLASS_ID, TOKEN_ID, ACCURACY, BOB), // may take BOB's token
-// 			Error::<Runtime>::OrderExpired,
-// 		);
-// 		System::set_block_number(1);
-// 		assert_noop!(
-// 			Nftmart::take_order(Origin::signed(ALICE), CLASS_ID, TOKEN_ID, ACCURACY - 10, BOB), // may take BOB's token
-// 			Error::<Runtime>::CanNotAfford,
-// 		);
-// 		assert_noop!(
-// 			Nftmart::take_order(Origin::signed(ALICE), CLASS_ID, TOKEN_ID, ACCURACY, BOB), // may take BOB's token
-// 			pallet_balances::Error::<Runtime>::InsufficientBalance,
-// 		);
-// 		const ALICE_TOKEN: <Runtime as orml_nft::Config>::TokenId = TOKEN_ID + 1;
-// 		assert_ok!(Nftmart::submit_order(Origin::signed(BOB), NATIVE_CURRENCY_ID, ACCURACY, CATEGORY_ID, CLASS_ID, ALICE_TOKEN, ACCURACY, DEADLINE + 1));
-// 		System::set_block_number(10);
-// 		assert_noop!(
-// 			Nftmart::take_order(Origin::signed(ALICE), CLASS_ID, ALICE_TOKEN, ACCURACY, BOB), // may sell token to BOB
-// 			Error::<Runtime>::OrderExpired,
-// 		);
-// 		System::set_block_number(1);
-// 		assert_noop!(
-// 			Nftmart::take_order(Origin::signed(ALICE), CLASS_ID, ALICE_TOKEN, ACCURACY + 10, BOB), // may sell token to BOB
-// 			Error::<Runtime>::PriceTooLow,
-// 		);
-// 		assert_noop!(
-// 			Nftmart::take_order(Origin::signed(CHARLIE), CLASS_ID, ALICE_TOKEN, ACCURACY + 10, BOB),
-// 			Error::<Runtime>::NoPermission,
-// 		);
-// 	});
-// }
-//
-// #[test]
-// fn remove_order_should_work() {
-// 	ExtBuilder::default().build().execute_with(|| {
-// 		add_category();
-// 		ensure_min_order_deposit_a_unit();
-// 		ensure_bob_balances(ACCURACY * 4);
-// 		add_class(ALICE);
-// 		add_token(BOB);
-// 		add_token(ALICE);
-// 		assert_ok!(Nftmart::submit_order(Origin::signed(BOB), NATIVE_CURRENCY_ID,
-// 							  ACCURACY, CATEGORY_ID, CLASS_ID, TOKEN_ID, ACCURACY + 3, DEADLINE + 1));
-// 		let order: OrderData<Runtime> = Nftmart::orders((CLASS_ID, TOKEN_ID), BOB).unwrap();
-// 		assert_eq!(order.deposit, ACCURACY + 3);
-// 		assert_eq!(order.price, ACCURACY);
-// 		assert_ok!(Nftmart::remove_order(Origin::signed(BOB), CLASS_ID, TOKEN_ID));
-// 		// check category
-// 		assert_eq!(0, Nftmart::categories(CATEGORY_ID).unwrap().nft_count);
-// 		assert!(Nftmart::categories(CATEGORY_ID + 1).is_none());
-// 		assert_eq!(last_event(), Event::nftmart_nft(crate::Event::RemovedOrder(CLASS_ID, TOKEN_ID, BOB, ACCURACY + 3)));
-// 		assert_ok!(Nftmart::submit_order(Origin::signed(BOB), NATIVE_CURRENCY_ID,
-// 							  ACCURACY, CATEGORY_ID, CLASS_ID, TOKEN_ID + 1, ACCURACY + 3, DEADLINE + 1));
-// 		assert_ok!(Nftmart::remove_order(Origin::signed(BOB), CLASS_ID, TOKEN_ID + 1));
-// 		assert_eq!(last_event(), Event::nftmart_nft(crate::Event::RemovedOrder(CLASS_ID, TOKEN_ID + 1, BOB, ACCURACY * 2 + 3)));
-// 		// check category
-// 		assert_eq!(0, Nftmart::categories(CATEGORY_ID).unwrap().nft_count);
-// 		assert!(Nftmart::categories(CATEGORY_ID + 1).is_none());
-// 	});
-// }
-//
-// #[test]
-// fn remove_order_should_fail() {
-// 	ExtBuilder::default().build().execute_with(|| {
-// 		add_category();
-// 		ensure_min_order_deposit_a_unit();
-// 		ensure_bob_balances(ACCURACY * 4);
-// 		add_class(ALICE);
-// 		add_token(BOB);
-// 		add_token(ALICE);
-// 		assert_ok!(Nftmart::submit_order(Origin::signed(BOB), NATIVE_CURRENCY_ID,
-// 							  ACCURACY, CATEGORY_ID, CLASS_ID, TOKEN_ID, ACCURACY + 3, DEADLINE + 1));
-// 		assert_noop!(
-// 			Nftmart::remove_order(Origin::signed(ALICE), CLASS_ID, TOKEN_ID),
-// 			Error::<Runtime>::OrderNotFound,
-// 		);
-// 		// check category
-// 		assert_eq!(1, Nftmart::categories(CATEGORY_ID).unwrap().nft_count);
-// 		assert!(Nftmart::categories(CATEGORY_ID + 1).is_none());
-// 		assert_ok!(Nftmart::remove_order(Origin::signed(BOB), CLASS_ID, TOKEN_ID));
-// 		assert_noop!(
-// 			Nftmart::remove_order(Origin::signed(BOB), CLASS_ID, TOKEN_ID),
-// 			Error::<Runtime>::OrderNotFound,
-// 		);
-// 		// check category
-// 		assert_eq!(0, Nftmart::categories(CATEGORY_ID).unwrap().nft_count);
-// 		assert!(Nftmart::categories(CATEGORY_ID + 1).is_none());
-// 	});
-// }
-//
-// #[test]
-// fn submit_order_should_work() {
-// 	ExtBuilder::default().build().execute_with(|| {
-// 		add_category();
-// 		ensure_min_order_deposit_a_unit();
-// 		ensure_bob_balances(ACCURACY * 4);
-// 		add_class(ALICE);
-// 		add_token(BOB);
-// 		add_token(ALICE);
-// 		// Get the accounts of Alice & Bob.
-// 		let alice_reserved = Currencies::reserved_balance(NATIVE_CURRENCY_ID, &ALICE);
-// 		let bob_reserved = Currencies::reserved_balance(NATIVE_CURRENCY_ID, &BOB);
-// 		assert_eq!(alice_reserved + bob_reserved, 0);
-// 		// Bob submits his own token.
-// 		assert_ok!(Nftmart::submit_order(Origin::signed(BOB), NATIVE_CURRENCY_ID,
-// 							  ACCURACY, CATEGORY_ID, CLASS_ID, TOKEN_ID, ACCURACY + 3, DEADLINE + 1));
-// 		assert_eq!(last_event(), Event::nftmart_nft(crate::Event::CreatedOrder(CLASS_ID, TOKEN_ID, BOB)));
-// 		// check category
-// 		assert_eq!(1, Nftmart::categories(CATEGORY_ID).unwrap().nft_count);
-// 		assert!(Nftmart::categories(CATEGORY_ID + 1).is_none());
-// 		let alice_reserved = Currencies::reserved_balance(NATIVE_CURRENCY_ID, &ALICE);
-// 		let bob_reserved = Currencies::reserved_balance(NATIVE_CURRENCY_ID, &BOB);
-// 		assert_eq!(alice_reserved, 0);
-// 		assert_eq!(bob_reserved, ACCURACY + 3);
-// 		assert!(Nftmart::orders((CLASS_ID, TOKEN_ID), BOB).unwrap().by_token_owner);
-// 		// Bob submits an order to buy Alice's token.
-// 		assert_ok!(Nftmart::submit_order(Origin::signed(BOB), NATIVE_CURRENCY_ID,
-// 							  ACCURACY, CATEGORY_ID, CLASS_ID, TOKEN_ID + 1, ACCURACY + 3, DEADLINE + 1));
-// 		assert_eq!(last_event(), Event::nftmart_nft(crate::Event::CreatedOrder(CLASS_ID, TOKEN_ID + 1, BOB)));
-// 		let alice_reserved = Currencies::reserved_balance(NATIVE_CURRENCY_ID, &ALICE);
-// 		let bob_reserved = Currencies::reserved_balance(NATIVE_CURRENCY_ID, &BOB);
-// 		assert_eq!(alice_reserved, 0);
-// 		assert_eq!(bob_reserved, ACCURACY + 3 + ACCURACY + ACCURACY + 3);
-// 		assert!(!Nftmart::orders((CLASS_ID, TOKEN_ID + 1), BOB).unwrap().by_token_owner);
-// 		assert_eq!(2, Nftmart::categories(CATEGORY_ID).unwrap().nft_count);
-// 		assert!(Nftmart::categories(CATEGORY_ID + 1).is_none());
-// 	});
-// }
-//
-// #[test]
-// fn submit_order_should_fail() {
-// 	ExtBuilder::default().build().execute_with(|| {
-// 		add_category();
-// 		ensure_min_order_deposit_a_unit();
-// 		ensure_bob_balances(ACCURACY);
-// 		add_class(ALICE);
-// 		add_token(BOB);
-// 		assert_noop!(
-// 			Nftmart::submit_order(Origin::signed(BOB), 1, ACCURACY, CATEGORY_ID, CLASS_ID, TOKEN_ID, ACCURACY, DEADLINE),
-// 			Error::<Runtime>::NativeCurrencyOnlyForNow,
-// 		);
-// 		assert_noop!(
-// 			Nftmart::submit_order(Origin::signed(BOB), NATIVE_CURRENCY_ID,
-// 				ACCURACY, CATEGORY_ID, CLASS_ID, TOKEN_ID_NOT_EXIST, ACCURACY, DEADLINE),
-// 			Error::<Runtime>::TokenIdNotFound,
-// 		);
-// 		assert_noop!(
-// 			Nftmart::submit_order(Origin::signed(BOB), NATIVE_CURRENCY_ID,
-// 				ACCURACY, CATEGORY_ID, CLASS_ID, TOKEN_ID, ACCURACY, 1),
-// 			Error::<Runtime>::InvalidDeadline,
-// 		);
-// 		assert_noop!(
-// 			Nftmart::submit_order(Origin::signed(BOB), NATIVE_CURRENCY_ID,
-// 				ACCURACY, CATEGORY_ID_NOT_EXIST, CLASS_ID, TOKEN_ID, ACCURACY, DEADLINE + 1),
-// 			Error::<Runtime>::CategoryNotFound,
-// 		);
-// 		assert_noop!(
-// 			Nftmart::submit_order(Origin::signed(BOB), NATIVE_CURRENCY_ID,
-// 				ACCURACY, CATEGORY_ID, CLASS_ID, TOKEN_ID, ACCURACY - 1, DEADLINE + 1),
-// 			Error::<Runtime>::InvalidDeposit,
-// 		);
-// 	});
-// }
+#[test]
+fn update_category() {
+	ExtBuilder::default().build().execute_with(|| {
+		assert_noop!(
+			Nftmart::update_category(Origin::signed(ALICE), CATEGORY_ID, METADATA.to_vec()),
+			DispatchError::BadOrigin,
+		);
+	});
+	ExtBuilder::default().build().execute_with(|| {
+		let metadata1 = vec![1];
+		let metadata2 = vec![2];
+		assert_ok!(Nftmart::create_category(Origin::root(), metadata1.clone()));
+		assert_eq!(Some(CategoryData{ metadata: metadata1, nft_count: 0 }), Nftmart::categories(CATEGORY_ID));
+
+		assert_ok!(Nftmart::update_category(Origin::root(), CATEGORY_ID, metadata2.clone()));
+		assert_eq!(Some(CategoryData{ metadata: metadata2, nft_count: 0 }), Nftmart::categories(CATEGORY_ID));
+	});
+}
 
 #[test]
 fn create_category_should_work() {

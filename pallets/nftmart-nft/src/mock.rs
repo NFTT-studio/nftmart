@@ -167,7 +167,7 @@ parameter_types! {
 	pub const CreateClassDeposit: Balance = 50;
 	pub const CreateTokenDeposit: Balance = 10;
 	pub const MetaDataByteDeposit: Balance = 1;
-	pub const NftModuleId: ModuleId = ModuleId(*b"nftmart*");
+	pub const NftModuleId: PalletId = PalletId(*b"nftmart*");
 }
 
 impl nftmart_nft::Config for Runtime {
@@ -210,14 +210,12 @@ construct_runtime!(
 
 pub const ALICE: AccountId = AccountId::new([1u8; 32]);
 pub const BOB: AccountId = AccountId::new([2u8; 32]);
-pub const CHARLIE: AccountId = AccountId::new([3u8; 32]);
 pub const CLASS_ID: <Runtime as orml_nft::Config>::ClassId = 0;
 pub const CATEGORY_ID: <Runtime as Config>::CategoryId = 0;
 pub const CATEGORY_ID_NOT_EXIST: <Runtime as Config>::CategoryId = 100;
 pub const CLASS_ID_NOT_EXIST: <Runtime as orml_nft::Config>::ClassId = 1;
 pub const TOKEN_ID: <Runtime as orml_nft::Config>::TokenId = 0;
 pub const TOKEN_ID2: <Runtime as orml_nft::Config>::TokenId = 1;
-pub const DEADLINE: BlockNumberOf<Runtime> = 2;
 pub const TOKEN_ID_NOT_EXIST: <Runtime as orml_nft::Config>::TokenId = 100;
 pub const METADATA: &[u8] = b"A";
 
@@ -243,8 +241,8 @@ impl ExtBuilder {
 		let mut ext = sp_io::TestExternalities::new(t);
 		ext.execute_with(|| {
 			System::set_block_number(1);
-			NftmartConfig::add_whitelist(Origin::root(), ALICE);
-			NftmartConfig::add_whitelist(Origin::root(), BOB);
+			NftmartConfig::add_whitelist(Origin::root(), ALICE).unwrap();
+			NftmartConfig::add_whitelist(Origin::root(), BOB).unwrap();
 		});
 		ext
 	}
@@ -271,10 +269,6 @@ pub fn class_id_account() -> AccountId {
 
 pub fn add_category() {
 	assert_ok!(Nftmart::create_category(Origin::root(), vec![1]));
-}
-
-pub fn ensure_min_order_deposit_a_unit() {
-	assert_ok!(Nftmart::update_min_order_deposit(Origin::root(), ACCURACY));
 }
 
 pub fn ensure_bob_balances(amount: Balance) {

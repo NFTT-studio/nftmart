@@ -13,14 +13,14 @@ pub use sp_core::constants_types::{Balance, ACCURACY, NATIVE_CURRENCY_ID};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::{
-	traits::{CheckedAdd, Bounded, CheckedSub,
+	traits::{CheckedAdd, Bounded,
 			 AccountIdConversion, StaticLookup, Zero, One, AtLeast32BitUnsigned},
 	RuntimeDebug, SaturatedConversion,
 };
 use codec::FullCodec;
 
-// mod mock;
-// mod tests;
+mod mock;
+mod tests;
 
 pub use module::*;
 
@@ -135,6 +135,7 @@ pub mod migrations {
 	}
 
 	impl OldClassData {
+		#[allow(dead_code)]
 		fn upgraded<T>(self) -> ClassData<T> where T: AtLeast32BitUnsigned + Bounded + Copy + From<u32> {
 			let create_block: T = One::one();
 			ClassData {
@@ -148,6 +149,7 @@ pub mod migrations {
 	}
 
 	impl OldTokenData {
+		#[allow(dead_code)]
 		fn upgraded<AccountId: Clone, T>(self, who: AccountId) -> TokenData<AccountId, T> where T: AtLeast32BitUnsigned + Bounded + Copy + From<u32> {
 			let create_block: T = One::one();
 			TokenData {
@@ -434,8 +436,9 @@ pub mod module {
 			orml_nft::Tokens::<T>::try_mutate(class_id, token_id, |maybe_token| -> DispatchResultWithPostInfo {
 				let token_info: &mut TokenInfoOf<T> = maybe_token.as_mut().ok_or(Error::<T>::TokenIdNotFound)?;
 				ensure!(who == token_info.data.royalty_beneficiary, Error::<T>::NoPermission);
+				ensure!(orml_nft::Pallet::<T>::is_owner(&who, (class_id, token_id)), Error::<T>::NoPermission);
 
-				// TODO: Get ride of this limitation.
+				// TODO: Get rid of this limitation.
 				ensure!(token_info.quantity == One::one(), Error::<T>::NotSupportedForNow);
 
 				token_info.data.royalty = charge_royalty.ok_or_else(|| -> Result<bool,DispatchError> {
@@ -500,7 +503,7 @@ pub mod module {
 				royalty_beneficiary: to.clone(),
 			};
 
-			// TODO: Get ride of this limitation.
+			// TODO: Get rid of this limitation.
 			if quantity > One::one() {
 				ensure!(!data.royalty, Error::<T>::NotSupportedForNow);
 			}
@@ -616,36 +619,6 @@ impl<T: Config> Pallet<T> {
 		let data = class_info.data;
 		Ok(data.properties.0.contains(ClassProperty::Transferable))
 	}
-
-	// fn delete_order(class_id: ClassIdOf<T>, token_id: TokenIdOf<T>, who: &T::AccountId) -> DispatchResult {
-	// 	Orders::<T>::try_mutate_exists((class_id, token_id), who, |maybe_order| {
-	// 		let order = maybe_order.as_mut().ok_or(Error::<T>::OrderNotFound)?;
-	//
-	// 		let mut deposit: Balance = Zero::zero();
-	// 		if !order.by_token_owner {
-	// 			// todo: emit an event for `order.currency_id`.
-	// 			let d = T::MultiCurrency::unreserve(order.currency_id, &who, order.price.saturated_into());
-	// 			deposit = deposit.saturating_add(order.price).saturating_sub(d);
-	// 		}
-	//
-	// 		Categories::<T>::try_mutate(order.category_id, |category| -> DispatchResult {
-	// 			category.as_mut().map(|cate| cate.nft_count = cate.nft_count.saturating_sub(One::one()) );
-	// 			Ok(())
-	// 		})?;
-	//
-	// 		let deposit = {
-	// 			let d = <T as Config>::Currency::unreserve(&who, order.deposit.saturated_into());
-	// 			deposit.saturating_add(order.deposit).saturating_sub(d.saturated_into())
-	// 		};
-	// 		Self::deposit_event(Event::RemovedOrder(class_id, token_id, who.clone(), deposit.saturated_into()));
-	// 		*maybe_order = None;
-	// 		Ok(())
-	// 	})
-	// }
-
-	// fn try_delete_order(class_id: ClassIdOf<T>, token_id: TokenIdOf<T>, who: &T::AccountId) {
-	// 	let _ = Self::delete_order(class_id, token_id, who);
-	// }
 
 	fn do_transfer(from: &T::AccountId, to: &T::AccountId, class_id: ClassIdOf<T>, token_id: TokenIdOf<T>, quantity: TokenIdOf<T>) -> DispatchResult {
 		ensure!(Self::is_transferable(class_id)?, Error::<T>::NonTransferable);
