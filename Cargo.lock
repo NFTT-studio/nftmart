@@ -4068,6 +4068,7 @@ dependencies = [
  "enumflags2",
  "frame-support",
  "frame-system",
+ "nftmart-config",
  "nftmart-nft",
  "orml-currencies",
  "orml-nft",
