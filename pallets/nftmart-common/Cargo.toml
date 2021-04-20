@@ -1,0 +1,20 @@
+[package]
+name = "nftmart-common"
+version = "3.0.0"
+authors = ["NFTMart Developers"]
+edition = "2018"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[dependencies]
+sp-std = { default-features = false, path = "../../primitives/std" }
+frame-support = { default-features = false, path = "../../frame/support" }
+
+[features]
+default = ['std']
+std = [
+    'sp-std/std',
+    'frame-support/std',
+]
+

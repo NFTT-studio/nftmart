@@ -1,6 +1,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use enumflags2::BitFlags;
 use frame_support::{
 	pallet_prelude::*,
 	traits::{Currency, ReservableCurrency, ExistenceRequirement::KeepAlive},
@@ -19,6 +18,7 @@ use sp_runtime::{
 };
 use codec::FullCodec;
 use nftmart_nft::{CurrencyIdOf, BlockNumberOf, CategoryIdOf, ClassIdOf, TokenIdOf, ClassData, TokenData};
+use orml_nft::{TokenInfoOf};
 
 // mod mock;
 // mod tests;
@@ -90,8 +90,6 @@ impl Default for Releases {
 #[frame_support::pallet]
 pub mod module {
 	use super::*;
-	use orml_nft::{TokenInfoOf, ClassInfoOf};
-	use sp_runtime::{PerU16};
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config +
@@ -198,11 +196,6 @@ pub mod module {
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
-		min_order_deposit: Balance,
-		min_reference_deposit: Balance,
-		royalties_rate: PerU16,
-		max_distribution_reward: PerU16,
-		platform_fee_rate: PerU16,
 		_phantom: PhantomData<T>,
 	}
 
@@ -210,11 +203,6 @@ pub mod module {
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
 			Self {
-				min_order_deposit: ACCURACY,
-				min_reference_deposit: ACCURACY,
-				royalties_rate: PerU16::from_percent(5),
-				max_distribution_reward: PerU16::from_percent(100),
-				platform_fee_rate: PerU16::from_rational(1u32, 10000u32),
 				_phantom: Default::default(),
 			}
 		}
@@ -224,27 +212,12 @@ pub mod module {
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
 			<StorageVersion<T>>::put(Releases::default());
-			MinOrderDeposit::<T>::put(self.min_order_deposit);
-			RoyaltiesRate::<T>::put(self.royalties_rate);
-			MaxDistributionReward::<T>::put(self.max_distribution_reward);
-			MinReferenceDeposit::<T>::put(self.min_reference_deposit);
-			PlatformFeeRate::<T>::put(self.platform_fee_rate);
 		}
 	}
 
 	/// Storage version of the pallet.
 	#[pallet::storage]
 	pub(super) type StorageVersion<T: Config> = StorageValue<_, Releases, ValueQuery>;
-
-	/// Next available common category ID.
-	#[pallet::storage]
-	#[pallet::getter(fn next_category_id)]
-	pub type NextCategoryId<T: Config> = StorageValue<_, T::CategoryId, ValueQuery>;
-
-	/// The storage of categories.
-	#[pallet::storage]
-	#[pallet::getter(fn categories)]
-	pub type Categories<T: Config> = StorageMap<_, Identity, T::CategoryId, CategoryData>;
 
 	/// An index mapping from token to order.
 	#[pallet::storage]
@@ -256,31 +229,6 @@ pub mod module {
 	#[pallet::storage]
 	#[pallet::getter(fn latest_order_prices)]
 	pub type LatestOrderPrices<T: Config> = StorageMap<_, Blake2_128Concat, (ClassIdOf<T>, TokenIdOf<T>, CurrencyIdOf<T>), OrderHistory>;
-
-	/// Order deposit config
-	#[pallet::storage]
-	#[pallet::getter(fn min_order_deposit)]
-	pub type MinOrderDeposit<T: Config> = StorageValue<_, Balance, ValueQuery>;
-
-	/// Royalties rate, which can be set by council or sudo.
-	#[pallet::storage]
-	#[pallet::getter(fn royalties_rate)]
-	pub type RoyaltiesRate<T: Config> = StorageValue<_, PerU16, ValueQuery>;
-
-	/// platform fee rate
-	#[pallet::storage]
-	#[pallet::getter(fn platform_fee_rate)]
-	pub type PlatformFeeRate<T: Config> = StorageValue<_, PerU16, ValueQuery>;
-
-	/// MaxDistributionReward
-	#[pallet::storage]
-	#[pallet::getter(fn max_distribution_reward)]
-	pub type MaxDistributionReward<T: Config> = StorageValue<_, PerU16, ValueQuery>;
-
-	/// The min deposit a beneficiary who will paid for distribution should have.
-	#[pallet::storage]
-	#[pallet::getter(fn min_reference_deposit)]
-	pub type MinReferenceDeposit<T: Config> = StorageValue<_, Balance, ValueQuery>;
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -344,62 +292,66 @@ pub mod module {
 		// 	Ok(().into())
 		// }
 
-		// /// Create an NFT order. Create only.
-		// ///
-		// /// - `currency_id`: currency id
-		// /// - `price`: price
-		// /// - `category_id`: category id
-		// /// - `class_id`: class id
-		// /// - `token_id`: token id
-		// /// - `deposit`: The balances to create an order
-		// /// - `deadline`: deadline
-		// #[pallet::weight(100_000)]
-		// #[transactional]
-		// pub fn submit_order(
-		// 	origin: OriginFor<T>,
-		// 	#[pallet::compact] currency_id: CurrencyIdOf<T>,
-		// 	#[pallet::compact] price: Balance,
-		// 	#[pallet::compact] category_id: CategoryIdOf<T>,
-		// 	#[pallet::compact] class_id: ClassIdOf<T>,
-		// 	#[pallet::compact] token_id: TokenIdOf<T>,
-		// 	#[pallet::compact] deposit: Balance,
-		// 	#[pallet::compact] deadline: BlockNumberOf<T>,
-		// ) -> DispatchResultWithPostInfo {
-		// 	let who = ensure_signed(origin)?;
-		// 	ensure!(currency_id == NATIVE_CURRENCY_ID.saturated_into(), Error::<T>::NativeCurrencyOnlyForNow); // TODO: remove this limitation.
-		//
-		// 	let token: TokenInfoOf<T> = orml_nft::Pallet::<T>::tokens(class_id, token_id).ok_or(Error::<T>::TokenIdNotFound)?;
-		//
-		// 	ensure!(Self::orders((class_id, token_id), &who).is_none(), Error::<T>::DuplicatedOrder);
-		// 	ensure!(<frame_system::Pallet<T>>::block_number() < deadline, Error::<T>::InvalidDeadline);
-		// 	Categories::<T>::try_mutate(category_id, |maybe_category| -> DispatchResult {
-		// 		let category = maybe_category.as_mut().ok_or(Error::<T>::CategoryNotFound)?;
-		// 		category.nft_count = category.nft_count.saturating_add(One::one());
-		// 		Ok(())
-		// 	})?;
-		//
-		// 	ensure!(deposit >= Self::min_order_deposit(), Error::<T>::InvalidDeposit);
-		// 	// Reserve native currency.
-		// 	<T as Config>::Currency::reserve(&who, deposit.saturated_into())?;
-		//
-		// 	if token.owner != who {
-		// 		// Reserve specified currency.
-		// 		T::MultiCurrency::reserve(currency_id, &who, price.saturated_into())?;
-		// 	}
-		//
-		// 	let order: OrderData<T> = OrderData {
-		// 		currency_id,
-		// 		price,
-		// 		deposit,
-		// 		deadline,
-		// 		category_id,
-		// 		by_token_owner: token.owner == who,
-		// 	};
-		// 	Orders::<T>::insert((class_id, token_id), &who, order);
-		//
-		// 	Self::deposit_event(Event::CreatedOrder(class_id, token_id, who));
-		// 	Ok(().into())
-		// }
+		/// Create an NFT order. Create only.
+		///
+		/// - `currency_id`: currency id
+		/// - `price`: price
+		/// - `category_id`: category id
+		/// - `class_id`: class id
+		/// - `token_id`: token id
+		/// - `deposit`: The balances to create an order
+		/// - `deadline`: deadline
+		#[pallet::weight(100_000)]
+		#[transactional]
+		pub fn submit_order(
+			origin: OriginFor<T>,
+			#[pallet::compact] currency_id: CurrencyIdOf<T>,
+			#[pallet::compact] price: Balance,
+			#[pallet::compact] category_id: CategoryIdOf<T>,
+			#[pallet::compact] class_id: ClassIdOf<T>,
+			#[pallet::compact] token_id: TokenIdOf<T>,
+			#[pallet::compact] deposit: Balance,
+			#[pallet::compact] deadline: BlockNumberOf<T>,
+		) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+
+			// TODO: Get rid of this limitation.
+			ensure!(currency_id == NATIVE_CURRENCY_ID.saturated_into(), nftmart_nft::Error::<T>::NotSupportedForNow);
+
+			let token_info: TokenInfoOf<T> = orml_nft::Pallet::<T>::tokens(class_id, token_id).ok_or(nftmart_nft::Error::<T>::TokenIdNotFound)?;
+			// TODO: Get rid of this limitation.
+			ensure!(token_info.quantity == One::one(), Error::<T>::NotSupportedForNow);
+
+			ensure!(Self::orders((class_id, token_id), &who).is_none(), Error::<T>::DuplicatedOrder);
+			// ensure!(<frame_system::Pallet<T>>::block_number() < deadline, Error::<T>::InvalidDeadline);
+			// Categories::<T>::try_mutate(category_id, |maybe_category| -> DispatchResult {
+			// 	let category = maybe_category.as_mut().ok_or(Error::<T>::CategoryNotFound)?;
+			// 	category.nft_count = category.nft_count.saturating_add(One::one());
+			// 	Ok(())
+			// })?;
+			//
+			// ensure!(deposit >= Self::min_order_deposit(), Error::<T>::InvalidDeposit);
+			// // Reserve native currency.
+			// <T as Config>::Currency::reserve(&who, deposit.saturated_into())?;
+			//
+			// if token.owner != who {
+			// 	// Reserve specified currency.
+			// 	T::MultiCurrency::reserve(currency_id, &who, price.saturated_into())?;
+			// }
+			//
+			// let order: OrderData<T> = OrderData {
+			// 	currency_id,
+			// 	price,
+			// 	deposit,
+			// 	deadline,
+			// 	category_id,
+			// 	by_token_owner: token.owner == who,
+			// };
+			// Orders::<T>::insert((class_id, token_id), &who, order);
+			//
+			// Self::deposit_event(Event::CreatedOrder(class_id, token_id, who));
+			Ok(().into())
+		}
 
 		// /// remove an order by order owner.
 		// ///
@@ -416,300 +368,10 @@ pub mod module {
 		// 	Self::delete_order(class_id, token_id, &who)?;
 		// 	Ok(().into())
 		// }
-
-		// TODO: Update order price
-
-		/// Create a common category for trading NFT.
-		/// A Selling NFT should belong to a category.
-		///
-		/// - `metadata`: metadata
-		#[pallet::weight(100_000)]
-		#[transactional]
-		pub fn create_category(origin: OriginFor<T>, metadata: NFTMetadata) -> DispatchResultWithPostInfo {
-			ensure_root(origin)?;
-
-			let category_id = NextCategoryId::<T>::try_mutate(|id| -> Result<T::CategoryId, DispatchError> {
-				let current_id = *id;
-				*id = id.checked_add(&One::one()).ok_or(Error::<T>::NoAvailableCategoryId)?;
-				Ok(current_id)
-			})?;
-
-			let info = CategoryData {
-				metadata,
-				nft_count: Zero::zero(),
-			};
-			Categories::<T>::insert(category_id, info);
-
-			Self::deposit_event(Event::CreatedCategory(category_id));
-			Ok(().into())
-		}
-
-		/// Update a common category.
-		///
-		/// - `category_id`: category ID
-		/// - `metadata`: metadata
-		#[pallet::weight(100_000)]
-		#[transactional]
-		pub fn update_category(origin: OriginFor<T>, category_id: CategoryIdOf<T>, metadata: NFTMetadata) -> DispatchResultWithPostInfo {
-			ensure_root(origin)?;
-			if let Some(category) = Self::categories(category_id) {
-				let info = CategoryData {
-					metadata,
-					nft_count: category.nft_count,
-				};
-				Categories::<T>::insert(category_id, info);
-				Self::deposit_event(Event::UpdatedCategory(category_id));
-			}
-			Ok(().into())
-		}
-
-		/// Update the `MinOrderDeposit` storage.
-		#[pallet::weight(100_000)]
-		#[transactional]
-		pub fn update_min_order_deposit(origin: OriginFor<T>, new_deposit: Balance) -> DispatchResultWithPostInfo {
-			ensure_root(origin)?;
-			MinOrderDeposit::<T>::mutate(|d|{
-				let old = *d;
-				*d = new_deposit;
-				Self::deposit_event(Event::UpdatedMinOrderDeposit(old, new_deposit));
-			});
-			Ok(().into())
-		}
-
-		/// Create NFT class, tokens belong to the class.
-		///
-		/// - `metadata`: external metadata
-		/// - `properties`: class property, include `Transferable` `Burnable`
-		/// - `name`: class name, with len limitation.
-		/// - `description`: class description, with len limitation.
-		#[pallet::weight(100_000)]
-		#[transactional]
-		pub fn create_class(origin: OriginFor<T>, metadata: NFTMetadata, name: Vec<u8>, description: Vec<u8>, properties: Properties) -> DispatchResultWithPostInfo {
-			let who = ensure_signed(origin)?;
-
-			ensure!(name.len() <= 20, Error::<T>::NameTooLong);// TODO: pass configurations from runtime configuration.
-			ensure!(description.len() <= 256, Error::<T>::DescriptionTooLong);// TODO: pass configurations from runtime configuration.
-
-			let next_id = orml_nft::Pallet::<T>::next_class_id();
-			let owner: T::AccountId = T::ModuleId::get().into_sub_account(next_id);
-			let (deposit, all_deposit) = Self::create_class_deposit(
-				metadata.len().saturated_into(),
-				name.len().saturated_into(),
-				description.len().saturated_into(),
-			);
-
-			<T as Config>::Currency::transfer(&who, &owner, all_deposit.saturated_into(), KeepAlive)?;
-			<T as Config>::Currency::reserve(&owner, deposit.saturated_into())?;
-			// owner add proxy delegate to origin
-			<pallet_proxy::Pallet<T>>::add_proxy_delegate(&owner, who, Default::default(), Zero::zero())?;
-
-			let data: ClassData<BlockNumberOf<T>> = ClassData {
-				deposit,
-				properties,
-				name,
-				description,
-				create_block: <frame_system::Pallet<T>>::block_number(),
-			};
-			orml_nft::Pallet::<T>::create_class(&owner, metadata, data)?;
-
-			Self::deposit_event(Event::CreatedClass(owner, next_id));
-			Ok(().into())
-		}
-
-		/// Update token royalty.
-		#[pallet::weight(100_000)]
-		#[transactional]
-		pub fn update_token_royalty(
-			origin: OriginFor<T>,
-			#[pallet::compact] class_id: ClassIdOf<T>,
-			#[pallet::compact] token_id: TokenIdOf<T>,
-			charge_royalty: Option<bool>,
-		) -> DispatchResultWithPostInfo {
-			let who = ensure_signed(origin)?;
-			orml_nft::Tokens::<T>::try_mutate(class_id, token_id, |maybe_token| -> DispatchResultWithPostInfo {
-				let token_info: &mut TokenInfoOf<T> = maybe_token.as_mut().ok_or(Error::<T>::TokenIdNotFound)?;
-				ensure!(who == token_info.data.royalty_beneficiary, Error::<T>::NoPermission);
-
-				// TODO: Get ride of this limitation.
-				ensure!(token_info.quantity == One::one(), Error::<T>::NotSupportedForNow);
-
-				token_info.data.royalty = charge_royalty.ok_or_else(|| -> Result<bool,DispatchError> {
-					let class_info: ClassInfoOf<T> = orml_nft::Pallet::<T>::classes(class_id).ok_or(Error::<T>::ClassIdNotFound)?;
-					let data: ClassData<T::BlockNumber> = class_info.data;
-					Ok(data.properties.0.contains(ClassProperty::RoyaltiesChargeable))
-				}).or_else(core::convert::identity)?;
-				Ok(().into())
-			})
-		}
-
-		/// Update token royalty beneficiary.
-		#[pallet::weight(100_000)]
-		#[transactional]
-		pub fn update_token_royalty_beneficiary(
-			origin: OriginFor<T>,
-			#[pallet::compact] class_id: ClassIdOf<T>,
-			#[pallet::compact] token_id: TokenIdOf<T>,
-			to: <T::Lookup as StaticLookup>::Source,
-		) -> DispatchResultWithPostInfo {
-			let who = ensure_signed(origin)?;
-			orml_nft::Tokens::<T>::try_mutate(class_id, token_id, |maybe_token| -> DispatchResultWithPostInfo {
-				let token_info: &mut TokenInfoOf<T> = maybe_token.as_mut().ok_or(Error::<T>::TokenIdNotFound)?;
-				ensure!(who == token_info.data.royalty_beneficiary, Error::<T>::NoPermission);
-				let to = T::Lookup::lookup(to)?;
-				token_info.data.royalty_beneficiary = to;
-				Ok(().into())
-			})
-		}
-
-		/// Mint NFT token
-		///
-		/// - `to`: the token owner's account
-		/// - `class_id`: token belong to the class id
-		/// - `metadata`: external metadata
-		/// - `quantity`: token quantity
-		#[pallet::weight(100_000)]
-		#[transactional]
-		pub fn mint(
-			origin: OriginFor<T>,
-			to: <T::Lookup as StaticLookup>::Source,
-			#[pallet::compact] class_id: ClassIdOf<T>,
-			metadata: NFTMetadata,
-			#[pallet::compact] quantity: TokenIdOf<T>,
-			charge_royalty: Option<bool>,
-		) -> DispatchResultWithPostInfo {
-			let who = ensure_signed(origin)?;
-			let to = T::Lookup::lookup(to)?;
-			ensure!(quantity >= One::one(), Error::<T>::InvalidQuantity);
-			let class_info: ClassInfoOf<T> = orml_nft::Pallet::<T>::classes(class_id).ok_or(Error::<T>::ClassIdNotFound)?;
-			ensure!(who == class_info.owner, Error::<T>::NoPermission);
-			let deposit = Self::mint_token_deposit(metadata.len().saturated_into());
-
-			<T as Config>::Currency::reserve(&class_info.owner, deposit.saturated_into())?;
-			let data: TokenData<T::AccountId, BlockNumberOf<T>> = TokenData {
-				deposit,
-				create_block: <frame_system::Pallet<T>>::block_number(),
-				royalty: charge_royalty.unwrap_or_else(|| class_info.data.properties.0.contains(ClassProperty::RoyaltiesChargeable)),
-				creator: to.clone(),
-				royalty_beneficiary: to.clone(),
-			};
-
-			// TODO: Get ride of this limitation.
-			if quantity > One::one() {
-				ensure!(!data.royalty, Error::<T>::NotSupportedForNow);
-			}
-
-			orml_nft::Pallet::<T>::mint(&to, class_id, metadata.clone(), data.clone(), quantity)?;
-
-			Self::deposit_event(Event::MintedToken(who, to, class_id, quantity));
-			Ok(().into())
-		}
-
-		/// Transfer NFT tokens to another account
-		///
-		/// - `to`: the token owner's account
-		/// - `class_id`: class id
-		/// - `token_id`: token id
-		/// - `quantity`: quantity
-		#[pallet::weight(100_000)]
-		#[transactional]
-		pub fn transfer(
-			origin: OriginFor<T>,
-			to: <T::Lookup as StaticLookup>::Source,
-			#[pallet::compact] class_id: ClassIdOf<T>,
-			#[pallet::compact] token_id: TokenIdOf<T>,
-			#[pallet::compact] quantity: TokenIdOf<T>,
-		) -> DispatchResultWithPostInfo {
-			let who = ensure_signed(origin)?;
-			let to = T::Lookup::lookup(to)?;
-			ensure!(quantity >= One::one(), Error::<T>::InvalidQuantity);
-			Self::do_transfer(&who, &to, class_id, token_id, quantity)?;
-			Ok(().into())
-		}
-
-		/// Burn NFT token
-		///
-		/// - `class_id`: class id
-		/// - `token_id`: token id
-		/// - `quantity`: quantity
-		#[pallet::weight(100_000)]
-		#[transactional]
-		pub fn burn(
-			origin: OriginFor<T>,
-			#[pallet::compact] class_id: ClassIdOf<T>,
-			#[pallet::compact] token_id: TokenIdOf<T>,
-			#[pallet::compact] quantity: TokenIdOf<T>,
-		) -> DispatchResultWithPostInfo {
-			let who = ensure_signed(origin)?;
-			ensure!(Self::is_burnable(class_id)?, Error::<T>::NonBurnable);
-			ensure!(quantity >= One::one(), Error::<T>::InvalidQuantity);
-
-			if let Some(token_info) = orml_nft::Pallet::<T>::burn(&who, (class_id, token_id), quantity)? {
-				if token_info.quantity.is_zero() {
-					let class_owner: T::AccountId = T::ModuleId::get().into_sub_account(class_id);
-					let data: TokenData<T::AccountId, T::BlockNumber> = token_info.data;
-					// `repatriate_reserved` will check `to` account exist and return `DeadAccount`.
-					// `transfer` not do this check.
-					<T as Config>::Currency::unreserve(&class_owner, data.deposit.saturated_into());
-					<T as Config>::Currency::transfer(&class_owner, &who, data.deposit.saturated_into(), KeepAlive)?;
-					Self::deposit_event(Event::BurnedToken(who, class_id, token_id, quantity, data.deposit));
-				} else {
-					Self::deposit_event(Event::BurnedToken(who, class_id, token_id, quantity, 0));
-				}
-			}
-			Ok(().into())
-		}
-
-		/// Destroy NFT class
-		///
-		/// - `class_id`: destroy class id
-		/// - `dest`: transfer reserve balance from sub_account to dest
-		#[pallet::weight(100_000)]
-		#[transactional]
-		pub fn destroy_class(
-			origin: OriginFor<T>,
-			#[pallet::compact] class_id: ClassIdOf<T>,
-			dest: <T::Lookup as StaticLookup>::Source,
-		) -> DispatchResultWithPostInfo {
-			let who = ensure_signed(origin)?;
-			let dest = T::Lookup::lookup(dest)?;
-			let class_info = orml_nft::Pallet::<T>::classes(class_id).ok_or(Error::<T>::ClassIdNotFound)?;
-			ensure!(who == class_info.owner, Error::<T>::NoPermission);
-			ensure!(
-				class_info.total_issuance == Zero::zero(),
-				Error::<T>::CannotDestroyClass
-			);
-
-			let owner: T::AccountId = T::ModuleId::get().into_sub_account(class_id);
-			let data = class_info.data;
-			// `repatriate_reserved` will check `to` account exist and return `DeadAccount`.
-			// `transfer` not do this check.
-			<T as Config>::Currency::unreserve(&owner, data.deposit.saturated_into());
-			// At least there is one admin at this point.
-			<T as Config>::Currency::transfer(&owner, &dest, data.deposit.saturated_into(), KeepAlive)?;
-
-			// transfer all free from origin to dest
-			orml_nft::Pallet::<T>::destroy_class(&who, class_id)?;
-
-			Self::deposit_event(Event::DestroyedClass(who, class_id, dest));
-			Ok(().into())
-		}
 	}
 }
 
 impl<T: Config> Pallet<T> {
-
-	fn is_burnable(class_id: ClassIdOf<T>) -> Result<bool, DispatchError> {
-		let class_info = orml_nft::Pallet::<T>::classes(class_id).ok_or(Error::<T>::ClassIdNotFound)?;
-		let data = class_info.data;
-		Ok(data.properties.0.contains(ClassProperty::Burnable))
-	}
-
-	fn is_transferable(class_id: ClassIdOf<T>) -> Result<bool, DispatchError> {
-		let class_info = orml_nft::Pallet::<T>::classes(class_id).ok_or(Error::<T>::ClassIdNotFound)?;
-		let data = class_info.data;
-		Ok(data.properties.0.contains(ClassProperty::Transferable))
-	}
-
 	// fn delete_order(class_id: ClassIdOf<T>, token_id: TokenIdOf<T>, who: &T::AccountId) -> DispatchResult {
 	// 	Orders::<T>::try_mutate_exists((class_id, token_id), who, |maybe_order| {
 	// 		let order = maybe_order.as_mut().ok_or(Error::<T>::OrderNotFound)?;
@@ -739,34 +401,4 @@ impl<T: Config> Pallet<T> {
 	// fn try_delete_order(class_id: ClassIdOf<T>, token_id: TokenIdOf<T>, who: &T::AccountId) {
 	// 	let _ = Self::delete_order(class_id, token_id, who);
 	// }
-
-	fn do_transfer(from: &T::AccountId, to: &T::AccountId, class_id: ClassIdOf<T>, token_id: TokenIdOf<T>, quantity: TokenIdOf<T>) -> DispatchResult {
-		ensure!(Self::is_transferable(class_id)?, Error::<T>::NonTransferable);
-
-		orml_nft::Pallet::<T>::transfer(from, to, (class_id, token_id), quantity)?;
-
-		Self::deposit_event(Event::TransferredToken(from.clone(), to.clone(), class_id, token_id, quantity));
-		Ok(())
-	}
-
-	pub fn add_class_admin_deposit(admin_count: u32) -> Balance {
-		let proxy_deposit_before: Balance = <pallet_proxy::Pallet<T>>::deposit(1).saturated_into();
-		let proxy_deposit_after: Balance = <pallet_proxy::Pallet<T>>::deposit(admin_count.saturating_add(1)).saturated_into();
-		proxy_deposit_after.saturating_sub(proxy_deposit_before)
-	}
-
-	pub fn mint_token_deposit(metadata_len: u32) -> Balance {
-		T::CreateTokenDeposit::get().saturating_add((metadata_len as Balance).saturating_mul(T::MetaDataByteDeposit::get()))
-	}
-
-	pub fn create_class_deposit(metadata_len: u32, name_len: u32, description_len: u32) -> (Balance, Balance) {
-		let deposit: Balance = {
-			let total_bytes = metadata_len.saturating_add(name_len).saturating_add(description_len);
-			T::CreateClassDeposit::get().saturating_add(
-				(total_bytes as Balance).saturating_mul(T::MetaDataByteDeposit::get())
-			)
-		};
-		let proxy_deposit: Balance = <pallet_proxy::Pallet<T>>::deposit(1).saturated_into();
-		(deposit, deposit.saturating_add(proxy_deposit))
-	}
 }

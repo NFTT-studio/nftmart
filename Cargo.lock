@@ -4016,11 +4016,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "nftmart-common"
+version = "3.0.0"
+dependencies = [
+ "frame-support",
+ "sp-std",
+]
+
+[[package]]
 name = "nftmart-config"
 version = "3.0.0"
 dependencies = [
  "frame-support",
  "frame-system",
+ "nftmart-common",
  "orml-currencies",
  "orml-nft",
  "orml-tokens",
@@ -4065,7 +4074,6 @@ dependencies = [
 name = "nftmart-order"
 version = "3.0.0"
 dependencies = [
- "enumflags2",
  "frame-support",
  "frame-system",
  "nftmart-config",

@@ -7,6 +7,20 @@ use frame_support::{assert_noop, assert_ok};
 use mock::*;
 
 #[test]
+fn reserve() {
+	ExtBuilder::default().build().execute_with(|| {
+		assert_ok!(NonFungibleTokenModule::create_class(&ALICE, vec![1], ()));
+		assert_ok!(NonFungibleTokenModule::mint(&BOB, CLASS_ID, vec![1], (), 10));
+		assert_ok!(NonFungibleTokenModule::reserve(&BOB, (CLASS_ID, TOKEN_ID), 10));
+		assert_ok!(NonFungibleTokenModule::reserve(&BOB, (CLASS_ID, TOKEN_ID), 0));
+		assert_ok!(NonFungibleTokenModule::unreserve(&BOB, (CLASS_ID, TOKEN_ID), 10));
+		assert_noop!(NonFungibleTokenModule::reserve(&BOB, (CLASS_ID, TOKEN_ID), 11), Error::<Runtime>::NumOverflow);
+		assert_noop!(NonFungibleTokenModule::unreserve(&BOB, (CLASS_ID, TOKEN_ID), 1), Error::<Runtime>::NumOverflow);
+	});
+}
+
+
+#[test]
 fn create_class_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		assert_ok!(NonFungibleTokenModule::create_class(&ALICE, vec![1], ()));
@@ -35,14 +49,14 @@ fn mint_should_work() {
 
 		assert_ok!(NonFungibleTokenModule::mint(&BOB, CLASS_ID, vec![1], (), 10));
 		assert_eq!(10, NonFungibleTokenModule::tokens(CLASS_ID, TOKEN_ID).unwrap().quantity);
-		assert_eq!(10, NonFungibleTokenModule::tokens_by_owner(&BOB, (CLASS_ID, TOKEN_ID)).unwrap());
+		assert_eq!(10, NonFungibleTokenModule::tokens_by_owner(&BOB, (CLASS_ID, TOKEN_ID)).unwrap().quantity);
 		assert_eq!(10, NonFungibleTokenModule::classes(CLASS_ID).unwrap().total_issuance);
 
 		assert_eq!(NonFungibleTokenModule::next_token_id(CLASS_ID), 1);
 
 		assert_ok!(NonFungibleTokenModule::mint(&BOB, CLASS_ID, vec![1], (), 1));
 		assert_eq!(1, NonFungibleTokenModule::tokens(CLASS_ID, TOKEN_ID + 1).unwrap().quantity);
-		assert_eq!(1, NonFungibleTokenModule::tokens_by_owner(&BOB, (CLASS_ID, TOKEN_ID + 1)).unwrap());
+		assert_eq!(1, NonFungibleTokenModule::tokens_by_owner(&BOB, (CLASS_ID, TOKEN_ID + 1)).unwrap().quantity);
 		assert_eq!(11, NonFungibleTokenModule::classes(CLASS_ID).unwrap().total_issuance);
 
 		assert_eq!(NonFungibleTokenModule::next_token_id(CLASS_ID), 2);
@@ -96,7 +110,7 @@ fn transfer_should_work() {
 
 		assert!(NonFungibleTokenModule::is_owner(&BOB, (CLASS_ID, TOKEN_ID)));
 		assert!(!NonFungibleTokenModule::is_owner(&ALICE, (CLASS_ID, TOKEN_ID)));
-		assert_eq!(10, NonFungibleTokenModule::tokens_by_owner(&BOB, (CLASS_ID, TOKEN_ID)).unwrap());
+		assert_eq!(10, NonFungibleTokenModule::tokens_by_owner(&BOB, (CLASS_ID, TOKEN_ID)).unwrap().quantity);
 		assert_eq!(None, NonFungibleTokenModule::tokens_by_owner(&ALICE, (CLASS_ID, TOKEN_ID)));
 		assert_eq!(10, NonFungibleTokenModule::tokens(CLASS_ID, TOKEN_ID).unwrap().quantity);
 		assert_eq!(11, NonFungibleTokenModule::classes(CLASS_ID).unwrap().total_issuance);
@@ -105,8 +119,8 @@ fn transfer_should_work() {
 
 		assert!(NonFungibleTokenModule::is_owner(&BOB, (CLASS_ID, TOKEN_ID)));
 		assert!(NonFungibleTokenModule::is_owner(&ALICE, (CLASS_ID, TOKEN_ID)));
-		assert_eq!(5, NonFungibleTokenModule::tokens_by_owner(&BOB, (CLASS_ID, TOKEN_ID)).unwrap());
-		assert_eq!(5, NonFungibleTokenModule::tokens_by_owner(&ALICE, (CLASS_ID, TOKEN_ID)).unwrap());
+		assert_eq!(5, NonFungibleTokenModule::tokens_by_owner(&BOB, (CLASS_ID, TOKEN_ID)).unwrap().quantity);
+		assert_eq!(5, NonFungibleTokenModule::tokens_by_owner(&ALICE, (CLASS_ID, TOKEN_ID)).unwrap().quantity);
 		assert_eq!(10, NonFungibleTokenModule::tokens(CLASS_ID, TOKEN_ID).unwrap().quantity);
 		assert_eq!(11, NonFungibleTokenModule::classes(CLASS_ID).unwrap().total_issuance);
 
@@ -114,8 +128,8 @@ fn transfer_should_work() {
 
 		assert!(NonFungibleTokenModule::is_owner(&BOB, (CLASS_ID, TOKEN_ID)));
 		assert!(NonFungibleTokenModule::is_owner(&ALICE, (CLASS_ID, TOKEN_ID)));
-		assert_eq!(7, NonFungibleTokenModule::tokens_by_owner(&BOB, (CLASS_ID, TOKEN_ID)).unwrap());
-		assert_eq!(3, NonFungibleTokenModule::tokens_by_owner(&ALICE, (CLASS_ID, TOKEN_ID)).unwrap());
+		assert_eq!(7, NonFungibleTokenModule::tokens_by_owner(&BOB, (CLASS_ID, TOKEN_ID)).unwrap().quantity);
+		assert_eq!(3, NonFungibleTokenModule::tokens_by_owner(&ALICE, (CLASS_ID, TOKEN_ID)).unwrap().quantity);
 		assert_eq!(10, NonFungibleTokenModule::tokens(CLASS_ID, TOKEN_ID).unwrap().quantity);
 		assert_eq!(11, NonFungibleTokenModule::classes(CLASS_ID).unwrap().total_issuance);
 
@@ -123,7 +137,7 @@ fn transfer_should_work() {
 		assert!(!NonFungibleTokenModule::is_owner(&BOB, (CLASS_ID, TOKEN_ID)));
 		assert!(NonFungibleTokenModule::is_owner(&ALICE, (CLASS_ID, TOKEN_ID)));
 		assert_eq!(None, NonFungibleTokenModule::tokens_by_owner(&BOB, (CLASS_ID, TOKEN_ID)));
-		assert_eq!(10, NonFungibleTokenModule::tokens_by_owner(&ALICE, (CLASS_ID, TOKEN_ID)).unwrap());
+		assert_eq!(10, NonFungibleTokenModule::tokens_by_owner(&ALICE, (CLASS_ID, TOKEN_ID)).unwrap().quantity);
 		assert_eq!(10, NonFungibleTokenModule::tokens(CLASS_ID, TOKEN_ID).unwrap().quantity);
 		assert_eq!(11, NonFungibleTokenModule::classes(CLASS_ID).unwrap().total_issuance);
 	});
@@ -161,15 +175,15 @@ fn burn_should_work() {
 		assert_ok!(NonFungibleTokenModule::transfer(&BOB, &ALICE, (CLASS_ID, TOKEN_ID), 7));
 		assert_eq!(9, NonFungibleTokenModule::burn(&BOB, (CLASS_ID, TOKEN_ID), 1).unwrap().unwrap().quantity);
 
-		assert_eq!(Some(2), NonFungibleTokenModule::tokens_by_owner(&BOB, (CLASS_ID, TOKEN_ID)));
-		assert_eq!(Some(7), NonFungibleTokenModule::tokens_by_owner(&ALICE, (CLASS_ID, TOKEN_ID)));
+		assert_eq!(Some(AccountToken::new(2)), NonFungibleTokenModule::tokens_by_owner(&BOB, (CLASS_ID, TOKEN_ID)));
+		assert_eq!(Some(AccountToken::new(7)), NonFungibleTokenModule::tokens_by_owner(&ALICE, (CLASS_ID, TOKEN_ID)));
 		assert_eq!(9, NonFungibleTokenModule::tokens(CLASS_ID, TOKEN_ID).unwrap().quantity);
 		assert_eq!(10, NonFungibleTokenModule::classes(CLASS_ID).unwrap().total_issuance);
 
 		assert_eq!(7, NonFungibleTokenModule::burn(&BOB, (CLASS_ID, TOKEN_ID), 2).unwrap().unwrap().quantity);
 
 		assert_eq!(None, NonFungibleTokenModule::tokens_by_owner(&BOB, (CLASS_ID, TOKEN_ID)));
-		assert_eq!(Some(7), NonFungibleTokenModule::tokens_by_owner(&ALICE, (CLASS_ID, TOKEN_ID)));
+		assert_eq!(Some(AccountToken::new(7)), NonFungibleTokenModule::tokens_by_owner(&ALICE, (CLASS_ID, TOKEN_ID)));
 		assert_eq!(7, NonFungibleTokenModule::tokens(CLASS_ID, TOKEN_ID).unwrap().quantity);
 		assert_eq!(8, NonFungibleTokenModule::classes(CLASS_ID).unwrap().total_issuance);
 

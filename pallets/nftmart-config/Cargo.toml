@@ -14,6 +14,7 @@ frame-support = { version = "3.0.0", default-features = false, path = "../../fra
 frame-system = { version = "3.0.0", default-features = false, path = "../../frame/system" }
 pallet-proxy = { version = "3.0.0", default-features = false, path = "../../frame/proxy" }
 pallet-timestamp = { version = "3.0.0", default-features = false, path = "../../frame/timestamp" }
+nftmart-common = { default-features = false, path = "../nftmart-common" }
 
 [dev-dependencies]
 sp-io = { version = "3.0.0", path = "../../primitives/io" }
@@ -35,4 +36,5 @@ std = [
 	"frame-system/std",
 	"pallet-proxy/std",
 	"pallet-timestamp/std",
+	"nftmart-common/std",
 ]

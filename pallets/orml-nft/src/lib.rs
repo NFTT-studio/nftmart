@@ -58,6 +58,43 @@ pub struct TokenInfo<TokenId, Data> {
 	pub quantity: TokenId,
 }
 
+/// Account Token
+#[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, RuntimeDebug)]
+pub struct AccountToken<TokenId> {
+	/// account token number.
+	#[codec(compact)]
+	pub quantity: TokenId,
+	/// account reserved token number.
+	#[codec(compact)]
+	pub reserved: TokenId,
+}
+
+impl<TokenId> Default for AccountToken<TokenId> where TokenId: AtLeast32BitUnsigned {
+	fn default() -> Self {
+		Self {
+			quantity: Zero::zero(),
+			reserved: Zero::zero(),
+		}
+	}
+}
+
+impl<TokenId> AccountToken<TokenId> where TokenId: AtLeast32BitUnsigned + Copy {
+	pub fn is_zero(&self) -> bool {
+		self.quantity.is_zero() && self.reserved.is_zero()
+	}
+
+	pub fn new(quantity: TokenId) -> Self {
+		Self{
+			quantity,
+			..Self::default()
+		}
+	}
+
+	pub fn total(&self) -> TokenId {
+		self.quantity.saturating_add(self.reserved)
+	}
+}
+
 pub use module::*;
 
 #[frame_support::pallet]
@@ -143,7 +180,7 @@ pub mod module {
 	#[pallet::storage]
 	#[pallet::getter(fn tokens_by_owner)]
 	pub type TokensByOwner<T: Config> =
-		StorageDoubleMap<_, Twox64Concat, T::AccountId, Twox64Concat, (T::ClassId, T::TokenId), <T as Config>::TokenId>;
+		StorageDoubleMap<_, Twox64Concat, T::AccountId, Twox64Concat, (T::ClassId, T::TokenId), AccountToken<<T as Config>::TokenId>>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
@@ -212,16 +249,16 @@ impl<T: Config> Pallet<T> {
 			return Ok(false)
 		}
 		TokensByOwner::<T>::try_mutate_exists(from, token, |maybe_from_count| -> Result<bool, DispatchError> {
-			let mut from_count: T::TokenId = maybe_from_count.unwrap_or_else(Zero::zero);
-			from_count = from_count.checked_sub(&quantity).ok_or(Error::<T>::NumOverflow)?;
+			let mut from_count: AccountToken<T::TokenId> = maybe_from_count.unwrap_or_default();
+			from_count.quantity = from_count.quantity.checked_sub(&quantity).ok_or(Error::<T>::NumOverflow)?;
 
 			TokensByOwner::<T>::try_mutate_exists(to, token, |maybe_to_count| -> DispatchResult {
 				match maybe_to_count {
 					Some(to_count) => {
-						*to_count = to_count.checked_add(&quantity).ok_or(Error::<T>::NumOverflow)?;
+						to_count.quantity = to_count.quantity.checked_add(&quantity).ok_or(Error::<T>::NumOverflow)?;
 					}
 					None => {
-						*maybe_to_count = Some(quantity);
+						*maybe_to_count = Some(AccountToken::new(quantity));
 					}
 				}
 				Ok(())
@@ -260,7 +297,7 @@ impl<T: Config> Pallet<T> {
 				quantity,
 			};
 			Tokens::<T>::insert(class_id, token_id, token_info);
-			TokensByOwner::<T>::insert(owner, (class_id, token_id), quantity);
+			TokensByOwner::<T>::insert(owner, (class_id, token_id), AccountToken::new(quantity));
 
 			Ok(token_id)
 		})
@@ -290,14 +327,13 @@ impl<T: Config> Pallet<T> {
 				Ok(Some(deep_copy))
 			})?;
 
-			let mut owner_count: T::TokenId = maybe_owner_count.unwrap_or_else(Zero::zero);
-			owner_count = owner_count.checked_sub(&quantity).ok_or(Error::<T>::NumOverflow)?;
+			let mut owner_count = maybe_owner_count.unwrap_or_default();
+			owner_count.quantity = owner_count.quantity.checked_sub(&quantity).ok_or(Error::<T>::NumOverflow)?;
 			if owner_count.is_zero() {
 				*maybe_owner_count = None;
 			} else {
 				*maybe_owner_count = Some(owner_count);
 			}
-
 			Ok(c)
 		})
 	}
@@ -316,6 +352,26 @@ impl<T: Config> Pallet<T> {
 	}
 
 	pub fn is_owner(account: &T::AccountId, token: (T::ClassId, T::TokenId)) -> bool {
-		Self::tokens_by_owner(account, token).unwrap_or_else(Zero::zero) >= One::one()
+		Self::tokens_by_owner(account, token).unwrap_or_default().total() >= One::one()
+	}
+
+	pub fn reserve(owner: &T::AccountId, token: (T::ClassId, T::TokenId), quantity: T::TokenId) -> DispatchResult {
+		TokensByOwner::<T>::try_mutate_exists(owner, token, |maybe_owner| -> DispatchResult {
+			let mut owner = maybe_owner.unwrap_or_default();
+			owner.quantity = owner.quantity.checked_sub(&quantity).ok_or(Error::<T>::NumOverflow)?;
+			owner.reserved = owner.reserved.checked_add(&quantity).ok_or(Error::<T>::NumOverflow)?;
+			*maybe_owner = Some(owner);
+			Ok(())
+		})
+	}
+
+	pub fn unreserve(owner: &T::AccountId, token: (T::ClassId, T::TokenId), quantity: T::TokenId) -> DispatchResult {
+		TokensByOwner::<T>::try_mutate_exists(owner, token, |maybe_owner| -> DispatchResult {
+			let mut owner = maybe_owner.unwrap_or_default();
+			owner.reserved = owner.reserved.checked_sub(&quantity).ok_or(Error::<T>::NumOverflow)?;
+			owner.quantity = owner.quantity.checked_add(&quantity).ok_or(Error::<T>::NumOverflow)?;
+			*maybe_owner = Some(owner);
+			Ok(())
+		})
 	}
 }
