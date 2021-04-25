@@ -18,6 +18,7 @@ use sp_runtime::{
 	RuntimeDebug, SaturatedConversion,
 };
 use codec::FullCodec;
+use nftmart_common::NftmartConfig;
 
 mod mock;
 mod tests;
@@ -197,10 +198,12 @@ pub mod module {
 	#[pallet::config]
 	pub trait Config: frame_system::Config +
 		orml_nft::Config<ClassData = ClassData<BlockNumberOf<Self>>, TokenData = TokenData<<Self as frame_system::Config>::AccountId, BlockNumberOf<Self>>> +
-		pallet_proxy::Config +
-		nftmart_config::Config
+		pallet_proxy::Config
 	{
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
+		/// Extra Configurations
+		type ExtraConfig: nftmart_common::NftmartConfig<Self::AccountId>;
 
 		/// The minimum balance to create class
 		#[pallet::constant]
@@ -342,7 +345,7 @@ pub mod module {
 		/// A Selling NFT should belong to a category.
 		///
 		/// - `metadata`: metadata
-		#[pallet::weight(100_000)]
+		#[pallet::weight((100_000, DispatchClass::Operational, Pays::Yes))]
 		#[transactional]
 		pub fn create_category(origin: OriginFor<T>, metadata: NFTMetadata) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
@@ -360,14 +363,14 @@ pub mod module {
 			Categories::<T>::insert(category_id, info);
 
 			Self::deposit_event(Event::CreatedCategory(category_id));
-			Ok(().into())
+			Ok((None, Pays::No).into())
 		}
 
 		/// Update a common category.
 		///
 		/// - `category_id`: category ID
 		/// - `metadata`: metadata
-		#[pallet::weight(100_000)]
+		#[pallet::weight((100_000, DispatchClass::Operational, Pays::Yes))]
 		#[transactional]
 		pub fn update_category(origin: OriginFor<T>, category_id: CategoryIdOf<T>, metadata: NFTMetadata) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
@@ -379,7 +382,7 @@ pub mod module {
 				Categories::<T>::insert(category_id, info);
 				Self::deposit_event(Event::UpdatedCategory(category_id));
 			}
-			Ok(().into())
+			Ok((None, Pays::No).into())
 		}
 
 		/// Create NFT class, tokens belong to the class.
@@ -392,7 +395,7 @@ pub mod module {
 		#[transactional]
 		pub fn create_class(origin: OriginFor<T>, metadata: NFTMetadata, name: Vec<u8>, description: Vec<u8>, properties: Properties) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
-			ensure!(nftmart_config::Pallet::<T>::account_whitelist(&who).is_some(), Error::<T>::AccountNotInWhitelist);
+			ensure!(T::ExtraConfig::is_in_whitelist(&who), Error::<T>::AccountNotInWhitelist);
 
 			ensure!(name.len() <= 20, Error::<T>::NameTooLong);// TODO: pass configurations from runtime configuration.
 			ensure!(description.len() <= 256, Error::<T>::DescriptionTooLong);// TODO: pass configurations from runtime configuration.
@@ -487,7 +490,7 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			let to = T::Lookup::lookup(to)?;
-			ensure!(nftmart_config::Pallet::<T>::account_whitelist(&to).is_some(), Error::<T>::AccountNotInWhitelist);
+			ensure!(T::ExtraConfig::is_in_whitelist(&to), Error::<T>::AccountNotInWhitelist);
 
 			ensure!(quantity >= One::one(), Error::<T>::InvalidQuantity);
 			let class_info: ClassInfoOf<T> = orml_nft::Pallet::<T>::classes(class_id).ok_or(Error::<T>::ClassIdNotFound)?;

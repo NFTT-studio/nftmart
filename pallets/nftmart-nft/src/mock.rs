@@ -172,6 +172,7 @@ parameter_types! {
 
 impl nftmart_nft::Config for Runtime {
 	type Event = Event;
+	type ExtraConfig = NftmartConfig;
 	type CreateClassDeposit = CreateClassDeposit;
 	type MetaDataByteDeposit = MetaDataByteDeposit;
 	type CreateTokenDeposit = CreateTokenDeposit;

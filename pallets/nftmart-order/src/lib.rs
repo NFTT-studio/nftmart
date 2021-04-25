@@ -25,23 +25,23 @@ use orml_nft::{TokenInfoOf};
 
 pub use module::*;
 
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode, RuntimeDebug)]
-pub enum OrderKind {
-	/// Normal
-	Normal,
-	/// Offer
-	Offer,
-	/// British
-	British,
-	/// Dutch
-	Dutch,
-}
-
-impl Default for OrderKind {
-	fn default() -> Self {
-		Self::Normal
-	}
-}
+// #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode, RuntimeDebug)]
+// pub enum OrderKind {
+// 	/// Normal
+// 	Normal,
+// 	/// Offer
+// 	Offer,
+// 	/// British
+// 	British,
+// 	/// Dutch
+// 	Dutch,
+// }
+//
+// impl Default for OrderKind {
+// 	fn default() -> Self {
+// 		Self::Normal
+// 	}
+// }
 
 #[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
