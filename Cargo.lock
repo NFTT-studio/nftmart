@@ -4016,24 +4016,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "nftmart-common"
-version = "3.0.0"
-dependencies = [
- "frame-support",
- "sp-std",
-]
-
-[[package]]
 name = "nftmart-config"
 version = "3.0.0"
 dependencies = [
  "frame-support",
  "frame-system",
- "nftmart-common",
- "orml-currencies",
- "orml-nft",
- "orml-tokens",
- "orml-traits",
+ "nftmart-traits",
  "pallet-balances",
  "pallet-proxy",
  "pallet-timestamp",
@@ -4053,8 +4041,8 @@ dependencies = [
  "enumflags2",
  "frame-support",
  "frame-system",
- "nftmart-common",
  "nftmart-config",
+ "nftmart-traits",
  "orml-currencies",
  "orml-nft",
  "orml-tokens",
@@ -4077,10 +4065,8 @@ version = "3.0.0"
 dependencies = [
  "frame-support",
  "frame-system",
- "nftmart-config",
- "nftmart-nft",
+ "nftmart-traits",
  "orml-currencies",
- "orml-nft",
  "orml-tokens",
  "orml-traits",
  "pallet-balances",
@@ -4115,6 +4101,14 @@ dependencies = [
  "nftmart-nft",
  "sp-api",
  "sp-core",
+ "sp-std",
+]
+
+[[package]]
+name = "nftmart-traits"
+version = "3.0.0"
+dependencies = [
+ "frame-support",
  "sp-std",
 ]
 

@@ -14,16 +14,12 @@ frame-support = { version = "3.0.0", default-features = false, path = "../../fra
 frame-system = { version = "3.0.0", default-features = false, path = "../../frame/system" }
 pallet-proxy = { version = "3.0.0", default-features = false, path = "../../frame/proxy" }
 pallet-timestamp = { version = "3.0.0", default-features = false, path = "../../frame/timestamp" }
-nftmart-common = { default-features = false, path = "../nftmart-common" }
+nftmart-traits = { default-features = false, path = "../nftmart-traits" }
 
 [dev-dependencies]
 sp-io = { version = "3.0.0", path = "../../primitives/io" }
 pallet-balances = { version = "3.0.0", path = "../../frame/balances" }
 pallet-utility = { version = "3.0.0", path = "../../frame/utility" }
-orml-currencies = { version = "0.4.1-dev", path = "../orml-currencies" }
-orml-tokens = { version = "0.4.1-dev", path = "../orml-tokens" }
-orml-traits = { version = "0.4.1-dev", path = "../orml-traits" }
-orml-nft = { version = "0.4.1-dev", path = "../orml-nft" }
 
 [features]
 default = ["std"]
@@ -36,5 +32,5 @@ std = [
 	"frame-system/std",
 	"pallet-proxy/std",
 	"pallet-timestamp/std",
-	"nftmart-common/std",
+	"nftmart-traits/std",
 ]

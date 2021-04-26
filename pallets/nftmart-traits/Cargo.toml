@@ -1,5 +1,5 @@
 [package]
-name = "nftmart-common"
+name = "nftmart-traits"
 version = "3.0.0"
 authors = ["NFTMart Developers"]
 edition = "2018"
@@ -10,14 +10,10 @@ targets = ["x86_64-unknown-linux-gnu"]
 [dependencies]
 sp-std = { default-features = false, path = "../../primitives/std" }
 frame-support = { default-features = false, path = "../../frame/support" }
-#codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false }
-#serde = { version = "1.0.111", optional = true }
 
 [features]
 default = ['std']
 std = [
-#	"serde",
-#	"codec/std",
 	'sp-std/std',
     'frame-support/std',
 ]

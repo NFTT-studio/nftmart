@@ -18,7 +18,7 @@ use sp_runtime::{
 	RuntimeDebug, SaturatedConversion,
 };
 use codec::FullCodec;
-use nftmart_common::NftmartConfig;
+use nftmart_traits::NftmartConfig;
 
 mod mock;
 mod tests;
@@ -203,7 +203,7 @@ pub mod module {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 		/// Extra Configurations
-		type ExtraConfig: nftmart_common::NftmartConfig<Self::AccountId>;
+		type ExtraConfig: NftmartConfig<Self::AccountId>;
 
 		/// The minimum balance to create class
 		#[pallet::constant]

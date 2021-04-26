@@ -137,7 +137,7 @@ pub mod module {
 	}
 }
 
-impl<T: Config> nftmart_common::NftmartConfig<T::AccountId> for Pallet<T> {
+impl<T: Config> nftmart_traits::NftmartConfig<T::AccountId> for Pallet<T> {
 	fn is_in_whitelist(who: &T::AccountId) -> bool {
 		Self::account_whitelist(who).is_some()
 	}
