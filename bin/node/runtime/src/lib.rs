@@ -458,11 +458,13 @@ impl pallet_session::historical::Config for Runtime {
 }
 
 pallet_staking_reward_curve::build! {
+	// https://www.desmos.com/calculator/jsqdbeaart
+	// 0.1 / 0.6 ~= 0.165(i_ideal)
 	const REWARD_CURVE: PiecewiseLinear<'static> = curve!(
 		min_inflation: 0_025_000,
 		max_inflation: 0_100_000,
-		ideal_stake: 0_500_000,
-		falloff: 0_050_000,
+		ideal_stake: 0_600_000,
+		falloff: 0_040_000,
 		max_piece_count: 40,
 		test_precision: 0_005_000,
 	);
