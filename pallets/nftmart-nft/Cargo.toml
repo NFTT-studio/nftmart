@@ -14,7 +14,6 @@ frame-support = { version = "3.0.0", default-features = false, path = "../../fra
 frame-system = { version = "3.0.0", default-features = false, path = "../../frame/system" }
 pallet-proxy = { version = "3.0.0", default-features = false, path = "../../frame/proxy" }
 pallet-timestamp = { version = "3.0.0", default-features = false, path = "../../frame/timestamp" }
-enumflags2 = { version = "0.6.3" }
 orml-traits = { version = "0.4.1-dev", default-features = false, path = "../orml-traits" }
 orml-nft = { version = "0.4.1-dev", default-features = false, path = "../orml-nft" }
 nftmart-traits = { default-features = false, path = "../nftmart-traits" }
@@ -42,5 +41,4 @@ std = [
 	"nftmart-config/std",
 	"nftmart-traits/std",
 	"pallet-timestamp/std",
-	"enumflags2/serde"
 ]

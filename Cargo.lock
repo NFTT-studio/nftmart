@@ -4038,7 +4038,6 @@ dependencies = [
 name = "nftmart-nft"
 version = "3.0.0"
 dependencies = [
- "enumflags2",
  "frame-support",
  "frame-system",
  "nftmart-config",
@@ -4108,7 +4107,11 @@ dependencies = [
 name = "nftmart-traits"
 version = "3.0.0"
 dependencies = [
+ "enumflags2",
  "frame-support",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
  "sp-std",
 ]
 

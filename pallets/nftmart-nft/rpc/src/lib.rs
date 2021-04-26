@@ -73,7 +73,7 @@ where
 			code: ErrorCode::ServerError(Error::RuntimeError.into()),
 			message: "Unable to query dispatch info.".into(),
 			data: Some(format!("{:?}", e).into()),
-		}).map(|(deposit)|{
+		}).map(|deposit|{
 			format!("{}", deposit)
 		})
 	}

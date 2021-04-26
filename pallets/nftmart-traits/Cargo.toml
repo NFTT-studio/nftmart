@@ -8,13 +8,21 @@ edition = "2018"
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
+serde = { version = "1.0.111", optional = true }
+codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false }
 sp-std = { default-features = false, path = "../../primitives/std" }
+sp-core = { version = "3.0.0", default-features = false, path = "../../primitives/core" }
 frame-support = { default-features = false, path = "../../frame/support" }
+enumflags2 = { version = "0.6.3" }
 
 [features]
 default = ['std']
 std = [
+	"serde",
+	"codec/std",
+	"sp-core/std",
 	'sp-std/std',
     'frame-support/std',
+	"enumflags2/serde",
 ]
 
