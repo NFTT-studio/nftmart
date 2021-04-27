@@ -46,7 +46,7 @@ class Validator {
   async isSyncing() {
     const response = await this.api.rpc.system.health();
 
-        if (response.isSyncing.valueOf()) {
+    if (response.isSyncing.valueOf()) {
       throw new Error("Node is syncing")
     }
   }
