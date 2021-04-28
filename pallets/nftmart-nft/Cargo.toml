@@ -24,7 +24,8 @@ pallet-balances = { version = "3.0.0", path = "../../frame/balances" }
 pallet-utility = { version = "3.0.0", path = "../../frame/utility" }
 orml-currencies = { version = "0.4.1-dev", path = "../orml-currencies" }
 orml-tokens = { version = "0.4.1-dev", path = "../orml-tokens" }
-nftmart-config = { default-features = false, path = "../nftmart-config" }
+nftmart-config = { path = "../nftmart-config" }
+nftmart-nft = { path = "../nftmart-nft" }
 
 [features]
 default = ["std"]
@@ -36,9 +37,8 @@ std = [
 	"frame-support/std",
 	"frame-system/std",
 	"pallet-proxy/std",
+	"pallet-timestamp/std",
 	"orml-traits/std",
 	"orml-nft/std",
-	"nftmart-config/std",
 	"nftmart-traits/std",
-	"pallet-timestamp/std",
 ]

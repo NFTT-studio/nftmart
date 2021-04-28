@@ -431,11 +431,6 @@ pub mod module {
 				royalty_beneficiary: to.clone(),
 			};
 
-			// TODO: Get rid of this limitation.
-			if quantity > One::one() {
-				ensure!(!data.royalty, Error::<T>::NotSupportedForNow);
-			}
-
 			orml_nft::Pallet::<T>::mint(&to, class_id, metadata.clone(), data.clone(), quantity)?;
 
 			Self::deposit_event(Event::MintedToken(who, to, class_id, quantity));

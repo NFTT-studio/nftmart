@@ -205,10 +205,10 @@ fn mint_should_fail() {
 			Error::<Runtime>::ClassIdNotFound
 		);
 
-		assert_noop!( // erc1155
-			Nftmart::mint(Origin::signed(class_id_account()), BOB, CLASS_ID, vec![1], 2, Some(true)),
-			Error::<Runtime>::NotSupportedForNow
-		);
+		// assert_noop!( // erc1155
+		// 	Nftmart::mint(Origin::signed(class_id_account()), BOB, CLASS_ID, vec![1], 2, Some(true)),
+		// 	Error::<Runtime>::NotSupportedForNow
+		// );
 
 		assert_noop!(
 			Nftmart::mint(Origin::signed(BOB), BOB, CLASS_ID, vec![1], 0, None),
