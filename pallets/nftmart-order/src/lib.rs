@@ -33,27 +33,38 @@ pub use module::*;
 
 #[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub struct OrderData<T: Config> {
-	/// currency ID.
+pub struct OrderItem<ClassId, TokenId> {
+	/// class id
 	#[codec(compact)]
-	pub currency_id: CurrencyIdOf<T>,
-	/// Price of this order.
+	pub class_id: ClassId,
+	/// token id
+	#[codec(compact)]
+	pub token_id: TokenId,
+	/// quantity
+	#[codec(compact)]
+	pub quantity: TokenId,
+	/// Price of this token.
 	#[codec(compact)]
 	pub price: Balance,
+}
+
+#[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub struct OrderData<CurrencyId, BlockNumber, CategoryId, ClassId, TokenId> {
+	/// currency ID.
+	#[codec(compact)]
+	pub currency_id: CurrencyId,
 	/// The balances to create an order
 	#[codec(compact)]
 	pub deposit: Balance,
 	/// This order will be invalidated after `deadline` block number.
 	#[codec(compact)]
-	pub deadline: BlockNumberOf<T>,
+	pub deadline: BlockNumber,
 	/// Category of this order.
 	#[codec(compact)]
-	pub category_id: CategoryIdOf<T>,
-	/// True, if the order was submitted by the token owner.
-	pub by_token_owner: bool,
-	/// The quantity of token.
-	#[codec(compact)]
-	pub quantity: TokenIdOf<T>,
+	pub category_id: CategoryId,
+	/// nft list
+	pub items: Vec<OrderItem<ClassId, TokenId>>
 }
 
 #[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug)]
@@ -70,6 +81,7 @@ impl Default for Releases {
 pub type TokenIdOf<T> = <T as module::Config>::TokenId;
 pub type ClassIdOf<T> = <T as module::Config>::ClassId;
 pub type CategoryIdOf<T> = <T as module::Config>::CategoryId;
+pub type OrderIdOf<T> = <T as module::Config>::OrderId;
 pub type BalanceOf<T> = <<T as module::Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 pub type CurrencyIdOf<T> = <<T as module::Config>::MultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::CurrencyId;
 pub type BlockNumberOf<T> = <T as frame_system::Config>::BlockNumber;
@@ -91,57 +103,23 @@ pub mod module {
 		/// The Category ID type
 		type CategoryId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy + MaybeSerializeDeserialize + Bounded + FullCodec;
 
+		/// The Order ID type
+		type OrderId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy + MaybeSerializeDeserialize + Bounded + FullCodec;
+
 		/// The class ID type
 		type ClassId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy + MaybeSerializeDeserialize + codec::FullCodec;
 
 		/// The token ID type
 		type TokenId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy + MaybeSerializeDeserialize + codec::FullCodec;
+
+		/// NFTMart nft
+		type NFT: nftmart_traits::NftmartNft<Self::AccountId>;
 	}
 
 	#[pallet::error]
 	pub enum Error<T> {
-		/// ClassId not found
-		ClassIdNotFound,
-		/// TokenId not found
-		TokenIdNotFound,
-		/// Order not found
-		OrderNotFound,
-		/// Category not found
-		CategoryNotFound,
-		/// The operator is not the owner of the token and has no permission
-		NoPermission,
-		/// Quantity is invalid. need >= 1
-		InvalidQuantity,
-		/// Invalid deadline
-		InvalidDeadline,
-		/// Invalid deposit
-		InvalidDeposit,
-		/// Property of class don't support transfer
-		NonTransferable,
-		/// Property of class don't support burn
-		NonBurnable,
-		/// Can not destroy class Total issuance is not 0
-		CannotDestroyClass,
-		/// No available category ID
-		NoAvailableCategoryId,
-		/// Order price too high.
-		CanNotAfford,
-		/// Price too low to accept.
-		PriceTooLow,
-		/// Duplicated order.
-		DuplicatedOrder,
-		/// Not allow to take own order.
-		TakeOwnOrder,
-		/// Cannot transfer NFT while order existing.
-		OrderExists,
-		/// Order expired
-		OrderExpired,
-		/// NameTooLong
-		NameTooLong,
-		/// DescriptionTooLong
-		DescriptionTooLong,
-		/// Not supported for now
-		NotSupportedForNow,
+		/// no available order id
+		NoAvailableOrderId,
 	}
 
 	#[pallet::event]
@@ -188,13 +166,76 @@ pub mod module {
 	#[pallet::storage]
 	pub(super) type StorageVersion<T: Config> = StorageValue<_, Releases, ValueQuery>;
 
-	// /// An index mapping from token to order.
+	/// Next available common Order ID.
+	#[pallet::storage]
+	#[pallet::getter(fn next_order_id)]
+	pub type NextOrderId<T: Config> = StorageValue<_, T::OrderId, ValueQuery>;
+
+	// /// Index/store orders by token as primary key and order id as secondary key.
 	// #[pallet::storage]
-	// #[pallet::getter(fn orders)]
-	// pub type Orders<T: Config> = StorageDoubleMap<_, Blake2_128Concat, (ClassIdOf<T>, TokenIdOf<T>), Blake2_128Concat, T::AccountId, OrderData<T>>;
+	// #[pallet::getter(fn order_by_token)]
+	// pub type OrderByToken<T: Config> = StorageDoubleMap<_, Blake2_128Concat, (ClassIdOf<T>, TokenIdOf<T>), Twox64Concat, OrderIdOf<T>, T::AccountId>;
+
+	/// Index/store orders by account as primary key and order id as secondary key.
+	#[pallet::storage]
+	#[pallet::getter(fn orders)]
+	pub type Orders<T: Config> = StorageDoubleMap<_, Blake2_128Concat, T::AccountId, Twox64Concat, OrderIdOf<T>, OrderData<CurrencyIdOf<T>, BlockNumberOf<T>, CategoryIdOf<T>, ClassIdOf<T>, TokenIdOf<T>>>;
+
+	// pub type Offers<T: Config> =
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		/// Create an order.
+		///
+		/// - `currency_id`: currency id
+		/// - `category_id`: category id
+		/// - `deposit`: The balances to create an order
+		/// - `deadline`: deadline
+		/// - `items`: a list of `(class_id, token_id, quantity, price)`
+		#[pallet::weight(100_000)]
+		#[transactional]
+		pub fn submit_order(
+			origin: OriginFor<T>,
+			#[pallet::compact] currency_id: CurrencyIdOf<T>,
+			#[pallet::compact] category_id: CategoryIdOf<T>,
+			#[pallet::compact] deposit: Balance,
+			#[pallet::compact] deadline: BlockNumberOf<T>,
+			items: Vec<(ClassIdOf<T>, TokenIdOf<T>, TokenIdOf<T>, Balance)>,
+		) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+			// let token_info: TokenInfoOf<T> = orml_nft::Pallet::<T>::tokens(class_id, token_id).ok_or(nftmart_nft::Error::<T>::TokenIdNotFound)?;
+			//
+			// ensure!(Self::orders((class_id, token_id), &who).is_none(), Error::<T>::DuplicatedOrder);
+			// ensure!(<frame_system::Pallet<T>>::block_number() < deadline, Error::<T>::InvalidDeadline);
+			// Categories::<T>::try_mutate(category_id, |maybe_category| -> DispatchResult {
+			// 	let category = maybe_category.as_mut().ok_or(Error::<T>::CategoryNotFound)?;
+			// 	category.nft_count = category.nft_count.saturating_add(One::one());
+			// 	Ok(())
+			// })?;
+			//
+			// ensure!(deposit >= Self::min_order_deposit(), Error::<T>::InvalidDeposit);
+			// // Reserve native currency.
+			// <T as Config>::Currency::reserve(&who, deposit.saturated_into())?;
+			//
+			// if token.owner != who {
+			// 	// Reserve specified currency.
+			// 	T::MultiCurrency::reserve(currency_id, &who, price.saturated_into())?;
+			// }
+			//
+			// let order: OrderData<T> = OrderData {
+			// 	currency_id,
+			// 	price,
+			// 	deposit,
+			// 	deadline,
+			// 	category_id,
+			// 	by_token_owner: token.owner == who,
+			// };
+			// Orders::<T>::insert((class_id, token_id), &who, order);
+			//
+			// Self::deposit_event(Event::CreatedOrder(class_id, token_id, who));
+			Ok(().into())
+		}
+
 		// /// Take an NFT order.
 		// ///
 		// /// - `class_id`: class id
@@ -255,67 +296,6 @@ pub mod module {
 		// 	Ok(().into())
 		// }
 
-		// /// Create an NFT order. Create only.
-		// ///
-		// /// - `currency_id`: currency id
-		// /// - `price`: price
-		// /// - `category_id`: category id
-		// /// - `class_id`: class id
-		// /// - `token_id`: token id
-		// /// - `deposit`: The balances to create an order
-		// /// - `deadline`: deadline
-		// #[pallet::weight(100_000)]
-		// #[transactional]
-		// pub fn submit_order(
-		// 	origin: OriginFor<T>,
-		// 	#[pallet::compact] currency_id: CurrencyIdOf<T>,
-		// 	#[pallet::compact] price: Balance,
-		// 	#[pallet::compact] category_id: CategoryIdOf<T>,
-		// 	#[pallet::compact] class_id: ClassIdOf<T>,
-		// 	#[pallet::compact] token_id: TokenIdOf<T>,
-		// 	#[pallet::compact] deposit: Balance,
-		// 	#[pallet::compact] deadline: BlockNumberOf<T>,
-		// ) -> DispatchResultWithPostInfo {
-		// 	let who = ensure_signed(origin)?;
-		//
-		// 	// TODO: Get rid of this limitation.
-		// 	ensure!(currency_id == NATIVE_CURRENCY_ID.saturated_into(), nftmart_nft::Error::<T>::NotSupportedForNow);
-		//
-		// 	let token_info: TokenInfoOf<T> = orml_nft::Pallet::<T>::tokens(class_id, token_id).ok_or(nftmart_nft::Error::<T>::TokenIdNotFound)?;
-		// 	// TODO: Get rid of this limitation.
-		// 	ensure!(token_info.quantity == One::one(), Error::<T>::NotSupportedForNow);
-		//
-		// 	ensure!(Self::orders((class_id, token_id), &who).is_none(), Error::<T>::DuplicatedOrder);
-		// 	// ensure!(<frame_system::Pallet<T>>::block_number() < deadline, Error::<T>::InvalidDeadline);
-		// 	// Categories::<T>::try_mutate(category_id, |maybe_category| -> DispatchResult {
-		// 	// 	let category = maybe_category.as_mut().ok_or(Error::<T>::CategoryNotFound)?;
-		// 	// 	category.nft_count = category.nft_count.saturating_add(One::one());
-		// 	// 	Ok(())
-		// 	// })?;
-		// 	//
-		// 	// ensure!(deposit >= Self::min_order_deposit(), Error::<T>::InvalidDeposit);
-		// 	// // Reserve native currency.
-		// 	// <T as Config>::Currency::reserve(&who, deposit.saturated_into())?;
-		// 	//
-		// 	// if token.owner != who {
-		// 	// 	// Reserve specified currency.
-		// 	// 	T::MultiCurrency::reserve(currency_id, &who, price.saturated_into())?;
-		// 	// }
-		// 	//
-		// 	// let order: OrderData<T> = OrderData {
-		// 	// 	currency_id,
-		// 	// 	price,
-		// 	// 	deposit,
-		// 	// 	deadline,
-		// 	// 	category_id,
-		// 	// 	by_token_owner: token.owner == who,
-		// 	// };
-		// 	// Orders::<T>::insert((class_id, token_id), &who, order);
-		// 	//
-		// 	// Self::deposit_event(Event::CreatedOrder(class_id, token_id, who));
-		// 	Ok(().into())
-		// }
-
 		// /// remove an order by order owner.
 		// ///
 		// /// - `class_id`: class id
@@ -335,6 +315,15 @@ pub mod module {
 }
 
 impl<T: Config> Pallet<T> {
+
+	fn get_and_inc_order_id() -> Result<OrderIdOf<T>, DispatchError>{
+		NextOrderId::<T>::try_mutate(|id| -> Result<T::OrderId, DispatchError> {
+			let current_id = *id;
+			*id = id.checked_add(&One::one()).ok_or(Error::<T>::NoAvailableOrderId)?;
+			Ok(current_id)
+		})
+	}
+
 	// fn delete_order(class_id: ClassIdOf<T>, token_id: TokenIdOf<T>, who: &T::AccountId) -> DispatchResult {
 	// 	Orders::<T>::try_mutate_exists((class_id, token_id), who, |maybe_order| {
 	// 		let order = maybe_order.as_mut().ok_or(Error::<T>::OrderNotFound)?;

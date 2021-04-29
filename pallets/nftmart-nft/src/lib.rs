@@ -573,3 +573,9 @@ impl<T: Config> Pallet<T> {
 		(deposit, deposit.saturating_add(proxy_deposit))
 	}
 }
+
+impl<T: Config> nftmart_traits::NftmartNft<T::AccountId> for Pallet<T> {
+	fn is_in_whitelist(who: &T::AccountId) -> bool {
+		true
+	}
+}

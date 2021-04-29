@@ -15,6 +15,10 @@ impl<AccountId> NftmartConfig<AccountId> for () {
 	fn is_in_whitelist(_who: &AccountId) -> bool { true }
 }
 
+pub trait NftmartNft<AccountId> {
+	fn is_in_whitelist(_who: &AccountId) -> bool;
+}
+
 pub type NFTMetadata = Vec<u8>;
 
 #[repr(u8)]
