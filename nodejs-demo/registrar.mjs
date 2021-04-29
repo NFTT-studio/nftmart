@@ -36,7 +36,7 @@ class Registrar {
     /**
      * Connect to a configured block chain, such as polkadot, westend or local chain.
      */
-    async connect() {
+    async init() {
         const _alice = '//Alice';
         const _bob = '//Bob';
         const _charlie = '//Charlie';
@@ -70,19 +70,16 @@ class Registrar {
      * identity
      */
     async identityRegistrars() {
-        await this.connect();
         const registrars = await this.api.query.identity.registrars();
         console.log(`[identity.registrars]: ${registrars}`);
         return registrars;
     }
     async identityIdentityOf() {
-        await this.connect();
         const identityOf = await this.api.query.identity.identityOf(this.mythis.address);
         console.log(`[identity.identityOf]: ${identityOf.toHuman()}`);
         return identityOf;
     }
     async identityAddRegistrar(account, registrarAccount) {
-        // await this.connect();
         const tx = this.api.tx.identity.addRegistrar(registrarAccount.address);
         console.log(`[identity.addRegistrar]: ${tx}`);
         return tx;
@@ -191,8 +188,8 @@ class Registrar {
     async setupRegistrar(registrarAccount) {
         // FIXME: Enforce address mapping
         const account2registrar = {
-            '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY': '15oF4uVJwmo4TdGW7VfQxNLavjCXviqxT9S1MgbjMNHr6Sp5',
-            '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty': '14E5nqKAp3oAJcmzgZhUD2RcptBeUBScxKHgJKU4HPNcKVf3',
+            '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY': '15oF4uVJwmo4TdGW7VfQxNLavjCXviqxT9S1MgbjMNHr6Sp5', //Alice : prefix 42 <=> prefix 0
+            '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty': '14E5nqKAp3oAJcmzgZhUD2RcptBeUBScxKHgJKU4HPNcKVf3', //Bob   : prefix 42 <=> prefix 0
         };
         console.log(`[setupRegistrar] Try to add registrar: `);
         console.log(registrarAccount.toJson());
@@ -275,11 +272,11 @@ class Registrar {
 }
 
 async function newRegistrar(config) {
-    const chain = new Registrar(config);
-    await chain.connect();
-    await chain.setupRegistrar(chain.alice);
+    const registrar = new Registrar(config);
+    await registrar.init();
+    await registrar.setupRegistrar(registrar.alice);
     /* eslint-disable-next-line */
-    const [tx, resp] = await chain.proxyProxies(chain.alice.address);
+    const [tx, resp] = await registrar.proxyProxies(registrar.alice.address);
     let shouldAddProxy = true;
     if (resp && resp[0]) {
         for (let tmp of resp[0]) {
@@ -293,12 +290,12 @@ async function newRegistrar(config) {
     }
     if (shouldAddProxy) {
         console.log('Should add proxy');
-        await chain.proxyAddProxy(chain.alice, chain.eve.address);
+        await registrar.proxyAddProxy(registrar.alice, registrar.eve.address);
     } else {
         console.log('No need to add proxy');
     }
 
-    await chain.disconnect();
+    await registrar.disconnect();
 }
 
 async function main() {
