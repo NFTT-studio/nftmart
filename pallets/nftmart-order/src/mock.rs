@@ -195,6 +195,7 @@ impl nftmart_order::Config for Runtime {
 	type ClassId = sp_core::constants_types::ClassId;
 	type TokenId = sp_core::constants_types::TokenId;
 	type NFT = Nftmart;
+	type ExtraConfig = NftmartConfig;
 }
 
 use frame_system::Call as SystemCall;

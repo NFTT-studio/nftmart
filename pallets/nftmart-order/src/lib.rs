@@ -17,6 +17,8 @@ use sp_runtime::{
 };
 use codec::FullCodec;
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
+use nftmart_traits::{NftmartConfig, NftmartNft};
+
 
 mod mock;
 mod tests;
@@ -113,20 +115,27 @@ pub mod module {
 		type TokenId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy + MaybeSerializeDeserialize + codec::FullCodec;
 
 		/// NFTMart nft
-		type NFT: nftmart_traits::NftmartNft<Self::AccountId>;
+		type NFT: NftmartNft<Self::AccountId>;
+
+		/// Extra Configurations
+		type ExtraConfig: NftmartConfig<Self::AccountId>;
 	}
 
 	#[pallet::error]
 	pub enum Error<T> {
 		/// no available order id
 		NoAvailableOrderId,
+		/// submit order with invalid deposit
+		SubmitOrderWithInvalidDeposit,
+		/// submit order with invalid deadline
+		SubmitOrderWithInvalidDeadline,
 	}
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(crate) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// OrderMinDeposit updated \[old, new\]
-		UpdatedMinOrderDeposit(Balance, Balance),
+		/// CreatedOrder \[who, order_id\]
+		CreatedOrder(T::AccountId, OrderIdOf<T>),
 	}
 
 	#[pallet::pallet]
@@ -203,36 +212,41 @@ pub mod module {
 			items: Vec<(ClassIdOf<T>, TokenIdOf<T>, TokenIdOf<T>, Balance)>,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
-			// let token_info: TokenInfoOf<T> = orml_nft::Pallet::<T>::tokens(class_id, token_id).ok_or(nftmart_nft::Error::<T>::TokenIdNotFound)?;
-			//
-			// ensure!(Self::orders((class_id, token_id), &who).is_none(), Error::<T>::DuplicatedOrder);
-			// ensure!(<frame_system::Pallet<T>>::block_number() < deadline, Error::<T>::InvalidDeadline);
+
+			ensure!(deposit >= T::ExtraConfig::get_min_order_deposit(), Error::<T>::SubmitOrderWithInvalidDeposit);
+			<T as Config>::Currency::reserve(&who, deposit.saturated_into())?;
+
+			ensure!(frame_system::Pallet::<T>::block_number() < deadline, Error::<T>::SubmitOrderWithInvalidDeadline);
+			let mut order = OrderData {
+				currency_id,
+				deposit,
+				deadline,
+				category_id,
+				items: Vec::with_capacity(items.len()),
+			};
+			// check orders' ownership.
+			for item in items{
+				let (class_id, token_id, quantity, price) = item;
+				// let token_info: TokenInfoOf<T> = orml_nft::Pallet::<T>::tokens(class_id, token_id).ok_or(nftmart_nft::Error::<T>::TokenIdNotFound)?;
+
+				order.items.push(OrderItem{
+					class_id,
+					token_id,
+					quantity,
+					price,
+				})
+			}
+
+			let order_id: OrderIdOf<T> = Self::get_and_inc_order_id()?;
+
+			Orders::<T>::insert(&who, order_id, order);
+			Self::deposit_event(Event::CreatedOrder(who, order_id));
+
 			// Categories::<T>::try_mutate(category_id, |maybe_category| -> DispatchResult {
 			// 	let category = maybe_category.as_mut().ok_or(Error::<T>::CategoryNotFound)?;
 			// 	category.nft_count = category.nft_count.saturating_add(One::one());
 			// 	Ok(())
 			// })?;
-			//
-			// ensure!(deposit >= Self::min_order_deposit(), Error::<T>::InvalidDeposit);
-			// // Reserve native currency.
-			// <T as Config>::Currency::reserve(&who, deposit.saturated_into())?;
-			//
-			// if token.owner != who {
-			// 	// Reserve specified currency.
-			// 	T::MultiCurrency::reserve(currency_id, &who, price.saturated_into())?;
-			// }
-			//
-			// let order: OrderData<T> = OrderData {
-			// 	currency_id,
-			// 	price,
-			// 	deposit,
-			// 	deadline,
-			// 	category_id,
-			// 	by_token_owner: token.owner == who,
-			// };
-			// Orders::<T>::insert((class_id, token_id), &who, order);
-			//
-			// Self::deposit_event(Event::CreatedOrder(class_id, token_id, who));
 			Ok(().into())
 		}
 

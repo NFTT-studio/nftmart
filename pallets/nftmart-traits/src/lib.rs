@@ -9,10 +9,7 @@ use enumflags2::BitFlags;
 
 pub trait NftmartConfig<AccountId> {
 	fn is_in_whitelist(_who: &AccountId) -> bool;
-}
-
-impl<AccountId> NftmartConfig<AccountId> for () {
-	fn is_in_whitelist(_who: &AccountId) -> bool { true }
+	fn get_min_order_deposit() -> Balance;
 }
 
 pub trait NftmartNft<AccountId> {

@@ -10,6 +10,7 @@ mod mock;
 mod tests;
 
 pub use module::*;
+use sp_core::constants_types::Balance;
 
 #[frame_support::pallet]
 pub mod module {
@@ -44,6 +45,7 @@ pub mod module {
 		platform_fee_rate: PerU16,
 		max_distribution_reward: PerU16,
 		min_reference_deposit: Balance,
+		min_order_deposit: Balance,
 		_phantom: PhantomData<T>,
 	}
 
@@ -55,6 +57,7 @@ pub mod module {
 				royalties_rate: PerU16::from_percent(5),
 				max_distribution_reward: PerU16::from_percent(100),
 				min_reference_deposit: ACCURACY,
+				min_order_deposit: ACCURACY,
 				_phantom: Default::default(),
 			}
 		}
@@ -69,6 +72,11 @@ pub mod module {
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
+			PlatformFeeRate::<T>::put(self.platform_fee_rate);
+			RoyaltiesRate::<T>::put(self.royalties_rate);
+			MaxDistributionReward::<T>::put(self.max_distribution_reward);
+			MinReferenceDeposit::<T>::put(self.min_reference_deposit);
+			MinOrderDeposit::<T>::put(self.min_order_deposit);
 		}
 	}
 
@@ -113,6 +121,11 @@ pub mod module {
 	#[pallet::getter(fn min_reference_deposit)]
 	pub type MinReferenceDeposit<T: Config> = StorageValue<_, Balance, ValueQuery>;
 
+	/// The lowest deposit every order should deposit.
+	#[pallet::storage]
+	#[pallet::getter(fn min_order_deposit)]
+	pub type MinOrderDeposit<T: Config> = StorageValue<_, Balance, ValueQuery>;
+
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// add an account into whitelist
@@ -140,5 +153,9 @@ pub mod module {
 impl<T: Config> nftmart_traits::NftmartConfig<T::AccountId> for Pallet<T> {
 	fn is_in_whitelist(who: &T::AccountId) -> bool {
 		Self::account_whitelist(who).is_some()
+	}
+
+	fn get_min_order_deposit() -> Balance {
+		Self::min_order_deposit()
 	}
 }
