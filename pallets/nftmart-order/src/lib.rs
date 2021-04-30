@@ -2,20 +2,18 @@
 
 use frame_support::{
 	pallet_prelude::*,
-	traits::{Currency, ReservableCurrency, ExistenceRequirement::KeepAlive},
-	transactional, dispatch::DispatchResult, PalletId,
+	traits::{Currency, ReservableCurrency},
+	transactional,
 };
 use sp_std::vec::Vec;
 use frame_system::pallet_prelude::*;
-pub use sp_core::constants_types::{Balance, ACCURACY, NATIVE_CURRENCY_ID};
+pub use sp_core::constants_types::{GlobalId, Balance, ACCURACY, NATIVE_CURRENCY_ID};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::{
-	traits::{CheckedAdd, Bounded, CheckedSub,
-			 AccountIdConversion, StaticLookup, Zero, One, AtLeast32BitUnsigned},
+	traits::{AtLeast32BitUnsigned},
 	RuntimeDebug, SaturatedConversion,
 };
-use codec::FullCodec;
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 use nftmart_traits::{NftmartConfig, NftmartNft};
 
@@ -82,8 +80,6 @@ impl Default for Releases {
 
 pub type TokenIdOf<T> = <T as module::Config>::TokenId;
 pub type ClassIdOf<T> = <T as module::Config>::ClassId;
-pub type CategoryIdOf<T> = <T as module::Config>::CategoryId;
-pub type OrderIdOf<T> = <T as module::Config>::OrderId;
 pub type BalanceOf<T> = <<T as module::Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 pub type CurrencyIdOf<T> = <<T as module::Config>::MultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::CurrencyId;
 pub type BlockNumberOf<T> = <T as frame_system::Config>::BlockNumber;
@@ -101,12 +97,6 @@ pub mod module {
 
 		/// The currency mechanism.
 		type Currency: ReservableCurrency<Self::AccountId>;
-
-		/// The Category ID type
-		type CategoryId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy + MaybeSerializeDeserialize + Bounded + FullCodec;
-
-		/// The Order ID type
-		type OrderId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy + MaybeSerializeDeserialize + Bounded + FullCodec;
 
 		/// The class ID type
 		type ClassId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy + MaybeSerializeDeserialize + codec::FullCodec;
@@ -135,7 +125,7 @@ pub mod module {
 	#[pallet::generate_deposit(pub(crate) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// CreatedOrder \[who, order_id\]
-		CreatedOrder(T::AccountId, OrderIdOf<T>),
+		CreatedOrder(T::AccountId, GlobalId),
 	}
 
 	#[pallet::pallet]
@@ -175,11 +165,6 @@ pub mod module {
 	#[pallet::storage]
 	pub(super) type StorageVersion<T: Config> = StorageValue<_, Releases, ValueQuery>;
 
-	/// Next available common Order ID.
-	#[pallet::storage]
-	#[pallet::getter(fn next_order_id)]
-	pub type NextOrderId<T: Config> = StorageValue<_, T::OrderId, ValueQuery>;
-
 	// /// Index/store orders by token as primary key and order id as secondary key.
 	// #[pallet::storage]
 	// #[pallet::getter(fn order_by_token)]
@@ -188,7 +173,7 @@ pub mod module {
 	/// Index/store orders by account as primary key and order id as secondary key.
 	#[pallet::storage]
 	#[pallet::getter(fn orders)]
-	pub type Orders<T: Config> = StorageDoubleMap<_, Blake2_128Concat, T::AccountId, Twox64Concat, OrderIdOf<T>, OrderData<CurrencyIdOf<T>, BlockNumberOf<T>, CategoryIdOf<T>, ClassIdOf<T>, TokenIdOf<T>>>;
+	pub type Orders<T: Config> = StorageDoubleMap<_, Blake2_128Concat, T::AccountId, Twox64Concat, GlobalId, OrderData<CurrencyIdOf<T>, BlockNumberOf<T>, GlobalId, ClassIdOf<T>, TokenIdOf<T>>>;
 
 	// pub type Offers<T: Config> =
 
@@ -206,7 +191,7 @@ pub mod module {
 		pub fn submit_order(
 			origin: OriginFor<T>,
 			#[pallet::compact] currency_id: CurrencyIdOf<T>,
-			#[pallet::compact] category_id: CategoryIdOf<T>,
+			#[pallet::compact] category_id: GlobalId,
 			#[pallet::compact] deposit: Balance,
 			#[pallet::compact] deadline: BlockNumberOf<T>,
 			items: Vec<(ClassIdOf<T>, TokenIdOf<T>, TokenIdOf<T>, Balance)>,
@@ -237,16 +222,10 @@ pub mod module {
 				})
 			}
 
-			let order_id: OrderIdOf<T> = Self::get_and_inc_order_id()?;
-
+			T::ExtraConfig::inc_count_in_category(category_id)?;
+			let order_id = T::ExtraConfig::get_then_inc_id()?;
 			Orders::<T>::insert(&who, order_id, order);
 			Self::deposit_event(Event::CreatedOrder(who, order_id));
-
-			// Categories::<T>::try_mutate(category_id, |maybe_category| -> DispatchResult {
-			// 	let category = maybe_category.as_mut().ok_or(Error::<T>::CategoryNotFound)?;
-			// 	category.nft_count = category.nft_count.saturating_add(One::one());
-			// 	Ok(())
-			// })?;
 			Ok(().into())
 		}
 
@@ -329,14 +308,6 @@ pub mod module {
 }
 
 impl<T: Config> Pallet<T> {
-
-	fn get_and_inc_order_id() -> Result<OrderIdOf<T>, DispatchError>{
-		NextOrderId::<T>::try_mutate(|id| -> Result<T::OrderId, DispatchError> {
-			let current_id = *id;
-			*id = id.checked_add(&One::one()).ok_or(Error::<T>::NoAvailableOrderId)?;
-			Ok(current_id)
-		})
-	}
 
 	// fn delete_order(class_id: ClassIdOf<T>, token_id: TokenIdOf<T>, who: &T::AccountId) -> DispatchResult {
 	// 	Orders::<T>::try_mutate_exists((class_id, token_id), who, |maybe_order| {

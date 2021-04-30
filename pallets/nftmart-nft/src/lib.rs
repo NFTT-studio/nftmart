@@ -10,13 +10,11 @@ use frame_system::pallet_prelude::*;
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 pub use sp_core::constants_types::{Balance, ACCURACY, NATIVE_CURRENCY_ID};
 use sp_runtime::{
-	traits::{CheckedAdd, Bounded,
-			 AccountIdConversion, StaticLookup, Zero, One, AtLeast32BitUnsigned},
+	traits::{Bounded, AccountIdConversion, StaticLookup, Zero, One, AtLeast32BitUnsigned},
 	RuntimeDebug, SaturatedConversion,
 };
-use codec::FullCodec;
 pub use nftmart_traits::{NftmartConfig, ClassData, ClassProperty, Properties,
-						 TokenData, CategoryData, NFTMetadata};
+						 TokenData, NFTMetadata};
 
 mod mock;
 mod tests;
@@ -25,7 +23,6 @@ pub use module::*;
 
 pub type TokenIdOf<T> = <T as orml_nft::Config>::TokenId;
 pub type ClassIdOf<T> = <T as orml_nft::Config>::ClassId;
-pub type CategoryIdOf<T> = <T as Config>::CategoryId;
 pub type BalanceOf<T> = <<T as module::Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 pub type CurrencyIdOf<T> = <<T as module::Config>::MultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::CurrencyId;
 pub type BlockNumberOf<T> = <T as frame_system::Config>::BlockNumber;
@@ -151,9 +148,6 @@ pub mod module {
 
 		/// The currency mechanism.
 		type Currency: ReservableCurrency<Self::AccountId>;
-
-		/// The Category ID type
-		type CategoryId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy + MaybeSerializeDeserialize + Bounded + FullCodec;
 	}
 
 	#[pallet::error]
@@ -203,10 +197,6 @@ pub mod module {
 		BurnedToken(T::AccountId, ClassIdOf<T>, TokenIdOf<T>, TokenIdOf<T>, Balance),
 		/// Destroyed NFT class. \[owner, class_id, dest\]
 		DestroyedClass(T::AccountId, ClassIdOf<T>, T::AccountId),
-		/// Created NFT common category. \[category_id\]
-		CreatedCategory(CategoryIdOf<T>),
-		/// Updated NFT common category. \[category_id\]
-		UpdatedCategory(CategoryIdOf<T>),
 	}
 
 	#[pallet::pallet]
@@ -253,62 +243,8 @@ pub mod module {
 	#[pallet::storage]
 	pub(super) type StorageVersion<T: Config> = StorageValue<_, Releases, ValueQuery>;
 
-	/// Next available common category ID.
-	#[pallet::storage]
-	#[pallet::getter(fn next_category_id)]
-	pub type NextCategoryId<T: Config> = StorageValue<_, T::CategoryId, ValueQuery>;
-
-	/// The storage of categories.
-	#[pallet::storage]
-	#[pallet::getter(fn categories)]
-	pub type Categories<T: Config> = StorageMap<_, Identity, T::CategoryId, CategoryData>;
-
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-
-		/// Create a common category for trading NFT.
-		/// A Selling NFT should belong to a category.
-		///
-		/// - `metadata`: metadata
-		#[pallet::weight((100_000, DispatchClass::Operational, Pays::Yes))]
-		#[transactional]
-		pub fn create_category(origin: OriginFor<T>, metadata: NFTMetadata) -> DispatchResultWithPostInfo {
-			ensure_root(origin)?;
-
-			let category_id = NextCategoryId::<T>::try_mutate(|id| -> Result<T::CategoryId, DispatchError> {
-				let current_id = *id;
-				*id = id.checked_add(&One::one()).ok_or(Error::<T>::NoAvailableCategoryId)?;
-				Ok(current_id)
-			})?;
-
-			let info = CategoryData {
-				metadata,
-				nft_count: Zero::zero(),
-			};
-			Categories::<T>::insert(category_id, info);
-
-			Self::deposit_event(Event::CreatedCategory(category_id));
-			Ok((None, Pays::No).into())
-		}
-
-		/// Update a common category.
-		///
-		/// - `category_id`: category ID
-		/// - `metadata`: metadata
-		#[pallet::weight((100_000, DispatchClass::Operational, Pays::Yes))]
-		#[transactional]
-		pub fn update_category(origin: OriginFor<T>, category_id: CategoryIdOf<T>, metadata: NFTMetadata) -> DispatchResultWithPostInfo {
-			ensure_root(origin)?;
-			if let Some(category) = Self::categories(category_id) {
-				let info = CategoryData {
-					metadata,
-					nft_count: category.nft_count,
-				};
-				Categories::<T>::insert(category_id, info);
-				Self::deposit_event(Event::UpdatedCategory(category_id));
-			}
-			Ok((None, Pays::No).into())
-		}
 
 		/// Create NFT class, tokens belong to the class.
 		///
@@ -575,7 +511,7 @@ impl<T: Config> Pallet<T> {
 }
 
 impl<T: Config> nftmart_traits::NftmartNft<T::AccountId> for Pallet<T> {
-	fn is_in_whitelist(who: &T::AccountId) -> bool {
+	fn is_in_whitelist(_: &T::AccountId) -> bool {
 		true
 	}
 }

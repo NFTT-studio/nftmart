@@ -172,14 +172,13 @@ parameter_types! {
 
 impl nftmart_nft::Config for Runtime {
 	type Event = Event;
-	type ExtraConfig = NftmartConfig;
+	type ExtraConfig = NftmartConf;
 	type CreateClassDeposit = CreateClassDeposit;
 	type MetaDataByteDeposit = MetaDataByteDeposit;
 	type CreateTokenDeposit = CreateTokenDeposit;
 	type ModuleId = NftModuleId;
 	type Currency = Balances;
 	type MultiCurrency = Currencies;
-	type CategoryId = sp_core::constants_types::CategoryId;
 }
 
 impl nftmart_config::Config for Runtime {
@@ -204,7 +203,7 @@ construct_runtime!(
 		Tokens: orml_tokens::{Pallet, Storage, Event<T>, Config<T>},
 		Currencies: orml_currencies::{Pallet, Call, Event<T>},
 		OrmlNFT: orml_nft::{Pallet, Storage, Config<T>},
-		NftmartConfig: nftmart_config::{Pallet, Call, Event<T>},
+		NftmartConf: nftmart_config::{Pallet, Call, Event<T>},
 		Nftmart: nftmart_nft::{Pallet, Call, Event<T>},
 	}
 );
@@ -212,8 +211,6 @@ construct_runtime!(
 pub const ALICE: AccountId = AccountId::new([1u8; 32]);
 pub const BOB: AccountId = AccountId::new([2u8; 32]);
 pub const CLASS_ID: <Runtime as orml_nft::Config>::ClassId = 0;
-pub const CATEGORY_ID: <Runtime as Config>::CategoryId = 0;
-pub const CATEGORY_ID_NOT_EXIST: <Runtime as Config>::CategoryId = 100;
 pub const CLASS_ID_NOT_EXIST: <Runtime as orml_nft::Config>::ClassId = 1;
 pub const TOKEN_ID: <Runtime as orml_nft::Config>::TokenId = 0;
 pub const TOKEN_ID2: <Runtime as orml_nft::Config>::TokenId = 1;
@@ -242,8 +239,8 @@ impl ExtBuilder {
 		let mut ext = sp_io::TestExternalities::new(t);
 		ext.execute_with(|| {
 			System::set_block_number(1);
-			NftmartConfig::add_whitelist(Origin::root(), ALICE).unwrap();
-			NftmartConfig::add_whitelist(Origin::root(), BOB).unwrap();
+			NftmartConf::add_whitelist(Origin::root(), ALICE).unwrap();
+			NftmartConf::add_whitelist(Origin::root(), BOB).unwrap();
 		});
 		ext
 	}
@@ -269,7 +266,7 @@ pub fn class_id_account() -> AccountId {
 }
 
 pub fn add_category() {
-	assert_ok!(Nftmart::create_category(Origin::root(), vec![1]));
+	assert_ok!(NftmartConf::create_category(Origin::root(), vec![1]));
 }
 
 pub fn ensure_bob_balances(amount: Balance) {

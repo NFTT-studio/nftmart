@@ -10,13 +10,13 @@ mod mock;
 mod tests;
 
 pub use module::*;
-use sp_core::constants_types::Balance;
+use sp_core::constants_types::{GlobalId, Balance, ACCURACY};
+use sp_runtime::{traits::{Zero, One}, PerU16};
+use nftmart_traits::{CategoryData, NFTMetadata, NftmartConfig};
 
 #[frame_support::pallet]
 pub mod module {
 	use super::*;
-	use sp_runtime::PerU16;
-	use sp_core::constants_types::{Balance, ACCURACY};
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
@@ -25,6 +25,10 @@ pub mod module {
 
 	#[pallet::error]
 	pub enum Error<T> {
+		/// no available id
+		NoAvailableId,
+		/// category not found
+		CategoryNotFound,
 	}
 
 	#[pallet::event]
@@ -34,6 +38,10 @@ pub mod module {
 		AddWhitelist(T::AccountId),
 		/// RemoveWhitelist \[who\]
 		RemoveWhitelist(T::AccountId),
+		/// Created NFT common category. \[category_id\]
+		CreatedCategory(GlobalId),
+		/// Updated NFT common category. \[category_id\]
+		UpdatedCategory(GlobalId),
 	}
 
 	#[pallet::pallet]
@@ -126,6 +134,16 @@ pub mod module {
 	#[pallet::getter(fn min_order_deposit)]
 	pub type MinOrderDeposit<T: Config> = StorageValue<_, Balance, ValueQuery>;
 
+	/// Next available global ID.
+	#[pallet::storage]
+	#[pallet::getter(fn next_id)]
+	pub type NextId<T: Config> = StorageValue<_, GlobalId, ValueQuery>;
+
+	/// The storage of categories.
+	#[pallet::storage]
+	#[pallet::getter(fn categories)]
+	pub type Categories<T: Config> = StorageMap<_, Twox64Concat, GlobalId, CategoryData>;
+
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// add an account into whitelist
@@ -147,15 +165,79 @@ pub mod module {
 			Self::deposit_event(Event::RemoveWhitelist(who));
 			Ok((None, Pays::No).into())
 		}
+
+		/// Create a common category for trading NFT.
+		/// A Selling NFT should belong to a category.
+		///
+		/// - `metadata`: metadata
+		#[pallet::weight((100_000, DispatchClass::Operational, Pays::Yes))]
+		#[transactional]
+		pub fn create_category(origin: OriginFor<T>, metadata: NFTMetadata) -> DispatchResultWithPostInfo {
+			ensure_root(origin)?;
+
+			let category_id = <Self as NftmartConfig<T::AccountId>>::get_then_inc_id()?;
+
+			let info = CategoryData {
+				metadata,
+				count: Zero::zero(),
+			};
+			Categories::<T>::insert(category_id, info);
+
+			Self::deposit_event(Event::CreatedCategory(category_id));
+			Ok((None, Pays::No).into())
+		}
+
+		/// Update a common category.
+		///
+		/// - `category_id`: category ID
+		/// - `metadata`: metadata
+		#[pallet::weight((100_000, DispatchClass::Operational, Pays::Yes))]
+		#[transactional]
+		pub fn update_category(origin: OriginFor<T>, category_id: GlobalId, metadata: NFTMetadata) -> DispatchResultWithPostInfo {
+			ensure_root(origin)?;
+			if let Some(category) = Self::categories(category_id) {
+				let info = CategoryData {
+					metadata,
+					count: category.count,
+				};
+				Categories::<T>::insert(category_id, info);
+				Self::deposit_event(Event::UpdatedCategory(category_id));
+			}
+			Ok((None, Pays::No).into())
+		}
 	}
 }
 
-impl<T: Config> nftmart_traits::NftmartConfig<T::AccountId> for Pallet<T> {
+impl<T: Config> NftmartConfig<T::AccountId> for Pallet<T> {
 	fn is_in_whitelist(who: &T::AccountId) -> bool {
 		Self::account_whitelist(who).is_some()
 	}
 
 	fn get_min_order_deposit() -> Balance {
 		Self::min_order_deposit()
+	}
+
+	fn get_then_inc_id() -> Result<GlobalId, DispatchError> {
+		NextId::<T>::try_mutate(|id| -> Result<GlobalId, DispatchError> {
+			let current_id = *id;
+			*id = id.checked_add(GlobalId::one()).ok_or(Error::<T>::NoAvailableId)?;
+			Ok(current_id)
+		})
+	}
+
+	fn inc_count_in_category (category_id: GlobalId) -> DispatchResult {
+		Categories::<T>::try_mutate(category_id, |maybe_category| -> DispatchResult {
+			let category = maybe_category.as_mut().ok_or(Error::<T>::CategoryNotFound)?;
+			category.count = category.count.saturating_add(One::one());
+			Ok(())
+		})
+	}
+
+	fn dec_count_in_category (category_id: GlobalId) -> DispatchResult {
+		Categories::<T>::try_mutate(category_id, |maybe_category| -> DispatchResult {
+			let category = maybe_category.as_mut().ok_or(Error::<T>::CategoryNotFound)?;
+			category.count = category.count.saturating_sub(One::one());
+			Ok(())
+		})
 	}
 }

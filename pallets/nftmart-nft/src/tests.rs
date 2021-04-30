@@ -70,59 +70,6 @@ fn update_token_royalty() {
 }
 
 #[test]
-fn update_category() {
-	ExtBuilder::default().build().execute_with(|| {
-		assert_noop!(
-			Nftmart::update_category(Origin::signed(ALICE), CATEGORY_ID, METADATA.to_vec()),
-			DispatchError::BadOrigin,
-		);
-	});
-	ExtBuilder::default().build().execute_with(|| {
-		let metadata1 = vec![1];
-		let metadata2 = vec![2];
-		assert_ok!(Nftmart::create_category(Origin::root(), metadata1.clone()));
-		assert_eq!(Some(CategoryData{ metadata: metadata1, nft_count: 0 }), Nftmart::categories(CATEGORY_ID));
-
-		assert_ok!(Nftmart::update_category(Origin::root(), CATEGORY_ID, metadata2.clone()));
-		assert_eq!(Some(CategoryData{ metadata: metadata2, nft_count: 0 }), Nftmart::categories(CATEGORY_ID));
-	});
-}
-
-#[test]
-fn create_category_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
-		assert_eq!({ let id_expect: CategoryIdOf<Runtime> = Zero::zero(); id_expect }, Nftmart::next_category_id());
-		assert_eq!(None, Nftmart::categories(CATEGORY_ID));
-
-		let metadata = vec![1];
-		assert_ok!(Nftmart::create_category(Origin::root(), metadata.clone()));
-
-		let event = Event::nftmart_nft(crate::Event::CreatedCategory(CATEGORY_ID));
-		assert_eq!(last_event(), event);
-		assert_eq!({ let id_expect: CategoryIdOf<Runtime> = One::one(); id_expect }, Nftmart::next_category_id());
-		assert_eq!(Some(CategoryData{ metadata, nft_count: 0 }), Nftmart::categories(CATEGORY_ID));
-		assert_eq!(None, Nftmart::categories(CATEGORY_ID_NOT_EXIST));
-	});
-}
-
-#[test]
-fn create_category_should_fail() {
-	ExtBuilder::default().build().execute_with(|| {
-		assert_noop!(
-			Nftmart::create_category(Origin::signed(ALICE), METADATA.to_vec()),
-			DispatchError::BadOrigin,
-		);
-	});
-	ExtBuilder::default().build().execute_with(|| {
-		NextCategoryId::<Runtime>::set(<CategoryIdOf<Runtime>>::max_value());
-		assert_noop!(
-			Nftmart::create_category(Origin::root(), METADATA.to_vec()),
-			Error::<Runtime>::NoAvailableCategoryId,
-		);
-	});
-}
-
-#[test]
 fn create_class_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		assert_ok!(Nftmart::create_class(Origin::signed(ALICE), METADATA.to_vec(), METADATA.to_vec(), METADATA.to_vec(),

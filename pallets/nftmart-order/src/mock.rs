@@ -1,7 +1,7 @@
 #![cfg(test)]
 
 use super::*;
-use frame_support::{assert_ok};
+use frame_support::{PalletId};
 use orml_currencies::BasicCurrencyAdapter;
 use sp_core::constants_types::*;
 use crate as nftmart_order;
@@ -179,7 +179,6 @@ impl nftmart_nft::Config for Runtime {
 	type ModuleId = NftModuleId;
 	type Currency = Balances;
 	type MultiCurrency = Currencies;
-	type CategoryId = sp_core::constants_types::CategoryId;
 }
 
 impl nftmart_config::Config for Runtime {
@@ -190,8 +189,6 @@ impl nftmart_order::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
 	type Currency = Balances;
-	type CategoryId = sp_core::constants_types::CategoryId;
-	type OrderId = sp_core::constants_types::OrderId;
 	type ClassId = sp_core::constants_types::ClassId;
 	type TokenId = sp_core::constants_types::TokenId;
 	type NFT = Nftmart;
@@ -223,17 +220,6 @@ construct_runtime!(
 );
 
 pub const ALICE: AccountId = AccountId::new([1u8; 32]);
-pub const BOB: AccountId = AccountId::new([2u8; 32]);
-pub const CHARLIE: AccountId = AccountId::new([3u8; 32]);
-pub const CLASS_ID: <Runtime as orml_nft::Config>::ClassId = 0;
-pub const CATEGORY_ID: <Runtime as Config>::CategoryId = 0;
-pub const CATEGORY_ID_NOT_EXIST: <Runtime as Config>::CategoryId = 100;
-pub const CLASS_ID_NOT_EXIST: <Runtime as orml_nft::Config>::ClassId = 1;
-pub const TOKEN_ID: <Runtime as orml_nft::Config>::TokenId = 0;
-pub const TOKEN_ID2: <Runtime as orml_nft::Config>::TokenId = 1;
-pub const DEADLINE: BlockNumberOf<Runtime> = 2;
-pub const TOKEN_ID_NOT_EXIST: <Runtime as orml_nft::Config>::TokenId = 100;
-pub const METADATA: &[u8] = b"A";
 
 pub struct ExtBuilder;
 impl Default for ExtBuilder {

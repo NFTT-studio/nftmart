@@ -140,7 +140,7 @@ construct_runtime!(
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		Proxy: pallet_proxy::{Pallet, Call, Storage, Event<T>},
 		Utility: pallet_utility::{Pallet, Call, Event},
-		NftmartConfig: nftmart_config::{Pallet, Call, Event<T>},
+		NftmartConf: nftmart_config::{Pallet, Call, Event<T>},
 	}
 );
 

@@ -2,7 +2,7 @@
 
 use frame_support::pallet_prelude::*;
 use sp_std::vec::Vec;
-use sp_core::constants_types::{Balance};
+use sp_core::constants_types::{Balance, GlobalId};
 #[cfg(feature = "std")]
 use serde::{Serialize, Deserialize};
 use enumflags2::BitFlags;
@@ -10,6 +10,9 @@ use enumflags2::BitFlags;
 pub trait NftmartConfig<AccountId> {
 	fn is_in_whitelist(_who: &AccountId) -> bool;
 	fn get_min_order_deposit() -> Balance;
+	fn get_then_inc_id() -> Result<GlobalId, DispatchError>;
+	fn inc_count_in_category (category_id: GlobalId) -> DispatchResult;
+	fn dec_count_in_category (category_id: GlobalId) -> DispatchResult;
 }
 
 pub trait NftmartNft<AccountId> {
@@ -85,7 +88,7 @@ pub struct TokenData<AccountId, BlockNumber> {
 pub struct CategoryData {
 	/// The category metadata.
 	pub metadata: NFTMetadata,
-	/// The number of NFTs in this category.
+	/// The number of orders/auctions in this category.
 	#[codec(compact)]
-	pub nft_count: Balance,
+	pub count: Balance,
 }
