@@ -1,7 +1,6 @@
 #![cfg(test)]
 
 use super::*;
-use frame_support::{PalletId};
 use orml_currencies::BasicCurrencyAdapter;
 use sp_core::constants_types::*;
 use crate as nftmart_order;
@@ -9,13 +8,14 @@ use codec::{Decode, Encode};
 use frame_support::{
 	construct_runtime, parameter_types,
 	traits::{Filter, InstanceFilter},
-	RuntimeDebug,
+	RuntimeDebug, assert_ok, PalletId
 };
 use sp_core::{crypto::AccountId32, H256};
 use sp_runtime::{
 	testing::Header,
-	traits::{BlakeTwo256, IdentityLookup},
+	traits::{BlakeTwo256, IdentityLookup, AccountIdConversion},
 };
+use nftmart_traits::{Properties, ClassProperty};
 
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
@@ -172,7 +172,7 @@ parameter_types! {
 
 impl nftmart_nft::Config for Runtime {
 	type Event = Event;
-	type ExtraConfig = NftmartConfig;
+	type ExtraConfig = NftmartConf;
 	type CreateClassDeposit = CreateClassDeposit;
 	type MetaDataByteDeposit = MetaDataByteDeposit;
 	type CreateTokenDeposit = CreateTokenDeposit;
@@ -192,7 +192,7 @@ impl nftmart_order::Config for Runtime {
 	type ClassId = sp_core::constants_types::ClassId;
 	type TokenId = sp_core::constants_types::TokenId;
 	type NFT = Nftmart;
-	type ExtraConfig = NftmartConfig;
+	type ExtraConfig = NftmartConf;
 }
 
 use frame_system::Call as SystemCall;
@@ -213,13 +213,15 @@ construct_runtime!(
 		Tokens: orml_tokens::{Pallet, Storage, Event<T>, Config<T>},
 		Currencies: orml_currencies::{Pallet, Call, Event<T>},
 		OrmlNFT: orml_nft::{Pallet, Storage, Config<T>},
-		NftmartConfig: nftmart_config::{Pallet, Call, Event<T>},
+		NftmartConf: nftmart_config::{Pallet, Call, Event<T>},
 		Nftmart: nftmart_nft::{Pallet, Call, Event<T>},
 		NftmartOrder: nftmart_order::{Pallet, Call, Event<T>},
 	}
 );
 
 pub const ALICE: AccountId = AccountId::new([1u8; 32]);
+pub const BOB: AccountId = AccountId::new([2u8; 32]);
+pub const CLASS_ID: <Runtime as orml_nft::Config>::ClassId = 0;
 
 pub struct ExtBuilder;
 impl Default for ExtBuilder {
@@ -241,14 +243,45 @@ impl ExtBuilder {
 		.unwrap();
 
 		let mut ext = sp_io::TestExternalities::new(t);
-		ext.execute_with(|| System::set_block_number(1));
+		ext.execute_with(|| {
+			System::set_block_number(1);
+			NftmartConf::add_whitelist(Origin::root(), ALICE).unwrap();
+			NftmartConf::add_whitelist(Origin::root(), BOB).unwrap();
+		});
 		ext
 	}
 }
 
+#[allow(dead_code)]
 pub fn last_event() -> Event {
 	frame_system::Pallet::<Runtime>::events()
 		.pop()
 		.expect("Event expected")
 		.event
+}
+
+pub fn add_class(who: AccountId) {
+	assert_ok!(Nftmart::create_class(
+		Origin::signed(who),
+		vec![1], vec![1], vec![1],
+		Properties(ClassProperty::Transferable |
+			ClassProperty::Burnable |
+			ClassProperty::RoyaltiesChargeable)
+	));
+}
+
+pub fn class_id_account() -> AccountId {
+	<Runtime as nftmart_nft::Config>::ModuleId::get().into_sub_account(CLASS_ID)
+}
+
+pub fn add_token(who: AccountId, quantity: TokenId, charge_royalty: Option<bool>) {
+	let deposit = Nftmart::mint_token_deposit(1);
+	assert_eq!(Balances::deposit_into_existing(&class_id_account(), deposit).is_ok(), true);
+	assert_ok!(Nftmart::mint(
+		Origin::signed(class_id_account()),
+		who,
+		CLASS_ID,
+		vec![1],
+		quantity, charge_royalty,
+	));
 }

@@ -15,8 +15,8 @@ pub trait NftmartConfig<AccountId> {
 	fn dec_count_in_category (category_id: GlobalId) -> DispatchResult;
 }
 
-pub trait NftmartNft<AccountId> {
-	fn is_in_whitelist(_who: &AccountId) -> bool;
+pub trait NftmartNft<AccountId, ClassId, TokenId> {
+	fn free_quantity(_who: &AccountId, _class_id: ClassId, _token_id: TokenId) -> TokenId;
 }
 
 pub type NFTMetadata = Vec<u8>;

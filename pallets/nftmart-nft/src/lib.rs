@@ -510,8 +510,8 @@ impl<T: Config> Pallet<T> {
 	}
 }
 
-impl<T: Config> nftmart_traits::NftmartNft<T::AccountId> for Pallet<T> {
-	fn is_in_whitelist(_: &T::AccountId) -> bool {
-		true
+impl<T: Config> nftmart_traits::NftmartNft<T::AccountId, ClassIdOf<T>, TokenIdOf<T>> for Pallet<T> {
+	fn free_quantity(who: &T::AccountId, class_id: ClassIdOf<T>, token_id: TokenIdOf<T>) -> TokenIdOf<T> {
+		orml_nft::Pallet::<T>::tokens_by_owner(who, (class_id, token_id)).unwrap_or_default().quantity
 	}
 }

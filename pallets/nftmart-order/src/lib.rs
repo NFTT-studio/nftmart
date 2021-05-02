@@ -105,7 +105,7 @@ pub mod module {
 		type TokenId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy + MaybeSerializeDeserialize + codec::FullCodec;
 
 		/// NFTMart nft
-		type NFT: NftmartNft<Self::AccountId>;
+		type NFT: NftmartNft<Self::AccountId, Self::ClassId, Self::TokenId>;
 
 		/// Extra Configurations
 		type ExtraConfig: NftmartConfig<Self::AccountId>;
@@ -119,6 +119,8 @@ pub mod module {
 		SubmitOrderWithInvalidDeposit,
 		/// submit order with invalid deadline
 		SubmitOrderWithInvalidDeadline,
+		/// not token owner or not enough quantity
+		NotTokenOwnerOrNotEnoughQuantity,
 	}
 
 	#[pallet::event]
@@ -209,11 +211,10 @@ pub mod module {
 				category_id,
 				items: Vec::with_capacity(items.len()),
 			};
-			// check orders' ownership.
+			// check tokens' ownership.
 			for item in items{
 				let (class_id, token_id, quantity, price) = item;
-				// let token_info: TokenInfoOf<T> = orml_nft::Pallet::<T>::tokens(class_id, token_id).ok_or(nftmart_nft::Error::<T>::TokenIdNotFound)?;
-
+				ensure!(T::NFT::free_quantity(&who, class_id, token_id) >= quantity, Error::<T>::NotTokenOwnerOrNotEnoughQuantity);
 				order.items.push(OrderItem{
 					class_id,
 					token_id,
