@@ -221,7 +221,9 @@ construct_runtime!(
 
 pub const ALICE: AccountId = AccountId::new([1u8; 32]);
 pub const BOB: AccountId = AccountId::new([2u8; 32]);
-pub const CLASS_ID: <Runtime as orml_nft::Config>::ClassId = 0;
+pub const CLASS_ID0: <Runtime as orml_nft::Config>::ClassId = 0;
+pub const TOKEN_ID0: <Runtime as orml_nft::Config>::TokenId = 0;
+pub const TOKEN_ID1: <Runtime as orml_nft::Config>::TokenId = 1;
 
 pub struct ExtBuilder;
 impl Default for ExtBuilder {
@@ -237,7 +239,10 @@ impl ExtBuilder {
 			.unwrap();
 
 		pallet_balances::GenesisConfig::<Runtime> {
-			balances: vec![(ALICE, 100000)],
+			balances: vec![
+				(ALICE, 100000),
+				(BOB, 100),
+			],
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
@@ -270,18 +275,35 @@ pub fn add_class(who: AccountId) {
 	));
 }
 
-pub fn class_id_account() -> AccountId {
-	<Runtime as nftmart_nft::Config>::ModuleId::get().into_sub_account(CLASS_ID)
+pub fn class_id0_account() -> AccountId {
+	<Runtime as nftmart_nft::Config>::ModuleId::get().into_sub_account(CLASS_ID0)
 }
 
 pub fn add_token(who: AccountId, quantity: TokenId, charge_royalty: Option<bool>) {
 	let deposit = Nftmart::mint_token_deposit(1);
-	assert_eq!(Balances::deposit_into_existing(&class_id_account(), deposit).is_ok(), true);
+	assert_eq!(Balances::deposit_into_existing(&class_id0_account(), deposit).is_ok(), true);
 	assert_ok!(Nftmart::mint(
-		Origin::signed(class_id_account()),
+		Origin::signed(class_id0_account()),
 		who,
-		CLASS_ID,
+		CLASS_ID0,
 		vec![1],
 		quantity, charge_royalty,
 	));
+}
+
+pub fn add_category() {
+	assert_ok!(NftmartConf::create_category(Origin::root(), vec![1]));
+}
+
+pub fn all_tokens_by(who: AccountId) -> Vec<(ClassId, TokenId, orml_nft::AccountToken<TokenId>)> {
+	let v: Vec<_> = orml_nft::TokensByOwner::<Runtime>::iter().filter(|(account, (_c, _t), _data)| {
+		who == *account
+	}).map(|(_account, (c, t), data)| {
+		(c, t, data)
+	}).collect();
+	v.into_iter().rev().collect()
+}
+
+pub fn current_gid() -> GlobalId {
+	nftmart_config::Pallet::<Runtime>::next_id()
 }
