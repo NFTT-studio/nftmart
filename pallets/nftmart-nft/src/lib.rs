@@ -189,8 +189,8 @@ pub mod module {
 	pub enum Event<T: Config> {
 		/// Created NFT class. \[owner, class_id\]
 		CreatedClass(T::AccountId, ClassIdOf<T>),
-		/// Minted NFT token. \[from, to, class_id, quantity\]
-		MintedToken(T::AccountId, T::AccountId, ClassIdOf<T>, TokenIdOf<T>),
+		/// Minted NFT token. \[from, to, class_id, token_id, quantity\]
+		MintedToken(T::AccountId, T::AccountId, ClassIdOf<T>, TokenIdOf<T>, TokenIdOf<T>),
 		/// Transferred NFT token. \[from, to, class_id, token_id, quantity\]
 		TransferredToken(T::AccountId, T::AccountId, ClassIdOf<T>, TokenIdOf<T>, TokenIdOf<T>),
 		/// Burned NFT token. \[owner, class_id, token_id, quantity, unreserved\]
@@ -367,9 +367,9 @@ pub mod module {
 				royalty_beneficiary: to.clone(),
 			};
 
-			orml_nft::Pallet::<T>::mint(&to, class_id, metadata.clone(), data.clone(), quantity)?;
+			let token_id: TokenIdOf<T> = orml_nft::Pallet::<T>::mint(&to, class_id, metadata.clone(), data.clone(), quantity)?;
 
-			Self::deposit_event(Event::MintedToken(who, to, class_id, quantity));
+			Self::deposit_event(Event::MintedToken(who, to, class_id, token_id, quantity));
 			Ok(().into())
 		}
 

@@ -130,7 +130,7 @@ fn mint_should_work() {
 			vec![1],
 			2u64, None,
 		));
-		let event = Event::nftmart_nft(crate::Event::MintedToken(class_id_account(), BOB, CLASS_ID, 2u64));
+		let event = Event::nftmart_nft(crate::Event::MintedToken(class_id_account(), BOB, CLASS_ID, TOKEN_ID, 2u64));
 		assert_eq!(last_event(), event);
 
 		assert_eq!(reserved_balance(&class_id_account()), reserved);
