@@ -13,7 +13,7 @@ fn submit_order_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		add_class(ALICE);
 		add_token(BOB, 10, None);
-		add_token(BOB, 20, None);
+		add_token(BOB, 20, Some(false));
 
 		let cate_id = current_gid();
 		add_category();
@@ -24,12 +24,13 @@ fn submit_order_should_work() {
 		], all_tokens_by(BOB));
 
 		let order_id = current_gid();
+		let deposit = 10;
+		let price = 100;
+		let deadline = 2;
+
 		assert_ok!(NftmartOrder::submit_order(Origin::signed(BOB),
-			NATIVE_CURRENCY_ID,
-			cate_id,
-			1,
-			2,
-			vec![(CLASS_ID0, TOKEN_ID0, 10, 100), (CLASS_ID0, TOKEN_ID1, 20, 200)]
+			NATIVE_CURRENCY_ID, cate_id, deposit, price, deadline,
+			vec![(CLASS_ID0, TOKEN_ID0, 10), (CLASS_ID0, TOKEN_ID1, 20)]
 		));
 
 		assert_eq!(

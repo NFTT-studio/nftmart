@@ -20,6 +20,7 @@ mod mock;
 mod tests;
 
 pub use module::*;
+use orml_nft::TokenInfoOf;
 
 pub type TokenIdOf<T> = <T as orml_nft::Config>::TokenId;
 pub type ClassIdOf<T> = <T as orml_nft::Config>::ClassId;
@@ -114,7 +115,7 @@ pub mod migrations {
 #[frame_support::pallet]
 pub mod module {
 	use super::*;
-	use orml_nft::{TokenInfoOf, ClassInfoOf};
+	use orml_nft::{ClassInfoOf};
 	use sp_runtime::{PerU16};
 
 	#[pallet::config]
@@ -513,5 +514,19 @@ impl<T: Config> Pallet<T> {
 impl<T: Config> nftmart_traits::NftmartNft<T::AccountId, ClassIdOf<T>, TokenIdOf<T>> for Pallet<T> {
 	fn free_quantity(who: &T::AccountId, class_id: ClassIdOf<T>, token_id: TokenIdOf<T>) -> TokenIdOf<T> {
 		orml_nft::Pallet::<T>::tokens_by_owner(who, (class_id, token_id)).unwrap_or_default().quantity
+	}
+
+	fn reserve_tokens(who: &T::AccountId, class_id: ClassIdOf<T>, token_id: TokenIdOf<T>, quantity: TokenIdOf<T>) -> DispatchResult {
+		orml_nft::Pallet::<T>::reserve(who, (class_id, token_id), quantity)
+	}
+
+	fn unreserve_tokens(who: &T::AccountId, class_id: ClassIdOf<T>, token_id: TokenIdOf<T>, quantity: TokenIdOf<T>) -> DispatchResult {
+		orml_nft::Pallet::<T>::unreserve(who, (class_id, token_id), quantity)
+	}
+
+	fn token_charged_royalty(class_id: ClassIdOf<T>, token_id: TokenIdOf<T>) -> Result<bool, DispatchError> {
+		let token: TokenInfoOf<T> = orml_nft::Tokens::<T>::get(class_id, token_id).ok_or(Error::<T>::TokenIdNotFound)?;
+		let data: TokenData<T::AccountId, T::BlockNumber> = token.data;
+		Ok(data.royalty)
 	}
 }

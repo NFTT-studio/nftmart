@@ -43,9 +43,6 @@ pub struct OrderItem<ClassId, TokenId> {
 	/// quantity
 	#[codec(compact)]
 	pub quantity: TokenId,
-	/// Price of this token.
-	#[codec(compact)]
-	pub price: Balance,
 }
 
 #[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq)]
@@ -57,6 +54,9 @@ pub struct OrderData<CurrencyId, BlockNumber, CategoryId, ClassId, TokenId> {
 	/// The balances to create an order
 	#[codec(compact)]
 	pub deposit: Balance,
+	/// Price of this token.
+	#[codec(compact)]
+	pub price: Balance,
 	/// This order will be invalidated after `deadline` block number.
 	#[codec(compact)]
 	pub deadline: BlockNumber,
@@ -121,6 +121,8 @@ pub mod module {
 		SubmitOrderWithInvalidDeadline,
 		/// not token owner or not enough quantity
 		NotTokenOwnerOrNotEnoughQuantity,
+		/// too many token charged royalty
+		TooManyTokenChargedRoyalty,
 	}
 
 	#[pallet::event]
@@ -186,6 +188,7 @@ pub mod module {
 		/// - `currency_id`: currency id
 		/// - `category_id`: category id
 		/// - `deposit`: The balances to create an order
+		/// - `price`: nfts' price.
 		/// - `deadline`: deadline
 		/// - `items`: a list of `(class_id, token_id, quantity, price)`
 		#[pallet::weight(100_000)]
@@ -195,8 +198,9 @@ pub mod module {
 			#[pallet::compact] currency_id: CurrencyIdOf<T>,
 			#[pallet::compact] category_id: GlobalId,
 			#[pallet::compact] deposit: Balance,
+			#[pallet::compact] price: Balance,
 			#[pallet::compact] deadline: BlockNumberOf<T>,
-			items: Vec<(ClassIdOf<T>, TokenIdOf<T>, TokenIdOf<T>, Balance)>,
+			items: Vec<(ClassIdOf<T>, TokenIdOf<T>, TokenIdOf<T>)>,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
@@ -207,19 +211,31 @@ pub mod module {
 			let mut order = OrderData {
 				currency_id,
 				deposit,
+				price,
 				deadline,
 				category_id,
 				items: Vec::with_capacity(items.len()),
 			};
-			// check tokens' ownership.
+
+			let mut count_of_charged_royalty = 0u8;
+
+			// process all tokens
 			for item in items{
-				let (class_id, token_id, quantity, price) = item;
-				ensure!(T::NFT::free_quantity(&who, class_id, token_id) >= quantity, Error::<T>::NotTokenOwnerOrNotEnoughQuantity);
+				let (class_id, token_id, quantity) = item;
+
+				// check only one royalty constrains
+				if T::NFT::token_charged_royalty(class_id, token_id)? {
+					ensure!(count_of_charged_royalty == 0, Error::<T>::TooManyTokenChargedRoyalty);
+					count_of_charged_royalty += 1;
+				}
+
+				// reserve selling tokens
+				T::NFT::reserve_tokens(&who, class_id, token_id, quantity)?;
+
 				order.items.push(OrderItem{
 					class_id,
 					token_id,
 					quantity,
-					price,
 				})
 			}
 

@@ -1145,18 +1145,27 @@ parameter_types! {
 
 impl nftmart_nft::Config for Runtime {
 	type Event = Event;
-	type ExtraConfig = Config;
+	type ExtraConfig = NftmartConf;
 	type CreateClassDeposit = CreateClassDeposit;
 	type MetaDataByteDeposit = MetaDataByteDeposit;
 	type CreateTokenDeposit = CreateTokenDeposit;
 	type ModuleId = NftModuleId;
 	type Currency = Balances;
 	type MultiCurrency = Currencies;
-	type CategoryId = sp_core::constants_types::CategoryId;
 }
 
 impl nftmart_config::Config for Runtime {
 	type Event = Event;
+}
+
+impl nftmart_order::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Currencies;
+	type Currency = Balances;
+	type ClassId = sp_core::constants_types::ClassId;
+	type TokenId = sp_core::constants_types::TokenId;
+	type NFT = Nftmart;
+	type ExtraConfig = NftmartConf;
 }
 
 construct_runtime!(
@@ -1206,8 +1215,9 @@ construct_runtime!(
 		Tokens: orml_tokens::{Pallet, Storage, Event<T>, Config<T>},
 		Currencies: orml_currencies::{Pallet, Call, Event<T>},
 		OrmlNFT: orml_nft::{Pallet, Storage, Config<T>},
+		NftmartConf: nftmart_config::{Pallet, Call, Event<T>},
 		Nftmart: nftmart_nft::{Pallet, Call, Storage, Event<T>, Config<T>},
-		Config: nftmart_config::{Pallet, Call, Storage, Event<T>},
+		NftmartOrder: nftmart_order::{Pallet, Call, Event<T>},
 	}
 );
 
