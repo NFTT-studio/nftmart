@@ -11,7 +11,7 @@ pub use sp_core::constants_types::{GlobalId, Balance, ACCURACY, NATIVE_CURRENCY_
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::{
-	traits::{AtLeast32BitUnsigned},
+	traits::{AtLeast32BitUnsigned, StaticLookup},
 	RuntimeDebug, SaturatedConversion,
 };
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
@@ -47,7 +47,7 @@ pub struct OrderItem<ClassId, TokenId> {
 
 #[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub struct OrderData<CurrencyId, BlockNumber, CategoryId, ClassId, TokenId> {
+pub struct Order<CurrencyId, BlockNumber, CategoryId, ClassId, TokenId> {
 	/// currency ID.
 	#[codec(compact)]
 	pub currency_id: CurrencyId,
@@ -83,6 +83,7 @@ pub type ClassIdOf<T> = <T as module::Config>::ClassId;
 pub type BalanceOf<T> = <<T as module::Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 pub type CurrencyIdOf<T> = <<T as module::Config>::MultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::CurrencyId;
 pub type BlockNumberOf<T> = <T as frame_system::Config>::BlockNumber;
+pub type OrderOf<T> = Order<CurrencyIdOf<T>, BlockNumberOf<T>, GlobalId, ClassIdOf<T>, TokenIdOf<T>>;
 
 #[frame_support::pallet]
 pub mod module {
@@ -123,6 +124,10 @@ pub mod module {
 		NotTokenOwnerOrNotEnoughQuantity,
 		/// too many token charged royalty
 		TooManyTokenChargedRoyalty,
+		/// order not found
+		OrderNotFound,
+		/// cannot take one's own order
+		TakeOwnOrder,
 	}
 
 	#[pallet::event]
@@ -130,6 +135,10 @@ pub mod module {
 	pub enum Event<T: Config> {
 		/// CreatedOrder \[who, order_id\]
 		CreatedOrder(T::AccountId, GlobalId),
+		/// RemovedOrder \[who, order_id\]
+		RemovedOrder(T::AccountId, GlobalId),
+		/// TakenOrder \[purchaser, order_owner, order_id\]
+		TakenOrder(T::AccountId, T::AccountId, GlobalId),
 	}
 
 	#[pallet::pallet]
@@ -177,7 +186,7 @@ pub mod module {
 	/// Index/store orders by account as primary key and order id as secondary key.
 	#[pallet::storage]
 	#[pallet::getter(fn orders)]
-	pub type Orders<T: Config> = StorageDoubleMap<_, Blake2_128Concat, T::AccountId, Twox64Concat, GlobalId, OrderData<CurrencyIdOf<T>, BlockNumberOf<T>, GlobalId, ClassIdOf<T>, TokenIdOf<T>>>;
+	pub type Orders<T: Config> = StorageDoubleMap<_, Blake2_128Concat, T::AccountId, Twox64Concat, GlobalId, OrderOf<T>>;
 
 	// pub type Offers<T: Config> =
 
@@ -208,7 +217,7 @@ pub mod module {
 			<T as Config>::Currency::reserve(&who, deposit.saturated_into())?;
 
 			ensure!(frame_system::Pallet::<T>::block_number() < deadline, Error::<T>::SubmitOrderWithInvalidDeadline);
-			let mut order = OrderData {
+			let mut order = Order {
 				currency_id,
 				deposit,
 				price,
@@ -246,65 +255,36 @@ pub mod module {
 			Ok(().into())
 		}
 
-		// /// Take an NFT order.
-		// ///
-		// /// - `class_id`: class id
-		// /// - `token_id`: token id
-		// /// - `price`: The max/min price to take an order. Usually it is set to the price of the target order.
-		// #[pallet::weight(100_000)]
-		// #[transactional]
-		// pub fn take_order(
-		// 	origin: OriginFor<T>,
-		// 	#[pallet::compact] class_id: ClassIdOf<T>,
-		// 	#[pallet::compact] token_id: TokenIdOf<T>,
-		// 	#[pallet::compact] price: Balance,
-		// 	order_owner: <T::Lookup as StaticLookup>::Source,
-		// ) -> DispatchResultWithPostInfo {
-		// 	let who = ensure_signed(origin)?;
-		// 	let order_owner = T::Lookup::lookup(order_owner)?;
-		// 	// Simplify the logic, to make life easier.
-		// 	ensure!(order_owner != who, Error::<T>::TakeOwnOrder);
-		// 	let token_owner = orml_nft::Pallet::<T>::tokens(class_id, token_id).ok_or(Error::<T>::TokenIdNotFound)?.owner;
-		//
-		// 	let order: OrderData<T> = {
-		// 		let order = Self::orders((class_id, token_id), &order_owner);
-		// 		ensure!(order.is_some(), Error::<T>::OrderNotFound);
-		// 		let order = order.unwrap();
-		// 		ensure!(<frame_system::Pallet<T>>::block_number() <= order.deadline, Error::<T>::OrderExpired);
-		// 		order
-		// 	};
-		//
-		// 	match (order_owner == token_owner, token_owner == who) {
-		// 		(true, false) => {
-		// 			ensure!(price >= order.price, Error::<T>::CanNotAfford);
-		// 			// `who` will take the order submitting by `order_owner`/`token_owner`
-		// 			Self::delete_order(class_id, token_id, &order_owner)?;
-		// 			// Try to delete another order for safety.
-		// 			// Because `who` may have already submitted an order to the same token.
-		// 			Self::try_delete_order(class_id, token_id, &who);
-		// 			// `order_owner` transfers this NFT to `who`
-		// 			Self::do_transfer(&order_owner, &who, class_id, token_id)?;
-		// 			T::MultiCurrency::transfer(order.currency_id, &who, &order_owner, order.price)?;
-		// 			// TODO: T::MultiCurrency::transfer(order.currency_id, &order_owner, some_account,platform-fee)?;
-		// 			Self::deposit_event(Event::TakenOrder(class_id, token_id, order_owner));
-		// 		},
-		// 		(false, true) => {
-		// 			ensure!(price <= order.price, Error::<T>::PriceTooLow);
-		// 			// `who`/`token_owner` will accept the order submitted by `order_owner`
-		// 			Self::delete_order(class_id, token_id, &order_owner)?;
-		// 			Self::try_delete_order(class_id, token_id, &who);
-		// 			// `order_owner` transfers this NFT to `who`
-		// 			Self::do_transfer(&who, &order_owner, class_id, token_id)?;
-		// 			T::MultiCurrency::transfer(order.currency_id, &order_owner, &who, order.price)?;
-		// 			// TODO: T::MultiCurrency::transfer(order.currency_id, &who, some_account,platform-fee)?;
-		// 			Self::deposit_event(Event::TakenOrder(class_id, token_id, order_owner));
-		// 		},
-		// 		_ => {
-		// 			return Err(Error::<T>::NoPermission.into());
-		// 		},
-		// 	}
-		// 	Ok(().into())
-		// }
+		/// Take a NFT order.
+		///
+		/// - `order_id`: order id
+		/// - `order_owner`: token owner
+		#[pallet::weight(100_000)]
+		#[transactional]
+		pub fn take_order (
+			origin: OriginFor<T>,
+			#[pallet::compact] order_id: GlobalId,
+			order_owner: <T::Lookup as StaticLookup>::Source,
+		) -> DispatchResultWithPostInfo {
+			let purchaser = ensure_signed(origin)?;
+			let order_owner = T::Lookup::lookup(order_owner)?;
+
+			// Simplify the logic, to make life easier.
+			ensure!(purchaser != order_owner, Error::<T>::TakeOwnOrder);
+
+			let order: OrderOf<T>= Self::delete_order(&order_owner, order_id)?;
+
+			// Purchaser pays the money.
+			T::MultiCurrency::transfer(order.currency_id, &purchaser, &order_owner, order.price)?;
+
+			// OrderOwner/TokenOwner transfers the nfts to purchaser.
+			for item in &order.items {
+				T::NFT::transfer(&order_owner, &purchaser, item.class_id, item.token_id, item.quantity)?;
+			}
+
+			Self::deposit_event(Event::TakenOrder(purchaser, order_owner, order_id));
+			Ok(().into())
+		}
 
 		// /// remove an order by order owner.
 		// ///
@@ -325,34 +305,22 @@ pub mod module {
 }
 
 impl<T: Config> Pallet<T> {
+	fn delete_order(who: &T::AccountId, order_id: GlobalId) -> Result<OrderOf<T>, DispatchError> {
+		Orders::<T>::try_mutate_exists(who, order_id, |maybe_order| {
+			let order: OrderOf<T> = maybe_order.as_mut().ok_or(Error::<T>::OrderNotFound)?.clone();
 
-	// fn delete_order(class_id: ClassIdOf<T>, token_id: TokenIdOf<T>, who: &T::AccountId) -> DispatchResult {
-	// 	Orders::<T>::try_mutate_exists((class_id, token_id), who, |maybe_order| {
-	// 		let order = maybe_order.as_mut().ok_or(Error::<T>::OrderNotFound)?;
-	//
-	// 		let mut deposit: Balance = Zero::zero();
-	// 		if !order.by_token_owner {
-	// 			// todo: emit an event for `order.currency_id`.
-	// 			let d = T::MultiCurrency::unreserve(order.currency_id, &who, order.price.saturated_into());
-	// 			deposit = deposit.saturating_add(order.price).saturating_sub(d);
-	// 		}
-	//
-	// 		Categories::<T>::try_mutate(order.category_id, |category| -> DispatchResult {
-	// 			category.as_mut().map(|cate| cate.nft_count = cate.nft_count.saturating_sub(One::one()) );
-	// 			Ok(())
-	// 		})?;
-	//
-	// 		let deposit = {
-	// 			let d = <T as Config>::Currency::unreserve(&who, order.deposit.saturated_into());
-	// 			deposit.saturating_add(order.deposit).saturating_sub(d.saturated_into())
-	// 		};
-	// 		Self::deposit_event(Event::RemovedOrder(class_id, token_id, who.clone(), deposit.saturated_into()));
-	// 		*maybe_order = None;
-	// 		Ok(())
-	// 	})
-	// }
+			// Can we safely ignore this remain value?
+			let _remain: BalanceOf<T> = <T as Config>::Currency::unreserve(&who, order.deposit.saturated_into());
 
-	// fn try_delete_order(class_id: ClassIdOf<T>, token_id: TokenIdOf<T>, who: &T::AccountId) {
-	// 	let _ = Self::delete_order(class_id, token_id, who);
-	// }
+			for item in &order.items {
+				T::NFT::unreserve_tokens(who, item.class_id, item.token_id, item.quantity)?;
+			}
+
+			T::ExtraConfig::dec_count_in_category(order.category_id)?;
+
+			Self::deposit_event(Event::RemovedOrder(who.clone(), order_id));
+			*maybe_order = None;
+			Ok(order)
+		})
+	}
 }

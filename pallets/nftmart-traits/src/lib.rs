@@ -16,6 +16,7 @@ pub trait NftmartConfig<AccountId> {
 }
 
 pub trait NftmartNft<AccountId, ClassId, TokenId> {
+	fn transfer(from: &AccountId, to: &AccountId, class_id: ClassId, token_id: TokenId, quantity: TokenId) -> DispatchResult;
 	fn free_quantity(_who: &AccountId, _class_id: ClassId, _token_id: TokenId) -> TokenId;
 	fn reserve_tokens(who: &AccountId, class_id: ClassId, token_id: TokenId, quantity: TokenId) -> DispatchResult;
 	fn unreserve_tokens(who: &AccountId, class_id: ClassId, token_id: TokenId, quantity: TokenId) -> DispatchResult;

@@ -512,6 +512,11 @@ impl<T: Config> Pallet<T> {
 }
 
 impl<T: Config> nftmart_traits::NftmartNft<T::AccountId, ClassIdOf<T>, TokenIdOf<T>> for Pallet<T> {
+
+	fn transfer(from: &T::AccountId, to: &T::AccountId, class_id: ClassIdOf<T>, token_id: TokenIdOf<T>, quantity: TokenIdOf<T>) -> DispatchResult {
+		Self::do_transfer(from, to, class_id, token_id, quantity)
+	}
+
 	fn free_quantity(who: &T::AccountId, class_id: ClassIdOf<T>, token_id: TokenIdOf<T>) -> TokenIdOf<T> {
 		orml_nft::Pallet::<T>::tokens_by_owner(who, (class_id, token_id)).unwrap_or_default().quantity
 	}
