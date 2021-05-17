@@ -84,6 +84,11 @@ fn take_order_should_work() {
 		ensure_account(&BOB, CLASS_ID0, TOKEN_ID1, 0, 20);
 		ensure_account(&ALICE, CLASS_ID0, TOKEN_ID0, 0, 10);
 		ensure_account(&ALICE, CLASS_ID0, TOKEN_ID1, 0, 20);
+
+		assert_eq!(
+			last_event(),
+			Event::nftmart_order(crate::Event::TakenOrder(ALICE, BOB, order_id)),
+		);
 	});
 }
 

@@ -272,7 +272,7 @@ pub mod module {
 			// Simplify the logic, to make life easier.
 			ensure!(purchaser != order_owner, Error::<T>::TakeOwnOrder);
 
-			let order: OrderOf<T>= Self::delete_order(&order_owner, order_id)?;
+			let order: OrderOf<T> = Self::delete_order(&order_owner, order_id)?;
 
 			// Purchaser pays the money.
 			T::MultiCurrency::transfer(order.currency_id, &purchaser, &order_owner, order.price)?;
@@ -286,21 +286,20 @@ pub mod module {
 			Ok(().into())
 		}
 
-		// /// remove an order by order owner.
-		// ///
-		// /// - `class_id`: class id
-		// /// - `token_id`: token id
-		// #[pallet::weight(100_000)]
-		// #[transactional]
-		// pub fn remove_order(
-		// 	origin: OriginFor<T>,
-		// 	#[pallet::compact] class_id: ClassIdOf<T>,
-		// 	#[pallet::compact] token_id: TokenIdOf<T>,
-		// ) -> DispatchResultWithPostInfo {
-		// 	let who = ensure_signed(origin)?;
-		// 	Self::delete_order(class_id, token_id, &who)?;
-		// 	Ok(().into())
-		// }
+		/// remove an order by order owner.
+		///
+		/// - `order_id`: order id
+		#[pallet::weight(100_000)]
+		#[transactional]
+		pub fn remove_order(
+			origin: OriginFor<T>,
+			#[pallet::compact] order_id: GlobalId,
+		) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+			Self::delete_order(&who, order_id)?;
+			Self::deposit_event(Event::RemovedOrder(who, order_id));
+			Ok(().into())
+		}
 	}
 }
 
@@ -317,8 +316,6 @@ impl<T: Config> Pallet<T> {
 			}
 
 			T::ExtraConfig::dec_count_in_category(order.category_id)?;
-
-			Self::deposit_event(Event::RemovedOrder(who.clone(), order_id));
 			*maybe_order = None;
 			Ok(order)
 		})
