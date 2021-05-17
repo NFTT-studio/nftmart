@@ -6,6 +6,7 @@ use sp_core::constants_types::{Balance, GlobalId};
 #[cfg(feature = "std")]
 use serde::{Serialize, Deserialize};
 use enumflags2::BitFlags;
+pub use orml_traits::nft::{TokenInfo, ClassInfo, AccountToken};
 
 pub trait NftmartConfig<AccountId> {
 	fn is_in_whitelist(_who: &AccountId) -> bool;

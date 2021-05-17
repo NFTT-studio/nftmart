@@ -4113,6 +4113,7 @@ version = "3.0.0"
 dependencies = [
  "enumflags2",
  "frame-support",
+ "orml-traits",
  "parity-scale-codec",
  "serde",
  "sp-core",
@@ -4731,6 +4732,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "funty",
+ "orml-traits",
  "parity-scale-codec",
  "serde",
  "sp-core",

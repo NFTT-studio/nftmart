@@ -21,79 +21,16 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
 
-use codec::{Decode, Encode};
 use frame_support::{ensure, pallet_prelude::*, Parameter};
 use sp_runtime::{
 	traits::{AtLeast32BitUnsigned, CheckedAdd, CheckedSub, MaybeSerializeDeserialize, Member, One, Zero},
-	DispatchError, DispatchResult, RuntimeDebug,
+	DispatchError, DispatchResult,
 };
 use sp_std::vec::Vec;
+pub use orml_traits::nft::{TokenInfo, ClassInfo, AccountToken};
 
 mod mock;
 mod tests;
-
-/// Class info
-#[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug)]
-pub struct ClassInfo<TokenId, AccountId, Data> {
-	/// Class metadata
-	pub metadata: Vec<u8>,
-	/// Total issuance for the class
-	#[codec(compact)]
-	pub total_issuance: TokenId,
-	/// Class owner
-	pub owner: AccountId,
-	/// Class Properties
-	pub data: Data,
-}
-
-/// Token info
-#[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug)]
-pub struct TokenInfo<TokenId, Data> {
-	/// Token metadata
-	pub metadata: Vec<u8>,
-	/// Token Properties
-	pub data: Data,
-	/// Token's number.
-	#[codec(compact)]
-	pub quantity: TokenId,
-}
-
-/// Account Token
-#[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, RuntimeDebug)]
-pub struct AccountToken<TokenId> {
-	/// account token number.
-	#[codec(compact)]
-	pub quantity: TokenId,
-	/// account reserved token number.
-	#[codec(compact)]
-	pub reserved: TokenId,
-}
-
-impl<TokenId> Default for AccountToken<TokenId> where TokenId: AtLeast32BitUnsigned {
-	fn default() -> Self {
-		Self {
-			quantity: Zero::zero(),
-			reserved: Zero::zero(),
-		}
-	}
-}
-
-impl<TokenId> AccountToken<TokenId> where TokenId: AtLeast32BitUnsigned + Copy {
-	pub fn is_zero(&self) -> bool {
-		self.quantity.is_zero() && self.reserved.is_zero()
-	}
-
-	pub fn new(quantity: TokenId) -> Self {
-		Self{
-			quantity,
-			..Self::default()
-		}
-	}
-
-	pub fn total(&self) -> TokenId {
-		self.quantity.saturating_add(self.reserved)
-	}
-}
 
 pub use module::*;
 

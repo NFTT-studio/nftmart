@@ -15,6 +15,7 @@ sp-runtime = { version = "3.0.0", default-features = false, path = "../../primit
 
 frame-support = { version = "3.0.0", default-features = false, path = "../../frame/support" }
 frame-system = { version = "3.0.0", default-features = false, path = "../../frame/system" }
+orml-traits = { default-features = false, path = "../orml-traits" }
 
 funty = { version = "=1.1.0", default-features = false } # https://github.com/bitvecto-rs/bitvec/issues/105
 
@@ -31,5 +32,6 @@ std = [
 	"sp-runtime/std",
 	"frame-support/std",
 	"frame-system/std",
+	"orml-traits/std",
 ]
 disable-tokens-by-owner = []
