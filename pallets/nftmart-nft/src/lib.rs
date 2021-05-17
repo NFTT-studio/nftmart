@@ -14,7 +14,7 @@ use sp_runtime::{
 	RuntimeDebug, SaturatedConversion,
 };
 pub use nftmart_traits::{NftmartConfig, ClassData, ClassProperty, Properties,
-						 TokenData, NFTMetadata};
+						 TokenData, NFTMetadata, AccountToken};
 
 mod mock;
 mod tests;
@@ -517,8 +517,8 @@ impl<T: Config> nftmart_traits::NftmartNft<T::AccountId, ClassIdOf<T>, TokenIdOf
 		Self::do_transfer(from, to, class_id, token_id, quantity)
 	}
 
-	fn free_quantity(who: &T::AccountId, class_id: ClassIdOf<T>, token_id: TokenIdOf<T>) -> TokenIdOf<T> {
-		orml_nft::Pallet::<T>::tokens_by_owner(who, (class_id, token_id)).unwrap_or_default().quantity
+	fn account_token(who: &T::AccountId, class_id: ClassIdOf<T>, token_id: TokenIdOf<T>) -> AccountToken<TokenIdOf<T>> {
+		orml_nft::Pallet::<T>::tokens_by_owner(who, (class_id, token_id)).unwrap_or_default()
 	}
 
 	fn reserve_tokens(who: &T::AccountId, class_id: ClassIdOf<T>, token_id: TokenIdOf<T>, quantity: TokenIdOf<T>) -> DispatchResult {

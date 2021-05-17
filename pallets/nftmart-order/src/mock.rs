@@ -16,6 +16,7 @@ use sp_runtime::{
 	traits::{BlakeTwo256, IdentityLookup, AccountIdConversion},
 };
 use nftmart_traits::{Properties, ClassProperty};
+use orml_nft::AccountToken;
 
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
@@ -306,4 +307,10 @@ pub fn all_tokens_by(who: AccountId) -> Vec<(ClassId, TokenId, orml_nft::Account
 
 pub fn current_gid() -> GlobalId {
 	nftmart_config::Pallet::<Runtime>::next_id()
+}
+
+pub fn ensure_account(who: &AccountId, class_id: ClassId, token_id: TokenId, reserved: TokenId, free: TokenId) {
+	let account: AccountToken<TokenId> = orml_nft::Pallet::<Runtime>::tokens_by_owner(who, (class_id, token_id)).unwrap_or_default();
+	assert_eq!(account.reserved, reserved);
+	assert_eq!(account.quantity, free);
 }
