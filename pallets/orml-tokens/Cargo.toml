@@ -23,7 +23,7 @@ funty = { version = "=1.1.0", default-features = false } # https://github.com/bi
 sp-io = { version = "3.0.0", path = "../../primitives/io" }
 sp-core = { version = "3.0.0", path = "../../primitives/core" }
 pallet-treasury = { version = "3.0.0", path = "../../frame/treasury" }
-pallet-elections-phragmen = { version = "3.0.0", path = "../../frame/elections-phragmen" }
+pallet-elections-phragmen = { path = "../../frame/elections-phragmen" }
 
 [features]
 default = ["std"]
