@@ -165,9 +165,9 @@ impl orml_nft::Config for Runtime {
 }
 
 parameter_types! {
-	pub const CreateClassDeposit: Balance = 50;
-	pub const CreateTokenDeposit: Balance = 10;
-	pub const MetaDataByteDeposit: Balance = 1;
+	pub const CreateClassDeposit: Balance = 0;
+	pub const CreateTokenDeposit: Balance = 0;
+	pub const MetaDataByteDeposit: Balance = 0;
 	pub const NftModuleId: PalletId = PalletId(*b"nftmart*");
 }
 
@@ -236,17 +236,19 @@ impl Default for ExtBuilder {
 impl ExtBuilder {
 	pub fn build(self) -> sp_io::TestExternalities {
 		let mut t = frame_system::GenesisConfig::default()
-			.build_storage::<Runtime>()
-			.unwrap();
+			.build_storage::<Runtime>().unwrap();
 
 		pallet_balances::GenesisConfig::<Runtime> {
 			balances: vec![
-				(ALICE, 100000),
+				(ALICE, 200),
 				(BOB, 100),
 			],
-		}
-		.assimilate_storage(&mut t)
-		.unwrap();
+		}.assimilate_storage(&mut t).unwrap();
+
+		nftmart_config::GenesisConfig::<Runtime> {
+			min_order_deposit: 10,
+			..Default::default()
+		}.assimilate_storage(&mut t).unwrap();
 
 		let mut ext = sp_io::TestExternalities::new(t);
 		ext.execute_with(|| {
@@ -314,3 +316,11 @@ pub fn ensure_account(who: &AccountId, class_id: ClassId, token_id: TokenId, res
 	assert_eq!(account.reserved, reserved);
 	assert_eq!(account.quantity, free);
 }
+
+pub fn free_balance(who: &AccountId) -> Balance {
+	<Runtime as Config>::Currency::free_balance(who)
+}
+
+// pub fn reserved_balance(who: &AccountId) -> Balance {
+// 	<Runtime as Config>::Currency::reserved_balance(who)
+// }

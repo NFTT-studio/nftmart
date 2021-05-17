@@ -49,12 +49,12 @@ pub mod module {
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
-		royalties_rate: PerU16,
-		platform_fee_rate: PerU16,
-		max_distribution_reward: PerU16,
-		min_reference_deposit: Balance,
-		min_order_deposit: Balance,
-		_phantom: PhantomData<T>,
+		pub royalties_rate: PerU16,
+		pub platform_fee_rate: PerU16,
+		pub max_distribution_reward: PerU16,
+		pub min_reference_deposit: Balance,
+		pub min_order_deposit: Balance,
+		pub _phantom: PhantomData<T>,
 	}
 
 	#[cfg(feature = "std")]
