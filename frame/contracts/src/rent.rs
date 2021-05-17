@@ -407,10 +407,7 @@ where
 		);
 
 		// Check what happened after enaction of the verdict.
-		let alive_contract_info = match new_contract_info.map_err(|_| IsTombstone)? {
-			None => return Err(IsTombstone),
-			Some(contract) => contract,
-		};
+		let alive_contract_info = new_contract_info.map_err(|_| IsTombstone)?.ok_or_else(|| IsTombstone)?;
 
 		// Compute how much would the fee per block be with the *updated* balance.
 		let total_balance = T::Currency::total_balance(account);
@@ -463,16 +460,13 @@ where
 	///
 	/// Result<(CallerCodeSize, DestCodeSize), (DispatchError, CallerCodeSize, DestCodesize)>
 	pub fn restore_to(
-		origin: T::AccountId,
+		origin: &T::AccountId,
+		mut origin_contract: AliveContractInfo<T>,
 		dest: T::AccountId,
 		code_hash: CodeHash<T>,
 		rent_allowance: BalanceOf<T>,
 		delta: Vec<crate::exec::StorageKey>,
 	) -> Result<(u32, u32), (DispatchError, u32, u32)> {
-		let mut origin_contract = <ContractInfoOf<T>>::get(&origin)
-			.and_then(|c| c.get_alive())
-			.ok_or((Error::<T>::InvalidSourceContract.into(), 0, 0))?;
-
 		let child_trie_info = origin_contract.child_trie_info();
 
 		let current_block = <frame_system::Pallet<T>>::block_number();

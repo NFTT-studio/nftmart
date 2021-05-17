@@ -134,6 +134,21 @@ pub mod pallet {
 	pub type DoubleMap2<T, I = ()> =
 		StorageDoubleMap<_, Twox64Concat, u16, Blake2_128Concat, u32, u64>;
 
+	#[pallet::storage]
+	#[pallet::getter(fn nmap)]
+	pub type NMap<T, I = ()> = StorageNMap<_, storage::Key<Blake2_128Concat, u8>, u32>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn nmap2)]
+	pub type NMap2<T, I = ()> = StorageNMap<
+		_,
+		(
+			storage::Key<Twox64Concat, u16>,
+			storage::Key<Blake2_128Concat, u32>,
+		),
+		u64,
+	>;
+
 	#[pallet::genesis_config]
 	#[derive(Default)]
 	pub struct GenesisConfig {
@@ -181,13 +196,13 @@ pub mod pallet {
 	pub enum InherentError {
 	}
 
-	impl sp_inherents::IsFatalError for InherentError {
+	impl frame_support::inherent::IsFatalError for InherentError {
 		fn is_fatal_error(&self) -> bool {
 			unimplemented!();
 		}
 	}
 
-	pub const INHERENT_IDENTIFIER: sp_inherents::InherentIdentifier = *b"testpall";
+	pub const INHERENT_IDENTIFIER: frame_support::inherent::InherentIdentifier = *b"testpall";
 }
 
 // Test that a instantiable pallet with a generic genesis_config is correctly handled
@@ -447,6 +462,19 @@ fn storage_expand() {
 		k.extend(2u32.using_encoded(blake2_128_concat));
 		assert_eq!(unhashed::get::<u64>(&k), Some(3u64));
 		assert_eq!(&k[..32], &<pallet::DoubleMap2<Runtime>>::final_prefix());
+
+		<pallet::NMap<Runtime>>::insert((&1,), &3);
+		let mut k = [twox_128(b"Example"), twox_128(b"NMap")].concat();
+		k.extend(1u8.using_encoded(blake2_128_concat));
+		assert_eq!(unhashed::get::<u32>(&k), Some(3u32));
+		assert_eq!(&k[..32], &<pallet::NMap<Runtime>>::final_prefix());
+
+		<pallet::NMap2<Runtime>>::insert((&1, &2), &3);
+		let mut k = [twox_128(b"Example"), twox_128(b"NMap2")].concat();
+		k.extend(1u16.using_encoded(twox_64_concat));
+		k.extend(2u32.using_encoded(blake2_128_concat));
+		assert_eq!(unhashed::get::<u64>(&k), Some(3u64));
+		assert_eq!(&k[..32], &<pallet::NMap2<Runtime>>::final_prefix());
 	});
 
 	TestExternalities::default().execute_with(|| {
@@ -479,6 +507,19 @@ fn storage_expand() {
 		k.extend(2u32.using_encoded(blake2_128_concat));
 		assert_eq!(unhashed::get::<u64>(&k), Some(3u64));
 		assert_eq!(&k[..32], &<pallet::DoubleMap2<Runtime, pallet::Instance1>>::final_prefix());
+
+		<pallet::NMap<Runtime, pallet::Instance1>>::insert((&1,), &3);
+		let mut k = [twox_128(b"Instance1Example"), twox_128(b"NMap")].concat();
+		k.extend(1u8.using_encoded(blake2_128_concat));
+		assert_eq!(unhashed::get::<u32>(&k), Some(3u32));
+		assert_eq!(&k[..32], &<pallet::NMap<Runtime, pallet::Instance1>>::final_prefix());
+
+		<pallet::NMap2<Runtime, pallet::Instance1>>::insert((&1, &2), &3);
+		let mut k = [twox_128(b"Instance1Example"), twox_128(b"NMap2")].concat();
+		k.extend(1u16.using_encoded(twox_64_concat));
+		k.extend(2u32.using_encoded(blake2_128_concat));
+		assert_eq!(unhashed::get::<u64>(&k), Some(3u64));
+		assert_eq!(&k[..32], &<pallet::NMap2<Runtime, pallet::Instance1>>::final_prefix());
 	});
 }
 
@@ -617,6 +658,36 @@ fn metadata() {
 					default: DecodeDifferent::Decoded(vec![0]),
 					documentation: DecodeDifferent::Decoded(vec![]),
 				},
+				StorageEntryMetadata {
+					name: DecodeDifferent::Decoded("NMap".to_string()),
+					modifier: StorageEntryModifier::Optional,
+					ty: StorageEntryType::NMap {
+						keys: DecodeDifferent::Decoded(vec!["u8".to_string()]),
+						hashers: DecodeDifferent::Decoded(vec![
+							StorageHasher::Blake2_128Concat,
+						]),
+						value: DecodeDifferent::Decoded("u32".to_string()),
+					},
+					default: DecodeDifferent::Decoded(vec![0]),
+					documentation: DecodeDifferent::Decoded(vec![]),
+				},
+				StorageEntryMetadata {
+					name: DecodeDifferent::Decoded("NMap2".to_string()),
+					modifier: StorageEntryModifier::Optional,
+					ty: StorageEntryType::NMap {
+						keys: DecodeDifferent::Decoded(vec![
+							"u16".to_string(),
+							"u32".to_string(),
+						]),
+						hashers: DecodeDifferent::Decoded(vec![
+							StorageHasher::Twox64Concat,
+							StorageHasher::Blake2_128Concat,
+						]),
+						value: DecodeDifferent::Decoded("u64".to_string()),
+					},
+					default: DecodeDifferent::Decoded(vec![0]),
+					documentation: DecodeDifferent::Decoded(vec![]),
+				},
 			]),
 		})),
 		calls: Some(DecodeDifferent::Decoded(vec![
@@ -696,7 +767,7 @@ fn metadata() {
 
 
 	let metadata = match Runtime::metadata().1 {
-		RuntimeMetadata::V12(metadata) => metadata,
+		RuntimeMetadata::V13(metadata) => metadata,
 		_ => panic!("metadata has been bump, test needs to be updated"),
 	};
 
@@ -711,4 +782,19 @@ fn metadata() {
 
 	pretty_assertions::assert_eq!(pallet_metadata, expected_pallet_metadata);
 	pretty_assertions::assert_eq!(pallet_instance1_metadata, expected_pallet_instance1_metadata);
+}
+
+#[test]
+fn test_pallet_info_access() {
+	assert_eq!(<System as frame_support::traits::PalletInfoAccess>::name(), "System");
+	assert_eq!(<Example as frame_support::traits::PalletInfoAccess>::name(), "Example");
+	assert_eq!(<Instance1Example as frame_support::traits::PalletInfoAccess>::name(), "Instance1Example");
+	assert_eq!(<Example2 as frame_support::traits::PalletInfoAccess>::name(), "Example2");
+	assert_eq!(<Instance1Example2 as frame_support::traits::PalletInfoAccess>::name(), "Instance1Example2");
+
+	assert_eq!(<System as frame_support::traits::PalletInfoAccess>::index(), 0);
+	assert_eq!(<Example as frame_support::traits::PalletInfoAccess>::index(), 1);
+	assert_eq!(<Instance1Example as frame_support::traits::PalletInfoAccess>::index(), 2);
+	assert_eq!(<Example2 as frame_support::traits::PalletInfoAccess>::index(), 3);
+	assert_eq!(<Instance1Example2 as frame_support::traits::PalletInfoAccess>::index(), 4);
 }
