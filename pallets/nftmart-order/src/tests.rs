@@ -4,7 +4,9 @@ use super::{NATIVE_CURRENCY_ID};
 use crate::mock::{add_class, ExtBuilder, ALICE, BOB, free_balance,
 				  Origin, add_token, all_tokens_by, add_category,
 				  NftmartOrder, CLASS_ID0, TOKEN_ID1, TOKEN_ID0,
-				  last_event, Event, current_gid, ensure_account};
+				  last_event, Event, current_gid, ensure_account,
+				  CHARLIE,
+};
 use orml_nft::AccountToken;
 use frame_support::{assert_ok};
 
@@ -14,20 +16,19 @@ fn submit_order_should_work() {
 		add_class(ALICE);
 		add_token(BOB, 20, None);
 		add_token(BOB, 40, Some(false));
-
-		let cate_id = current_gid();
-		add_category();
-
 		assert_eq!(vec![
 			(CLASS_ID0, TOKEN_ID0, AccountToken { quantity: 20, reserved: 0 }),
 			(CLASS_ID0, TOKEN_ID1, AccountToken { quantity: 40, reserved: 0 })
 		], all_tokens_by(BOB));
 
-		let order_id = current_gid();
+		let cate_id = current_gid();
+		add_category();
+
 		let deposit = 10;
 		let price = 100;
 		let deadline = 2;
 
+		let order_id = current_gid();
 		assert_ok!(NftmartOrder::submit_order(Origin::signed(BOB),
 			NATIVE_CURRENCY_ID, cate_id, deposit, price, deadline,
 			vec![(CLASS_ID0, TOKEN_ID0, 10), (CLASS_ID0, TOKEN_ID1, 20)]
@@ -56,26 +57,15 @@ fn take_order_should_work() {
 		let cate_id = current_gid();
 		add_category();
 
-		assert_eq!(vec![
-			(CLASS_ID0, TOKEN_ID0, AccountToken { quantity: 20, reserved: 0 }),
-			(CLASS_ID0, TOKEN_ID1, AccountToken { quantity: 40, reserved: 0 })
-		], all_tokens_by(BOB));
-
-		let order_id = current_gid();
 		let deposit = 10;
 		let price = 100;
 		let deadline = 2;
 
+		let order_id = current_gid();
 		assert_ok!(NftmartOrder::submit_order(Origin::signed(BOB),
 			NATIVE_CURRENCY_ID, cate_id, deposit, price, deadline,
 			vec![(CLASS_ID0, TOKEN_ID0, 10), (CLASS_ID0, TOKEN_ID1, 20)]
 		));
-
-		assert_eq!(
-			last_event(),
-			Event::nftmart_order(crate::Event::CreatedOrder(BOB, order_id)),
-		);
-
 		assert_ok!(NftmartOrder::take_order(Origin::signed(ALICE), order_id, BOB));
 
 		assert_eq!(98, free_balance(&ALICE));
@@ -92,3 +82,31 @@ fn take_order_should_work() {
 	});
 }
 
+#[test]
+fn submit_offer_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		add_class(ALICE);
+		add_token(BOB, 20, None);
+		add_token(BOB, 40, Some(false));
+		assert_eq!(100, free_balance(&CHARLIE));
+
+		let cate_id = current_gid();
+		add_category();
+
+		let price = 100;
+		let deadline = 2;
+
+		let order_id = current_gid();
+		assert_ok!(NftmartOrder::submit_offer(Origin::signed(CHARLIE),
+			NATIVE_CURRENCY_ID, cate_id, price, deadline,
+			vec![(CLASS_ID0, TOKEN_ID0, 10), (CLASS_ID0, TOKEN_ID1, 20)]
+		));
+
+		assert_eq!(
+			last_event(),
+			Event::nftmart_order(crate::Event::CreatedOffer(CHARLIE, order_id)),
+		);
+
+		assert_eq!(0, free_balance(&CHARLIE));
+	});
+}

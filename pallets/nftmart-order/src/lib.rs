@@ -136,6 +136,7 @@ pub mod module {
 		TooManyTokenChargedRoyalty,
 		/// order not found
 		OrderNotFound,
+		OfferNotFound,
 		/// cannot take one's own order
 		TakeOwnOrder,
 	}
@@ -147,6 +148,7 @@ pub mod module {
 		CreatedOrder(T::AccountId, GlobalId),
 		/// RemovedOrder \[who, order_id\]
 		RemovedOrder(T::AccountId, GlobalId),
+		RemovedOffer(T::AccountId, GlobalId),
 		/// TakenOrder \[purchaser, order_owner, order_id\]
 		TakenOrder(T::AccountId, T::AccountId, GlobalId),
 		/// CreatedOffer \[who, order_id\]
@@ -319,6 +321,21 @@ pub mod module {
 			Ok(().into())
 		}
 
+		/// remove an offer by offer owner.
+		///
+		/// - `order_id`: order id
+		#[pallet::weight(100_000)]
+		#[transactional]
+		pub fn remove_offer(
+			origin: OriginFor<T>,
+			#[pallet::compact] offer_id: GlobalId,
+		) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+			Self::delete_offer(&who, offer_id)?;
+			Self::deposit_event(Event::RemovedOffer(who, offer_id));
+			Ok(().into())
+		}
+
 		#[pallet::weight(100_000)]
 		#[transactional]
 		pub fn submit_offer(
@@ -386,6 +403,19 @@ impl<T: Config> Pallet<T> {
 			T::ExtraConfig::dec_count_in_category(order.category_id)?;
 			*maybe_order = None;
 			Ok(order)
+		})
+	}
+
+	fn delete_offer(who: &T::AccountId, order_id: GlobalId) -> Result<OfferOf<T>, DispatchError> {
+		Offers::<T>::try_mutate_exists(who, order_id, |maybe_offer| {
+			let offer: OfferOf<T> = maybe_offer.as_mut().ok_or(Error::<T>::OfferNotFound)?.clone();
+
+			// Can we safely ignore this remain value?
+			let _remain: Balance = T::MultiCurrency::unreserve(offer.currency_id, who, offer.price);
+
+			T::ExtraConfig::dec_count_in_category(offer.category_id)?;
+			*maybe_offer = None;
+			Ok(offer)
 		})
 	}
 }

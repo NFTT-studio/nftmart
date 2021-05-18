@@ -222,6 +222,8 @@ construct_runtime!(
 
 pub const ALICE: AccountId = AccountId::new([1u8; 32]);
 pub const BOB: AccountId = AccountId::new([2u8; 32]);
+pub const CHARLIE: AccountId = AccountId::new([3u8; 32]);
+pub const DAVE: AccountId = AccountId::new([4u8; 32]);
 pub const CLASS_ID0: <Runtime as orml_nft::Config>::ClassId = 0;
 pub const TOKEN_ID0: <Runtime as orml_nft::Config>::TokenId = 0;
 pub const TOKEN_ID1: <Runtime as orml_nft::Config>::TokenId = 1;
@@ -242,6 +244,8 @@ impl ExtBuilder {
 			balances: vec![
 				(ALICE, 200),
 				(BOB, 100),
+				(CHARLIE, 100),
+				(DAVE, 100),
 			],
 		}.assimilate_storage(&mut t).unwrap();
 
@@ -255,6 +259,8 @@ impl ExtBuilder {
 			System::set_block_number(1);
 			NftmartConf::add_whitelist(Origin::root(), ALICE).unwrap();
 			NftmartConf::add_whitelist(Origin::root(), BOB).unwrap();
+			NftmartConf::add_whitelist(Origin::root(), CHARLIE).unwrap();
+			NftmartConf::add_whitelist(Origin::root(), DAVE).unwrap();
 		});
 		ext
 	}
