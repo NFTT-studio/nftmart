@@ -313,6 +313,14 @@ pub fn all_tokens_by(who: AccountId) -> Vec<(ClassId, TokenId, orml_nft::Account
 	v.into_iter().rev().collect()
 }
 
+pub fn all_orders() -> Vec<OrderOf<Runtime>> {
+	nftmart_order::Orders::<Runtime>::iter().map(|(_who, _order_id, order)|order).collect()
+}
+
+pub fn all_offers() -> Vec<OfferOf<Runtime>> {
+	nftmart_order::Offers::<Runtime>::iter().map(|(_who, _order_id, offer)|offer).collect()
+}
+
 pub fn current_gid() -> GlobalId {
 	nftmart_config::Pallet::<Runtime>::next_id()
 }

@@ -139,6 +139,7 @@ pub mod module {
 		OfferNotFound,
 		/// cannot take one's own order
 		TakeOwnOrder,
+		TakeOwnOffer,
 	}
 
 	#[pallet::event]
@@ -151,6 +152,8 @@ pub mod module {
 		RemovedOffer(T::AccountId, GlobalId),
 		/// TakenOrder \[purchaser, order_owner, order_id\]
 		TakenOrder(T::AccountId, T::AccountId, GlobalId),
+		/// TakenOrder \[token_owner, offer_owner, order_id\]
+		TakenOffer(T::AccountId, T::AccountId, GlobalId),
 		/// CreatedOffer \[who, order_id\]
 		CreatedOffer(T::AccountId, GlobalId),
 	}
@@ -323,7 +326,7 @@ pub mod module {
 
 		/// remove an offer by offer owner.
 		///
-		/// - `order_id`: order id
+		/// - `offer_id`: offer id
 		#[pallet::weight(100_000)]
 		#[transactional]
 		pub fn remove_offer(
@@ -380,9 +383,51 @@ pub mod module {
 			}
 
 			T::ExtraConfig::inc_count_in_category(category_id)?;
-			let order_id = T::ExtraConfig::get_then_inc_id()?;
-			Offers::<T>::insert(&purchaser, order_id, offer);
-			Self::deposit_event(Event::CreatedOffer(purchaser, order_id));
+			let offer_id = T::ExtraConfig::get_then_inc_id()?;
+			Offers::<T>::insert(&purchaser, offer_id, offer);
+			Self::deposit_event(Event::CreatedOffer(purchaser, offer_id));
+			Ok(().into())
+		}
+
+		/// Take a NFT offer.
+		///
+		/// - `offer_id`: offer id
+		/// - `offer_owner`: token owner
+		#[pallet::weight(100_000)]
+		#[transactional]
+		pub fn take_offer (
+			origin: OriginFor<T>,
+			#[pallet::compact] offer_id: GlobalId,
+			offer_owner: <T::Lookup as StaticLookup>::Source,
+		) -> DispatchResultWithPostInfo {
+			let token_owner = ensure_signed(origin)?;
+			let offer_owner = T::Lookup::lookup(offer_owner)?;
+
+			// Simplify the logic, to make life easier.
+			ensure!(offer_owner != token_owner, Error::<T>::TakeOwnOffer);
+
+			let offer: OfferOf<T> = Self::delete_offer(&offer_owner, offer_id)?;
+
+			// Check deadline of this offer
+			ensure!(frame_system::Pallet::<T>::block_number() < offer.deadline, Error::<T>::TakeExpiredOrderOrOffer);
+
+			// offer_owner pays the money.
+			T::MultiCurrency::transfer(offer.currency_id, &offer_owner, &token_owner, offer.price)?;
+
+			let mut count_of_charged_royalty = 0u8;
+
+			// token_owner transfers the nfts to offer_owner.
+			for item in &offer.items {
+				// check only one royalty constrains
+				if T::NFT::token_charged_royalty(item.class_id, item.token_id)? {
+					ensure!(count_of_charged_royalty == 0, Error::<T>::TooManyTokenChargedRoyalty);
+					count_of_charged_royalty += 1;
+				}
+
+				T::NFT::transfer(&token_owner, &offer_owner, item.class_id, item.token_id, item.quantity)?;
+			}
+
+			Self::deposit_event(Event::TakenOffer(token_owner, offer_owner, offer_id));
 			Ok(().into())
 		}
 	}
