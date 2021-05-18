@@ -23,14 +23,6 @@ mod tests;
 
 pub use module::*;
 
-// #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode, RuntimeDebug)]
-// pub enum OrderKind {
-// 	Normal,
-// 	Offer,
-// 	British,
-// 	Dutch,
-// }
-
 #[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct OrderItem<ClassId, TokenId> {
@@ -64,7 +56,26 @@ pub struct Order<CurrencyId, BlockNumber, CategoryId, ClassId, TokenId> {
 	#[codec(compact)]
 	pub category_id: CategoryId,
 	/// nft list
-	pub items: Vec<OrderItem<ClassId, TokenId>>
+	pub items: Vec<OrderItem<ClassId, TokenId>>,
+}
+
+#[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub struct Offer<CurrencyId, BlockNumber, CategoryId, ClassId, TokenId> {
+	/// currency ID.
+	#[codec(compact)]
+	pub currency_id: CurrencyId,
+	/// Price of this token.
+	#[codec(compact)]
+	pub price: Balance,
+	/// This order will be invalidated after `deadline` block number.
+	#[codec(compact)]
+	pub deadline: BlockNumber,
+	/// Category of this order.
+	#[codec(compact)]
+	pub category_id: CategoryId,
+	/// nft list
+	pub items: Vec<OrderItem<ClassId, TokenId>>,
 }
 
 #[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug)]
@@ -84,6 +95,7 @@ pub type BalanceOf<T> = <<T as module::Config>::Currency as Currency<<T as frame
 pub type CurrencyIdOf<T> = <<T as module::Config>::MultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::CurrencyId;
 pub type BlockNumberOf<T> = <T as frame_system::Config>::BlockNumber;
 pub type OrderOf<T> = Order<CurrencyIdOf<T>, BlockNumberOf<T>, GlobalId, ClassIdOf<T>, TokenIdOf<T>>;
+pub type OfferOf<T> = Offer<CurrencyIdOf<T>, BlockNumberOf<T>, GlobalId, ClassIdOf<T>, TokenIdOf<T>>;
 
 #[frame_support::pallet]
 pub mod module {
@@ -114,14 +126,12 @@ pub mod module {
 
 	#[pallet::error]
 	pub enum Error<T> {
-		/// no available order id
-		NoAvailableOrderId,
-		/// submit order with invalid deposit
-		SubmitOrderWithInvalidDeposit,
-		/// submit order with invalid deadline
-		SubmitOrderWithInvalidDeadline,
-		/// not token owner or not enough quantity
-		NotTokenOwnerOrNotEnoughQuantity,
+		/// submit with invalid deposit
+		SubmitWithInvalidDeposit,
+		/// submit with invalid deadline
+		SubmitWithInvalidDeadline,
+		// Take Expired Order or Offer
+		TakeExpiredOrderOrOffer,
 		/// too many token charged royalty
 		TooManyTokenChargedRoyalty,
 		/// order not found
@@ -139,6 +149,8 @@ pub mod module {
 		RemovedOrder(T::AccountId, GlobalId),
 		/// TakenOrder \[purchaser, order_owner, order_id\]
 		TakenOrder(T::AccountId, T::AccountId, GlobalId),
+		/// CreatedOffer \[who, order_id\]
+		CreatedOffer(T::AccountId, GlobalId),
 	}
 
 	#[pallet::pallet]
@@ -188,7 +200,10 @@ pub mod module {
 	#[pallet::getter(fn orders)]
 	pub type Orders<T: Config> = StorageDoubleMap<_, Blake2_128Concat, T::AccountId, Twox64Concat, GlobalId, OrderOf<T>>;
 
-	// pub type Offers<T: Config> =
+	/// Index/store offers by account as primary key and order id as secondary key.
+	#[pallet::storage]
+	#[pallet::getter(fn offers)]
+	pub type Offers<T: Config> = StorageDoubleMap<_, Blake2_128Concat, T::AccountId, Twox64Concat, GlobalId, OfferOf<T>>;
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -213,10 +228,10 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			ensure!(deposit >= T::ExtraConfig::get_min_order_deposit(), Error::<T>::SubmitOrderWithInvalidDeposit);
+			ensure!(deposit >= T::ExtraConfig::get_min_order_deposit(), Error::<T>::SubmitWithInvalidDeposit);
 			<T as Config>::Currency::reserve(&who, deposit.saturated_into())?;
 
-			ensure!(frame_system::Pallet::<T>::block_number() < deadline, Error::<T>::SubmitOrderWithInvalidDeadline);
+			ensure!(frame_system::Pallet::<T>::block_number() < deadline, Error::<T>::SubmitWithInvalidDeadline);
 			let mut order = Order {
 				currency_id,
 				deposit,
@@ -274,6 +289,9 @@ pub mod module {
 
 			let order: OrderOf<T> = Self::delete_order(&order_owner, order_id)?;
 
+			// Check deadline of this order
+			ensure!(frame_system::Pallet::<T>::block_number() < order.deadline, Error::<T>::TakeExpiredOrderOrOffer);
+
 			// Purchaser pays the money.
 			T::MultiCurrency::transfer(order.currency_id, &purchaser, &order_owner, order.price)?;
 
@@ -298,6 +316,56 @@ pub mod module {
 			let who = ensure_signed(origin)?;
 			Self::delete_order(&who, order_id)?;
 			Self::deposit_event(Event::RemovedOrder(who, order_id));
+			Ok(().into())
+		}
+
+		#[pallet::weight(100_000)]
+		#[transactional]
+		pub fn submit_offer(
+			origin: OriginFor<T>,
+			#[pallet::compact] currency_id: CurrencyIdOf<T>,
+			#[pallet::compact] category_id: GlobalId,
+			#[pallet::compact] price: Balance,
+			#[pallet::compact] deadline: BlockNumberOf<T>,
+			items: Vec<(ClassIdOf<T>, TokenIdOf<T>, TokenIdOf<T>)>,
+		) -> DispatchResultWithPostInfo {
+			let purchaser = ensure_signed(origin)?;
+			ensure!(frame_system::Pallet::<T>::block_number() < deadline, Error::<T>::SubmitWithInvalidDeadline);
+
+			// Reserve balances of `currency_id` for tokenOwner to accept this offer.
+			T::MultiCurrency::reserve(currency_id, &purchaser, price)?;
+
+			let mut offer = Offer {
+				currency_id,
+				price,
+				deadline,
+				category_id,
+				items: Vec::with_capacity(items.len()),
+			};
+
+			let mut count_of_charged_royalty = 0u8;
+
+			// process all tokens
+			for item in items {
+				let (class_id, token_id, quantity) = item;
+
+				// check only one royalty constrains
+				if T::NFT::token_charged_royalty(class_id, token_id)? {
+					ensure!(count_of_charged_royalty == 0, Error::<T>::TooManyTokenChargedRoyalty);
+					count_of_charged_royalty += 1;
+				}
+
+				offer.items.push(OrderItem {
+					class_id,
+					token_id,
+					quantity,
+				})
+			}
+
+			T::ExtraConfig::inc_count_in_category(category_id)?;
+			let order_id = T::ExtraConfig::get_then_inc_id()?;
+			Offers::<T>::insert(&purchaser, order_id, offer);
+			Self::deposit_event(Event::CreatedOffer(purchaser, order_id));
 			Ok(().into())
 		}
 	}
