@@ -4032,6 +4032,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "nftmart-auction"
+version = "3.0.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "nftmart-config",
+ "nftmart-nft",
+ "nftmart-traits",
+ "orml-currencies",
+ "orml-nft",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-balances",
+ "pallet-proxy",
+ "pallet-timestamp",
+ "pallet-utility",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "nftmart-config"
 version = "3.0.0"
 dependencies = [
