@@ -126,7 +126,7 @@ pub mod module {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 		/// Extra Configurations
-		type ExtraConfig: NftmartConfig<Self::AccountId>;
+		type ExtraConfig: NftmartConfig<Self::AccountId, BlockNumberFor<Self>>;
 
 		/// The minimum balance to create class
 		#[pallet::constant]

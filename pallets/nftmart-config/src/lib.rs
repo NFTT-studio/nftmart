@@ -54,6 +54,7 @@ pub mod module {
 		pub max_distribution_reward: PerU16,
 		pub min_reference_deposit: Balance,
 		pub min_order_deposit: Balance,
+		pub auction_delay: BlockNumberFor<T>,
 		pub _phantom: PhantomData<T>,
 	}
 
@@ -66,6 +67,7 @@ pub mod module {
 				max_distribution_reward: PerU16::from_percent(100),
 				min_reference_deposit: ACCURACY,
 				min_order_deposit: ACCURACY,
+				auction_delay: 10u32.into(),
 				_phantom: Default::default(),
 			}
 		}
@@ -85,8 +87,14 @@ pub mod module {
 			MaxDistributionReward::<T>::put(self.max_distribution_reward);
 			MinReferenceDeposit::<T>::put(self.min_reference_deposit);
 			MinOrderDeposit::<T>::put(self.min_order_deposit);
+			AuctionDelay::<T>::put(self.auction_delay);
 		}
 	}
+
+	/// auction delay
+	#[pallet::storage]
+	#[pallet::getter(fn auction_delay)]
+	pub type AuctionDelay<T: Config> = StorageValue<_, BlockNumberFor<T>, ValueQuery>;
 
 	/// Whitelist for class creation
 	#[pallet::storage]
@@ -175,7 +183,7 @@ pub mod module {
 		pub fn create_category(origin: OriginFor<T>, metadata: NFTMetadata) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
 
-			let category_id = <Self as NftmartConfig<T::AccountId>>::get_then_inc_id()?;
+			let category_id = <Self as NftmartConfig<T::AccountId, BlockNumberFor<T>>>::get_then_inc_id()?;
 
 			let info = CategoryData {
 				metadata,
@@ -208,7 +216,11 @@ pub mod module {
 	}
 }
 
-impl<T: Config> NftmartConfig<T::AccountId> for Pallet<T> {
+impl<T: Config> NftmartConfig<T::AccountId, BlockNumberFor<T>> for Pallet<T> {
+	fn auction_delay() -> BlockNumberFor<T> {
+		AuctionDelay::<T>::get()
+	}
+
 	fn is_in_whitelist(who: &T::AccountId) -> bool {
 		Self::account_whitelist(who).is_some()
 	}

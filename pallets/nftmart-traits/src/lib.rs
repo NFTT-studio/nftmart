@@ -8,7 +8,8 @@ use serde::{Serialize, Deserialize};
 use enumflags2::BitFlags;
 pub use orml_traits::nft::{TokenInfo, ClassInfo, AccountToken};
 
-pub trait NftmartConfig<AccountId> {
+pub trait NftmartConfig<AccountId, BlockNumber> {
+	fn auction_delay() -> BlockNumber;
 	fn is_in_whitelist(_who: &AccountId) -> bool;
 	fn get_min_order_deposit() -> Balance;
 	fn get_then_inc_id() -> Result<GlobalId, DispatchError>;

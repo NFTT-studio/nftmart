@@ -106,7 +106,7 @@ pub mod module {
 		type NFT: NftmartNft<Self::AccountId, Self::ClassId, Self::TokenId>;
 
 		/// Extra Configurations
-		type ExtraConfig: NftmartConfig<Self::AccountId>;
+		type ExtraConfig: NftmartConfig<Self::AccountId, BlockNumberFor<Self>>;
 	}
 
 	#[pallet::error]
