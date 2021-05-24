@@ -15,27 +15,12 @@ use sp_runtime::{
 	RuntimeDebug, SaturatedConversion,
 };
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
-use nftmart_traits::{NftmartConfig, NftmartNft};
-
+use nftmart_traits::{NftmartConfig, NftmartNft, OrderItem};
 
 mod mock;
 mod tests;
 
 pub use module::*;
-
-#[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub struct OrderItem<ClassId, TokenId> {
-	/// class id
-	#[codec(compact)]
-	pub class_id: ClassId,
-	/// token id
-	#[codec(compact)]
-	pub token_id: TokenId,
-	/// quantity
-	#[codec(compact)]
-	pub quantity: TokenId,
-}
 
 #[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]

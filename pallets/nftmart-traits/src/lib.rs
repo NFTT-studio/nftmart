@@ -97,3 +97,17 @@ pub struct CategoryData {
 	#[codec(compact)]
 	pub count: Balance,
 }
+
+#[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub struct OrderItem<ClassId, TokenId> {
+	/// class id
+	#[codec(compact)]
+	pub class_id: ClassId,
+	/// token id
+	#[codec(compact)]
+	pub token_id: TokenId,
+	/// quantity
+	#[codec(compact)]
+	pub quantity: TokenId,
+}

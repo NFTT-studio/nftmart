@@ -12,16 +12,51 @@ pub use sp_core::constants_types::{GlobalId, Balance, ACCURACY, NATIVE_CURRENCY_
 use serde::{Deserialize, Serialize};
 use sp_runtime::{
 	traits::{AtLeast32BitUnsigned, StaticLookup},
-	RuntimeDebug, SaturatedConversion,
+	RuntimeDebug, SaturatedConversion, PerU16,
 };
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
-use nftmart_traits::{NftmartConfig, NftmartNft};
-
+use nftmart_traits::{NftmartConfig, NftmartNft, OrderItem};
 
 mod mock;
 mod tests;
 
 pub use module::*;
+
+#[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub struct BritishAuction<AccountId, CurrencyId, BlockNumber, CategoryId, ClassId, TokenId> {
+	/// currency ID for this auction
+	#[codec(compact)]
+	pub currency_id: CurrencyId,
+	/// If encountered this price, the auction should be finished.
+	pub fixed_price: Option<Balance>,
+	/// The new price offered should meet `new_price>=old_price*(1+min_raise)`
+	/// if Some(min_raise), min_raise > 0.
+	pub min_raise: Option<PerU16>,
+	/// The auction owner/creator should deposit some balances to create an auction.
+	/// After this auction finishing or deleting, this balances
+	/// will be returned to the auction owner.
+	#[codec(compact)]
+	pub deposit: Balance,
+	/// The initialized price of `currency_id` for auction.
+	#[codec(compact)]
+	pub init_price: Balance,
+	/// the newest price offered by
+	#[codec(compact)]
+	pub last_price: Balance,
+	/// the last account offering.
+	pub last_offer: Option<AccountId>,
+	/// The auction should be forced to be ended if current block number higher than this value.
+	pub deadline: Option<BlockNumber>,
+	/// if false, `deadline` will be updated by new offering.
+	/// if ture, `deadline` will be set by creating this auction.
+	pub set_deadline: bool,
+	/// Category of this auction.
+	#[codec(compact)]
+	pub category_id: CategoryId,
+	/// nft list
+	pub items: Vec<OrderItem<ClassId, TokenId>>,
+}
 
 #[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug)]
 enum Releases {
