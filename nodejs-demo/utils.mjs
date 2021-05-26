@@ -1,9 +1,11 @@
 import {ApiPromise, WsProvider} from '@polkadot/api';
 import {Client as WebSocket} from 'rpc-websockets';
+import {bnToBn} from "@polkadot/util";
 
 export const convert = (from, to) => str => Buffer.from(str, from).toString(to)
 export const utf8ToHex = convert('utf8', 'hex')
 export const hexToUtf8 = convert('hex', 'utf8')
+export const unit = bnToBn('1000000000000');
 
 export function sleep(milliseconds) {
 	return new Promise(resolve => setTimeout(resolve, milliseconds))
@@ -78,50 +80,52 @@ export async function getApi(dest) {
 		NFTMetadata: 'Vec<u8>',
 		BlockNumber: 'u32',
 		BlockNumberOf: 'BlockNumber',
-
-		OrderData: {
-			currencyId: 'Compact<CurrencyIdOf>',
-			price: 'Compact<Balance>',
-			deposit: 'Compact<Balance>',
-			deadline: 'Compact<BlockNumberOf>',
-			categoryId: 'Compact<CategoryIdOf>'
-		},
-
-		CategoryId: 'u32',
-		CategoryIdOf: 'CategoryId',
-		CategoryData: {
-			metadata: 'NFTMetadata',
-			nftCount: 'Compact<Balance>'
-		},
-
+		BlockNumberFor: 'BlockNumber',
+		GlobalId: 'u64',
 		CurrencyId: 'u32',
 		CurrencyIdOf: 'CurrencyId',
 		Amount: 'i128',
 		AmountOf: 'Amount',
-
+		CategoryId: 'u32',
+		CategoryIdOf: 'CategoryId',
 		ClassId: 'u32',
 		ClassIdOf: 'ClassId',
-		ClassInfoOf: {
-			metadata: 'NFTMetadata',
-			totalIssuance: 'TokenId',
-			owner: 'AccountId',
-			data: 'ClassData'
-		},
-		ClassData: {
-			deposit: 'Compact<Balance>',
-			properties: 'Properties',
-			name: 'Vec<u8>',
-			description: 'Vec<u8>',
-			createBlock: 'Compact<BlockNumberOf>'
-		},
-
 		TokenId: 'u64',
 		TokenIdOf: 'TokenId',
-		TokenInfoOf: {metadata: 'NFTMetadata', owner: 'AccountId', data: 'TokenData'},
-		TokenData: {
-			deposit: 'Compact<Balance>',
-			createBlock: 'Compact<BlockNumberOf>'
-		}
+
+		// OrderData: {
+		// 	currencyId: 'Compact<CurrencyIdOf>',
+		// 	price: 'Compact<Balance>',
+		// 	deposit: 'Compact<Balance>',
+		// 	deadline: 'Compact<BlockNumberOf>',
+		// 	categoryId: 'Compact<CategoryIdOf>'
+		// },
+
+		// CategoryData: {
+		// 	metadata: 'NFTMetadata',
+		// 	nftCount: 'Compact<Balance>'
+		// },
+
+		// ClassInfoOf: {
+		// 	metadata: 'NFTMetadata',
+		// 	totalIssuance: 'TokenId',
+		// 	owner: 'AccountId',
+		// 	data: 'ClassData'
+		// },
+
+		// ClassData: {
+		// 	deposit: 'Compact<Balance>',
+		// 	properties: 'Properties',
+		// 	name: 'Vec<u8>',
+		// 	description: 'Vec<u8>',
+		// 	createBlock: 'Compact<BlockNumberOf>'
+		// },
+
+		// TokenInfoOf: {metadata: 'NFTMetadata', owner: 'AccountId', data: 'TokenData'},
+		// TokenData: {
+		// 	deposit: 'Compact<Balance>',
+		// 	createBlock: 'Compact<BlockNumberOf>'
+		// }
 	};
 
 	const api = await ApiPromise.create({provider, types});

@@ -1214,9 +1214,9 @@ construct_runtime!(
 		Tokens: orml_tokens::{Pallet, Storage, Event<T>, Config<T>},
 		Currencies: orml_currencies::{Pallet, Call, Event<T>},
 		OrmlNFT: orml_nft::{Pallet, Storage, Config<T>},
-		NftmartConf: nftmart_config::{Pallet, Call, Event<T>},
+		NftmartConf: nftmart_config::{Pallet, Call, Storage, Event<T>},
 		Nftmart: nftmart_nft::{Pallet, Call, Storage, Event<T>, Config<T>},
-		NftmartOrder: nftmart_order::{Pallet, Call, Event<T>},
+		NftmartOrder: nftmart_order::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
