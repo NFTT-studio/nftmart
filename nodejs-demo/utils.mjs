@@ -93,6 +93,35 @@ export async function getApi(dest) {
 		TokenId: 'u64',
 		TokenIdOf: 'TokenId',
 
+		ClassInfoOf: {
+			metadata: 'NFTMetadata',
+			totalIssuance: 'Compact<TokenId>',
+			owner: 'AccountId',
+			data: 'ClassData'
+		},
+
+		ClassData: {
+			deposit: 'Compact<Balance>',
+			properties: 'Properties',
+			name: 'Vec<u8>',
+			description: 'Vec<u8>',
+			createBlock: 'Compact<BlockNumberOf>'
+		},
+
+		TokenInfoOf: {
+			metadata: 'NFTMetadata',
+			data: 'TokenData',
+			quantity: 'Compact<TokenId>',
+		},
+
+		TokenData: {
+			deposit: 'Compact<Balance>',
+			createBlock: 'Compact<BlockNumberOf>',
+			royalty: 'bool',
+			creator: 'AccountId',
+			royalty_beneficiary: 'AccountId',
+		}
+
 		// OrderData: {
 		// 	currencyId: 'Compact<CurrencyIdOf>',
 		// 	price: 'Compact<Balance>',
@@ -105,27 +134,6 @@ export async function getApi(dest) {
 		// 	metadata: 'NFTMetadata',
 		// 	nftCount: 'Compact<Balance>'
 		// },
-
-		// ClassInfoOf: {
-		// 	metadata: 'NFTMetadata',
-		// 	totalIssuance: 'TokenId',
-		// 	owner: 'AccountId',
-		// 	data: 'ClassData'
-		// },
-
-		// ClassData: {
-		// 	deposit: 'Compact<Balance>',
-		// 	properties: 'Properties',
-		// 	name: 'Vec<u8>',
-		// 	description: 'Vec<u8>',
-		// 	createBlock: 'Compact<BlockNumberOf>'
-		// },
-
-		// TokenInfoOf: {metadata: 'NFTMetadata', owner: 'AccountId', data: 'TokenData'},
-		// TokenData: {
-		// 	deposit: 'Compact<Balance>',
-		// 	createBlock: 'Compact<BlockNumberOf>'
-		// }
 	};
 
 	const api = await ApiPromise.create({provider, types});

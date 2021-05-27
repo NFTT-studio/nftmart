@@ -12,6 +12,9 @@ async function main() {
 	program.command('create_class <signer>').action(async (signer) => {
 		await create_class(program.opts().ws, keyring, signer);
 	});
+	program.command('show_class').action(async () => {
+		await show_class(program.opts().ws);
+	});
 	program.command('show_whitelist').action(async () => {
 		await show_whitelist(program.opts().ws, keyring);
 	});
@@ -20,6 +23,29 @@ async function main() {
 	});
 
 	await program.parseAsync(process.argv);
+}
+
+async function show_class(ws) {
+	let api = await getApi(ws);
+	let classCount = 0;
+
+	const allClasses = await api.query.ormlNft.classes.entries();
+	let all = [];
+	for (const c of allClasses) {
+		let key = c[0];
+		const len = key.length;
+		key = key.buffer.slice(len - 4, len);
+		const classID = new Uint32Array(key)[0];
+		let clazz = c[1].toJSON();
+		clazz.metadata = hexToUtf8(clazz.metadata.slice(2));
+		clazz.classID = classID;
+		clazz.adminList = await api.query.proxy.proxies(clazz.owner);
+		all.push(JSON.stringify(clazz));
+		classCount++;
+	}
+	console.log("%s", all);
+	console.log("class count: %s", classCount);
+	console.log("nextClassId: %s", await api.query.ormlNft.nextClassId());
 }
 
 async function add_whitelist(ws, keyring, sudo, account) {

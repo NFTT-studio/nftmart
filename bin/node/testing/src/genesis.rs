@@ -123,5 +123,7 @@ pub fn config_endowed(
 		orml_tokens: Default::default(),
 		orml_nft: Default::default(),
 		nftmart_nft: Default::default(),
+		nftmart_order: Default::default(),
+		nftmart_config: Default::default(),
 	}
 }

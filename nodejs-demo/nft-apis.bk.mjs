@@ -49,12 +49,12 @@ async function main() {
 	const program = new Command();
 	program.option('--ws <port>', 'node ws addr', 'ws://8.136.111.191:9944');
 
-	program.command('create-class <account>').action(async (account) => {
-		await demo_create_class(program.opts().ws, keyring, account);
-	});
-	program.command('show-class-info').action(async () => {
-		await demo_show_class_info(program.opts().ws);
-	});
+	// program.command('create-class <account>').action(async (account) => {
+	// 	await demo_create_class(program.opts().ws, keyring, account);
+	// });
+	// program.command('show-class-info').action(async () => {
+	// 	await demo_show_class_info(program.opts().ws);
+	// });
 	program.command('add-class-admin <account>').action(async (account) => {
 		await demo_add_class_admin(program.opts().ws, keyring, account);
 	});
@@ -97,44 +97,44 @@ async function main() {
 	program.command('take-order <classID> <tokenID> <orderOwner> <account>').action(async (classID, tokenID, orderOwner, account) => {
 		await demo_take_order(program.opts().ws, keyring, classID, tokenID, orderOwner, account);
 	});
-	program.command('add-whitelist <sudo> <account>').action(async (sudo, account) => {
-		await demo_add_whitelist(program.opts().ws, keyring, sudo, account);
-	});
-	program.command('show-whitelist').action(async () => {
-		await demo_show_whitelist(program.opts().ws, keyring);
-	});
+	// program.command('add-whitelist <sudo> <account>').action(async (sudo, account) => {
+	// 	await demo_add_whitelist(program.opts().ws, keyring, sudo, account);
+	// });
+	// program.command('show-whitelist').action(async () => {
+	// 	await demo_show_whitelist(program.opts().ws, keyring);
+	// });
 	await program.parseAsync(process.argv);
 }
 
-async function demo_show_whitelist(ws, keyring) {
-	let api = await getApi(ws);
-	const all = await api.query.config.accountWhitelist.entries();
-	for (const account of all) {
-		let key = account[0];
-		const len = key.length;
-		key = key.buffer.slice(len - 32, len);
-		const addr = keyring.encodeAddress(new Uint8Array(key));
-		console.log("%s", addr);
-	}
-}
-
-async function demo_add_whitelist(ws, keyring, sudo, account) {
-	// usage: node nft-apis.mjs add-whitelist //Alice 63dHdZZMdgFeHs544yboqnVvrnAaTRdPWPC1u2aZjpC5HTqx
-	let api = await getApi(ws);
-	let moduleMetadata = await getModules(api);
-	sudo = keyring.addFromUri(sudo);
-	if(account.length !== '62qUEaQwPx7g4vDz88cT36XXuEUQmYo3Y5dxnxScsiDkb8wy'.length){
-		account = keyring.addFromUri(account);
-		account = account.address;
-	}
-	// const call = api.tx.sudo.sudo(api.tx.config.removeWhitelist(account.address));
-	const call = api.tx.sudo.sudo(api.tx.config.addWhitelist(account));
-	const feeInfo = await call.paymentInfo(sudo.address);
-	console.log("The fee of the call: %s.", feeInfo.partialFee / unit);
-	let [a, b] = waitTx(moduleMetadata);
-	await call.signAndSend(sudo, a);
-	await b();
-}
+// async function demo_show_whitelist(ws, keyring) {
+// 	let api = await getApi(ws);
+// 	const all = await api.query.config.accountWhitelist.entries();
+// 	for (const account of all) {
+// 		let key = account[0];
+// 		const len = key.length;
+// 		key = key.buffer.slice(len - 32, len);
+// 		const addr = keyring.encodeAddress(new Uint8Array(key));
+// 		console.log("%s", addr);
+// 	}
+// }
+//
+// async function demo_add_whitelist(ws, keyring, sudo, account) {
+// 	// usage: node nft-apis.mjs add-whitelist //Alice 63dHdZZMdgFeHs544yboqnVvrnAaTRdPWPC1u2aZjpC5HTqx
+// 	let api = await getApi(ws);
+// 	let moduleMetadata = await getModules(api);
+// 	sudo = keyring.addFromUri(sudo);
+// 	if(account.length !== '62qUEaQwPx7g4vDz88cT36XXuEUQmYo3Y5dxnxScsiDkb8wy'.length){
+// 		account = keyring.addFromUri(account);
+// 		account = account.address;
+// 	}
+// 	// const call = api.tx.sudo.sudo(api.tx.config.removeWhitelist(account.address));
+// 	const call = api.tx.sudo.sudo(api.tx.config.addWhitelist(account));
+// 	const feeInfo = await call.paymentInfo(sudo.address);
+// 	console.log("The fee of the call: %s.", feeInfo.partialFee / unit);
+// 	let [a, b] = waitTx(moduleMetadata);
+// 	await call.signAndSend(sudo, a);
+// 	await b();
+// }
 
 async function demo_take_order(ws, keyring, classID, tokenID, orderOwner, account) {
 	let api = await getApi(ws);
@@ -461,45 +461,45 @@ async function demo_add_class_admin(ws, keyring, account) {
 	process.exit();
 }
 
-async function demo_show_class_info(ws) {
-	let api = await getApi(ws);
-	let classCount = 0;
+// async function demo_show_class_info(ws) {
+// 	let api = await getApi(ws);
+// 	let classCount = 0;
+//
+// 	const allClasses = await api.query.ormlNft.classes.entries();
+// 	let all = [];
+// 	for (const c of allClasses) {
+// 		let key = c[0];
+// 		const len = key.length;
+// 		key = key.buffer.slice(len - 4, len);
+// 		const classID = new Uint32Array(key)[0];
+// 		let clazz = c[1].toJSON();
+// 		clazz.metadata = hexToUtf8(clazz.metadata.slice(2));
+// 		clazz.classID = classID;
+// 		clazz.adminList = await api.query.proxy.proxies(clazz.owner);
+// 		all.push(JSON.stringify(clazz));
+// 		classCount++;
+// 	}
+// 	console.log("%s", all);
+// 	console.log("class count: %s", classCount);
+// 	console.log("nextClassId: %s", await api.query.ormlNft.nextClassId());
+// 	process.exit();
+// }
 
-	const allClasses = await api.query.ormlNft.classes.entries();
-	let all = [];
-	for (const c of allClasses) {
-		let key = c[0];
-		const len = key.length;
-		key = key.buffer.slice(len - 4, len);
-		const classID = new Uint32Array(key)[0];
-		let clazz = c[1].toJSON();
-		clazz.metadata = hexToUtf8(clazz.metadata.slice(2));
-		clazz.classID = classID;
-		clazz.adminList = await api.query.proxy.proxies(clazz.owner);
-		all.push(JSON.stringify(clazz));
-		classCount++;
-	}
-	console.log("%s", all);
-	console.log("class count: %s", classCount);
-	console.log("nextClassId: %s", await api.query.ormlNft.nextClassId());
-	process.exit();
-}
-
-async function demo_create_class(ws, keyring, account) {
-	let api = await getApi(ws);
-	let moduleMetadata = await getModules(api);
-	account = keyring.addFromUri(account);
-	let [a, b] = waitTx(moduleMetadata);
-	// pub enum ClassProperty {
-	// 	/// Token can be transferred
-	// 	Transferable = 0b00000001,
-	// 	/// Token can be burned
-	// 	Burnable = 0b00000010,
-	// }
-	await api.tx.nftmart.createClass("https://xx.com/aa.jpg", "aaa", "bbbb", 1 | 2).signAndSend(account, a);
-	await b();
-	process.exit();
-}
+// async function demo_create_class(ws, keyring, account) {
+// 	let api = await getApi(ws);
+// 	let moduleMetadata = await getModules(api);
+// 	account = keyring.addFromUri(account);
+// 	let [a, b] = waitTx(moduleMetadata);
+// 	// pub enum ClassProperty {
+// 	// 	/// Token can be transferred
+// 	// 	Transferable = 0b00000001,
+// 	// 	/// Token can be burned
+// 	// 	Burnable = 0b00000010,
+// 	// }
+// 	await api.tx.nftmart.createClass("https://xx.com/aa.jpg", "aaa", "bbbb", 1 | 2).signAndSend(account, a);
+// 	await b();
+// 	process.exit();
+// }
 
 main().then(r => {
 	console.log("ok");

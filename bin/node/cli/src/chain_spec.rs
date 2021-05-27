@@ -38,6 +38,7 @@ use sp_consensus_babe::{AuthorityId as BabeId};
 use pallet_im_online::sr25519::{AuthorityId as ImOnlineId};
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 use sp_runtime::{Perbill, traits::{Verify, IdentifyAccount}};
+use sp_std::vec::Vec;
 
 pub use node_primitives::{AccountId, Balance, Signature};
 pub use node_runtime::GenesisConfig;
@@ -305,6 +306,11 @@ pub fn testnet_genesis(
 		},
 		orml_nft: OrmlNFTConfig { tokens: vec![] },
 		nftmart_nft: Default::default(),
+		nftmart_order: Default::default(),
+		nftmart_config: node_runtime::NftmartConfConfig {
+			white_list: endowed_accounts,
+			..Default::default()
+		},
 	}
 }
 

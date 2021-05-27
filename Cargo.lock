@@ -4297,6 +4297,7 @@ dependencies = [
  "sp-keyring",
  "sp-keystore",
  "sp-runtime",
+ "sp-std",
  "sp-timestamp",
  "sp-transaction-pool",
  "sp-trie",

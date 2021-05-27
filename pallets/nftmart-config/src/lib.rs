@@ -5,6 +5,7 @@ use frame_support::{
 	transactional
 };
 use frame_system::pallet_prelude::*;
+use sp_std::vec::Vec;
 
 mod mock;
 mod tests;
@@ -55,6 +56,7 @@ pub mod module {
 		pub min_reference_deposit: Balance,
 		pub min_order_deposit: Balance,
 		pub auction_delay: BlockNumberFor<T>,
+		pub white_list: Vec<T::AccountId>,
 		pub _phantom: PhantomData<T>,
 	}
 
@@ -68,6 +70,7 @@ pub mod module {
 				min_reference_deposit: ACCURACY,
 				min_order_deposit: ACCURACY,
 				auction_delay: 10u32.into(),
+				white_list: vec![],
 				_phantom: Default::default(),
 			}
 		}
@@ -88,6 +91,9 @@ pub mod module {
 			MinReferenceDeposit::<T>::put(self.min_reference_deposit);
 			MinOrderDeposit::<T>::put(self.min_order_deposit);
 			AuctionDelay::<T>::put(self.auction_delay);
+			for a in &self.white_list {
+				AccountWhitelist::<T>::insert(a, ());
+			}
 		}
 	}
 
