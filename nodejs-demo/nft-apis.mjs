@@ -19,18 +19,23 @@ async function main() {
 	const program = new Command();
 	program.option('--ws <addr>', 'node ws addr', 'ws://192.168.0.2:9944');
 
+	// node nft-apis.mjs create_class //Alice
 	program.command('create_class <signer>').action(async (signer) => {
 		await create_class(program.opts().ws, keyring, signer);
 	});
+	// node nft-apis.mjs add_class_admin //Alice 0 //Bob
 	program.command('add_class_admin <admin> <classId> <newAdmin>').action(async (admin, classId, newAdmin) => {
 		await add_class_admin(program.opts().ws, keyring, admin, classId, newAdmin);
 	});
+	// node nft-apis.mjs show_class
 	program.command('show_class').action(async () => {
 		await show_class(program.opts().ws);
 	});
+	// node nft-apis.mjs show_whitelist
 	program.command('show_whitelist').action(async () => {
 		await show_whitelist(program.opts().ws, keyring);
 	});
+	// node nft-apis.mjs add_class_admin //Alice 0 //Bob
 	program.command('add_whitelist <sudo> <account>').action(async (sudo, account) => {
 		await add_whitelist(program.opts().ws, keyring, sudo, account);
 	});
@@ -51,7 +56,6 @@ async function add_class_admin(ws, keyring, admin, classId, newAdmin) {
 		console.log(ownerOfClass.toString());
 		const balancesNeeded = await proxyDeposit(api, 1);
 		if (balancesNeeded === null) {
-			console.log("error: await proxyDeposit(api, 1);");
 			return;
 		}
 		console.log("adding a class admin needs to reserve %s NMT", balancesNeeded / unit);
