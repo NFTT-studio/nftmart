@@ -13,11 +13,31 @@ async function proxyDeposit(api, num_proxies) {
 	}
 }
 
+async function nftDeposit(api, metadata) {
+	try {
+		let depositAll = await api.ws.call('nftmart_mintTokenDeposit', [metadata.length], 10000);
+		return bnToBn(depositAll);
+	} catch (e) {
+		console.log(e);
+		return null;
+	}
+}
+
+async function classDeposit(api, metadata, name, description) {
+	try {
+		let [_deposit, depositAll] = await api.ws.call('nftmart_createClassDeposit', [metadata.length, name.length, description.length], 10000);
+		return bnToBn(depositAll);
+	} catch (e) {
+		console.log(e);
+		return null;
+	}
+}
+
 async function main() {
 	const ss58Format = 50;
 	const keyring = new Keyring({type: 'sr25519', ss58Format});
 	const program = new Command();
-	program.option('--ws <addr>', 'node ws addr', 'ws://192.168.0.2:9944');
+	program.option('--ws <url>', 'node ws addr', 'ws://192.168.0.2:9944');
 
 	// node nft-apis.mjs create_class //Alice
 	program.command('create_class <signer>').action(async (signer) => {
@@ -39,8 +59,88 @@ async function main() {
 	program.command('add_whitelist <sudo> <account>').action(async (sudo, account) => {
 		await add_whitelist(program.opts().ws, keyring, sudo, account);
 	});
-
+	// node nft-apis.mjs mint_nft //Alice 0 30
+	program.command('mint_nft <admin> <classID> <quantity>').action(async (admin, classID, quantity) => {
+		await mint_nft(program.opts().ws, keyring, admin, classID, quantity);
+	});
+	// 1: nftmart-nft show_nfts
+	// 2: nftmart-nft show_nfts 0
+	program.command('show_nfts [classID]').action(async (classID) => {
+		await show_nfts(program.opts().ws, classID);
+	});
 	await program.parseAsync(process.argv);
+}
+
+async function display_nfts(api, classID) {
+	let tokenCount = 0;
+	let classInfo = await api.query.ormlNft.classes(classID);
+	if (classInfo.isSome) {
+		const nextTokenId = await api.query.ormlNft.nextTokenId(classID);
+		console.log(`nextTokenId in classId ${classID} is ${nextTokenId}.`);
+		classInfo = classInfo.unwrap();
+		const accountInfo = await api.query.system.account(classInfo.owner);
+		console.log("classInfo: %s", classInfo.toString());
+		console.log("classOwner: %s", accountInfo.toString());
+		for (let i = 0; i < nextTokenId; i++) {
+			let nft = await api.query.ormlNft.tokens(classID, i);
+			if (nft.isSome) {
+				nft = nft.unwrap();
+				nft = nft.toJSON();
+				nft.metadata = hexToUtf8(nft.metadata.slice(2));
+				try{ nft.metadata = JSON.parse(nft.metadata); } catch(_e) {}
+				console.log("classId %s, tokenId %s, tokenInfo %s", classID, i, JSON.stringify(nft));
+				tokenCount++;
+			}
+		}
+	}
+	console.log(`The token count of class ${classID} is ${tokenCount}.`);
+}
+
+async function show_nfts(ws, classID) {
+	let api = await getApi(ws);
+	if (classID === undefined) { // find all nfts
+		const allClasses = await api.query.ormlNft.classes.entries();
+		for (const c of allClasses) {
+			let key = c[0];
+			const len = key.length;
+			key = key.buffer.slice(len - 4, len);
+			const classID = new Uint32Array(key)[0];
+			await display_nfts(api, classID);
+		}
+	} else {
+		await display_nfts(api, classID);
+	}
+}
+
+async function mint_nft(ws, keyring, admin, classID, quantity) {
+	let api = await getApi(ws);
+	let moduleMetadata = await getModules(api);
+	admin = keyring.addFromUri(admin);
+	const classInfo = await api.query.ormlNft.classes(classID);
+	if (classInfo.isSome) {
+		const ownerOfClass = classInfo.unwrap().owner.toString();
+		const nftMetadata = 'demo nft metadata';
+		const balancesNeeded = await nftDeposit(api, nftMetadata, bnToBn(quantity));
+		if (balancesNeeded === null) {
+			return;
+		}
+		const needToChargeRoyalty = null; // follow the config in class.
+		// const needToChargeRoyalty = true;
+		// const needToChargeRoyalty = false;
+		const txs = [
+			// make sure `ownerOfClass` has sufficient balances to mint nft.
+			api.tx.balances.transfer(ownerOfClass, balancesNeeded),
+			// mint some nfts and transfer to admin.address.
+			api.tx.proxy.proxy(ownerOfClass, null, api.tx.nftmart.mint(admin.address, classID, nftMetadata, quantity, needToChargeRoyalty)),
+		];
+		const batchExtrinsic = api.tx.utility.batchAll(txs);
+		const feeInfo = await batchExtrinsic.paymentInfo(admin);
+		console.log("fee of batchExtrinsic: %s NMT", feeInfo.partialFee / unit);
+
+		let [a, b] = waitTx(moduleMetadata);
+		await batchExtrinsic.signAndSend(admin, a);
+		await b();
+	}
 }
 
 async function add_class_admin(ws, keyring, admin, classId, newAdmin) {
@@ -89,6 +189,7 @@ async function show_class(ws) {
 		const classID = new Uint32Array(key)[0];
 		let clazz = c[1].toJSON();
 		clazz.metadata = hexToUtf8(clazz.metadata.slice(2));
+		try{ clazz.metadata = JSON.parse(clazz.metadata); } catch(_e) {}
 		clazz.classID = classID;
 		clazz.adminList = await api.query.proxy.proxies(clazz.owner);
 		all.push(JSON.stringify(clazz));
@@ -134,10 +235,18 @@ async function create_class(ws, keyring, signer) {
 	let moduleMetadata = await getModules(api);
 	signer = keyring.addFromUri(signer);
 	let [a, b] = waitTx(moduleMetadata);
+
+	const name = 'demo class name';
+	const description = 'demo class description';
+	const metadata = 'demo class metadata';
+
+	const deposit = await classDeposit(api, metadata, name, description);
+	console.log("create class deposit %s", deposit);
+
 	// 	Transferable = 0b00000001,
 	// 	Burnable = 0b00000010,
 	// 	RoyaltiesChargeable = 0b00000100,
-	await api.tx.nftmart.createClass("https://xx.com/aa.jpg", "aaa", "bbbb", 1 | 2 | 4).signAndSend(signer, a);
+	await api.tx.nftmart.createClass(metadata, name, description, 1 | 2 | 4).signAndSend(signer, a);
 	await b();
 }
 
