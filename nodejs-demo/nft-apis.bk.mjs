@@ -64,9 +64,9 @@ async function main() {
 	// program.command('show-all-nfts [classID]').action(async (classID) => {
 	// 	await demo_show_all_nfts(program.opts().ws, classID);
 	// });
-	program.command('query-nft <account>').action(async (account) => {
-		await demo_query_nft(program.opts().ws, keyring, account);
-	});
+	// program.command('query-nft <account>').action(async (account) => {
+	// 	await demo_query_nft(program.opts().ws, keyring, account);
+	// });
 	program.command('query-class <account>').action(async (account) => {
 		await demo_query_class(program.opts().ws, keyring, account);
 	});
@@ -330,34 +330,33 @@ async function demo_query_class(ws, keyring, account) {
 	process.exit();
 }
 
-function u32ToU64(tokenIDLow32, tokenIDHigh32) {
-	// TODO: convert [tokenIDLow32, tokenIDHigh32] into Uint64.
-	return tokenIDLow32;
-}
+// function u32ToU64(tokenIDLow32, tokenIDHigh32) {
+// 	return tokenIDLow32;
+// }
 
-async function demo_query_nft(ws, keyring, account) {
-	let api = await getApi(ws);
-	const address = keyring.addFromUri(account).address;
-	const nfts = await api.query.ormlNft.tokensByOwner.entries(address);
-	for (let clzToken of nfts) {
-		clzToken = clzToken[0];
-		const len = clzToken.length;
-
-		const classID = new Uint32Array(clzToken.slice(len - 4 - 8, len - 8))[0];
-		const tokenIDRaw = new Uint32Array(clzToken.slice(len - 8, len));
-
-		const tokenIDLow32 = tokenIDRaw[0];
-		const tokenIDHigh32 = tokenIDRaw[1];
-		const tokenID = u32ToU64(tokenIDLow32, tokenIDHigh32);
-
-		let nft = await api.query.ormlNft.tokens(classID, tokenID);
-		if (nft.isSome) {
-			nft = nft.unwrap();
-			console.log(`${classID} ${tokenID} ${nft.toString()}`);
-		}
-	}
-	process.exit();
-}
+// async function demo_query_nft(ws, keyring, account) {
+// 	let api = await getApi(ws);
+// 	const address = keyring.addFromUri(account).address;
+// 	const nfts = await api.query.ormlNft.tokensByOwner.entries(address);
+// 	for (let clzToken of nfts) {
+// 		clzToken = clzToken[0];
+// 		const len = clzToken.length;
+//
+// 		const classID = new Uint32Array(clzToken.slice(len - 4 - 8, len - 8))[0];
+// 		const tokenIDRaw = new Uint32Array(clzToken.slice(len - 8, len));
+//
+// 		const tokenIDLow32 = tokenIDRaw[0];
+// 		const tokenIDHigh32 = tokenIDRaw[1];
+// 		const tokenID = u32ToU64(tokenIDLow32, tokenIDHigh32);
+//
+// 		let nft = await api.query.ormlNft.tokens(classID, tokenID);
+// 		if (nft.isSome) {
+// 			nft = nft.unwrap();
+// 			console.log(`${classID} ${tokenID} ${nft.toString()}`);
+// 		}
+// 	}
+// 	process.exit();
+// }
 
 // async function show_all_nfts(api, classID) {
 // 	const nextTokenId = await api.query.ormlNft.nextTokenId(classID);

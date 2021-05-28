@@ -120,7 +120,12 @@ export async function getApi(dest) {
 			royalty: 'bool',
 			creator: 'AccountId',
 			royalty_beneficiary: 'AccountId',
-		}
+		},
+
+		AccountToken: {
+			quantity: 'Compact<TokenId>',
+			reserved: 'Compact<TokenId>',
+		},
 
 		// OrderData: {
 		// 	currencyId: 'Compact<CurrencyIdOf>',
