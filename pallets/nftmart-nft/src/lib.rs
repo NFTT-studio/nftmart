@@ -385,14 +385,15 @@ pub mod module {
 		pub fn transfer(
 			origin: OriginFor<T>,
 			to: <T::Lookup as StaticLookup>::Source,
-			#[pallet::compact] class_id: ClassIdOf<T>,
-			#[pallet::compact] token_id: TokenIdOf<T>,
-			#[pallet::compact] quantity: TokenIdOf<T>,
+			items: Vec<(ClassIdOf<T>, TokenIdOf<T>, TokenIdOf<T>)>,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			let to = T::Lookup::lookup(to)?;
-			ensure!(quantity >= One::one(), Error::<T>::InvalidQuantity);
-			Self::do_transfer(&who, &to, class_id, token_id, quantity)?;
+			for (class_id, token_id, quantity) in items {
+				if quantity > Zero::zero() {
+					Self::do_transfer(&who, &to, class_id, token_id, quantity)?;
+				}
+			}
 			Ok(().into())
 		}
 

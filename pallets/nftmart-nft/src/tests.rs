@@ -196,11 +196,11 @@ fn transfer_should_work() {
 		add_class(ALICE);
 		add_token(BOB, 2, None);
 
-		assert_ok!(Nftmart::transfer(Origin::signed(BOB), ALICE, CLASS_ID, TOKEN_ID, 2));
+		assert_ok!(Nftmart::transfer(Origin::signed(BOB), ALICE, vec![(CLASS_ID, TOKEN_ID, 2)]));
 		let event = Event::nftmart_nft(crate::Event::TransferredToken(BOB, ALICE, CLASS_ID, TOKEN_ID, 2));
 		assert_eq!(last_event(), event);
 
-		assert_ok!(Nftmart::transfer(Origin::signed(ALICE), BOB, CLASS_ID, TOKEN_ID, 2));
+		assert_ok!(Nftmart::transfer(Origin::signed(ALICE), BOB, vec![(CLASS_ID, TOKEN_ID, 2)]));
 		let event = Event::nftmart_nft(crate::Event::TransferredToken(ALICE, BOB, CLASS_ID, TOKEN_ID, 2));
 		assert_eq!(last_event(), event);
 	});
@@ -212,19 +212,19 @@ fn transfer_should_fail() {
 		add_class(ALICE);
 		add_token(BOB, 1, None);
 		assert_noop!(
-			Nftmart::transfer(Origin::signed(BOB), ALICE, CLASS_ID, TOKEN_ID, 0),
+			Nftmart::transfer(Origin::signed(BOB), ALICE, vec![(CLASS_ID, TOKEN_ID, 0)]),
 			Error::<Runtime>::InvalidQuantity
 		);
 		assert_noop!(
-			Nftmart::transfer(Origin::signed(BOB), ALICE, CLASS_ID_NOT_EXIST, TOKEN_ID, 1),
+			Nftmart::transfer(Origin::signed(BOB), ALICE, vec![(CLASS_ID_NOT_EXIST, TOKEN_ID, 1)]),
 			Error::<Runtime>::ClassIdNotFound
 		);
 		assert_noop!(
-			Nftmart::transfer(Origin::signed(BOB), ALICE, CLASS_ID, TOKEN_ID_NOT_EXIST, 1),
+			Nftmart::transfer(Origin::signed(BOB), ALICE, vec![(CLASS_ID, TOKEN_ID_NOT_EXIST, 1)]),
 			orml_nft::Error::<Runtime>::NumOverflow
 		);
 		assert_noop!(
-			Nftmart::transfer(Origin::signed(ALICE), BOB, CLASS_ID, TOKEN_ID, 1),
+			Nftmart::transfer(Origin::signed(ALICE), BOB, vec![(CLASS_ID, TOKEN_ID, 1)]),
 			orml_nft::Error::<Runtime>::NumOverflow
 		);
 	});
@@ -245,7 +245,7 @@ fn transfer_should_fail() {
 			1, None
 		));
 		assert_noop!(
-			Nftmart::transfer(Origin::signed(BOB), ALICE, CLASS_ID, TOKEN_ID, 1),
+			Nftmart::transfer(Origin::signed(BOB), ALICE, vec![(CLASS_ID, TOKEN_ID, 1)]),
 			Error::<Runtime>::NonTransferable
 		);
 	});

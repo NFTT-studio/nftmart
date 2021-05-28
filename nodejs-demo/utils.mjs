@@ -156,6 +156,20 @@ export async function getApi(dest) {
 	return api;
 }
 
+export function ensureAddress(keyring, account) {
+	if(account.length !== '62qUEaQwPx7g4vDz88cT36XXuEUQmYo3Y5dxnxScsiDkb8wy'.length){
+		account = keyring.addFromUri(account);
+		account = account.address;
+	}
+	return account;
+}
+
+export function u32sToU64(tokenIDRaw) {
+	const tokenIDLow32 =  BigInt(tokenIDRaw[0]);
+	const tokenIDHigh32 = BigInt(tokenIDRaw[1]);
+	return (tokenIDHigh32 << 32n) + tokenIDLow32;
+}
+
 export function secondsToString(seconds) {
 	let numyears = Math.floor(seconds / 31536000);
 	let numdays = Math.floor((seconds % 31536000) / 86400);

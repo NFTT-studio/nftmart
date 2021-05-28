@@ -5,13 +5,13 @@ import {Command} from "commander";
 
 const unit = bnToBn('1000000000000');
 
-async function showNft(api, classID, tokenID) {
-	let nft = await api.query.ormlNft.tokens(classID, tokenID);
-	if (nft.isSome) {
-		nft = nft.unwrap();
-		console.log(nft.toString());
-	}
-}
+// async function showNft(api, classID, tokenID) {
+// 	let nft = await api.query.ormlNft.tokens(classID, tokenID);
+// 	if (nft.isSome) {
+// 		nft = nft.unwrap();
+// 		console.log(nft.toString());
+// 	}
+// }
 
 // async function nftDeposit(api, metadata, nft_quantity) {
 // 	try {
@@ -70,18 +70,18 @@ async function main() {
 	// program.command('query-class <account>').action(async (account) => {
 	// 	await demo_query_class(program.opts().ws, keyring, account);
 	// });
-	program.command('transfer-nft <classID> <tokenID> <from> <to>').action(async (classID, tokenID, from, to) => {
-		await demo_transfer_nft(program.opts().ws, keyring, classID, tokenID, from, to);
-	});
+	// program.command('transfer-nft <classID> <tokenID> <from> <to>').action(async (classID, tokenID, from, to) => {
+	// 	await demo_transfer_nft(program.opts().ws, keyring, classID, tokenID, from, to);
+	// });
 	program.command('burn-nft <classID> <tokenID> <account>').action(async (classID, tokenID, account) => {
 		await demo_burn_nft(program.opts().ws, keyring, classID, tokenID, account);
 	});
 	program.command('destroy-class <classID> <account>').action(async (classID, account) => {
 		await demo_destroy_class(program.opts().ws, keyring, classID, account);
 	});
-	program.command('show-create-class-deposit <metadata> <name> <description>').action(async (metadata, name, description) => {
-		await demo_show_create_class_deposit(program.opts().ws, metadata, name, description);
-	});
+	// program.command('show-create-class-deposit <metadata> <name> <description>').action(async (metadata, name, description) => {
+	// 	await demo_show_create_class_deposit(program.opts().ws, metadata, name, description);
+	// });
 	program.command('create-category <metadata> <account>').action(async (metadata, account) => {
 		await demo_create_category(program.opts().ws, keyring, metadata, account);
 	});
@@ -246,12 +246,12 @@ async function demo_create_category(ws, keyring, metadata, account) {
 	process.exit();
 }
 
-async function demo_show_create_class_deposit(ws, metadata, name, description) {
-	let api = await getApi(ws);
-	const deposit = await classDeposit(api, metadata, name, description);
-	console.log(deposit.toString());
-	process.exit(0);
-}
+// async function demo_show_create_class_deposit(ws, metadata, name, description) {
+// 	let api = await getApi(ws);
+// 	const deposit = await classDeposit(api, metadata, name, description);
+// 	console.log(deposit.toString());
+// 	process.exit(0);
+// }
 
 async function demo_destroy_class(ws, keyring, classID, account) {
 	let api = await getApi(ws);
@@ -288,25 +288,25 @@ async function demo_burn_nft(ws, keyring, classID, tokenID, account) {
 	process.exit();
 }
 
-async function demo_transfer_nft(ws, keyring, classID, tokenID, from, to) {
-	let api = await getApi(ws);
-	await showNft(api, classID, tokenID);
-
-	let moduleMetadata = await getModules(api);
-	from = keyring.addFromUri(from);
-	to = keyring.addFromUri(to).address;
-
-	const call = api.tx.nftmart.transfer(to, classID, tokenID);
-	const feeInfo = await call.paymentInfo(from);
-	console.log("The fee of the call: %s.", feeInfo.partialFee / unit);
-
-	let [a, b] = waitTx(moduleMetadata);
-	await call.signAndSend(from, a);
-	await b();
-
-	await showNft(api, classID, tokenID);
-	process.exit();
-}
+// async function demo_transfer_nft(ws, keyring, classID, tokenID, from, to) {
+// 	let api = await getApi(ws);
+// 	await showNft(api, classID, tokenID);
+//
+// 	let moduleMetadata = await getModules(api);
+// 	from = keyring.addFromUri(from);
+// 	to = keyring.addFromUri(to).address;
+//
+// 	const call = api.tx.nftmart.transfer(to, classID, tokenID);
+// 	const feeInfo = await call.paymentInfo(from);
+// 	console.log("The fee of the call: %s.", feeInfo.partialFee / unit);
+//
+// 	let [a, b] = waitTx(moduleMetadata);
+// 	await call.signAndSend(from, a);
+// 	await b();
+//
+// 	await showNft(api, classID, tokenID);
+// 	process.exit();
+// }
 
 // async function demo_query_class(ws, keyring, account) {
 // 	let api = await getApi(ws);
