@@ -55,9 +55,9 @@ async function main() {
 	// program.command('show-class-info').action(async () => {
 	// 	await demo_show_class_info(program.opts().ws);
 	// });
-	program.command('add-class-admin <account>').action(async (account) => {
-		await demo_add_class_admin(program.opts().ws, keyring, account);
-	});
+	// program.command('add-class-admin <account>').action(async (account) => {
+	// 	await demo_add_class_admin(program.opts().ws, keyring, account);
+	// });
 	program.command('mint-nft <account> <classID>').action(async (account, classID) => {
 		await demo_mint_nft(program.opts().ws, keyring, account, classID);
 	});
@@ -431,35 +431,35 @@ async function demo_mint_nft(ws, keyring, account, classID) {
 	process.exit();
 }
 
-async function demo_add_class_admin(ws, keyring, account) {
-	let api = await getApi(ws);
-	let moduleMetadata = await getModules(api);
-	const alice = keyring.addFromUri("//Alice");
-	const bob = keyring.addFromUri(account);
-	const classCount = bnToBn((await api.query.ormlNft.nextClassId()).toString());
-
-	const ownerOfClass0 = '62qUEaQwPx7g4vDz88bN4zMBTFmcwLPYbPsvbBhH2QiqWhfB'
-	const balancesNeeded = await proxyDeposit(api, 1);
-	if (balancesNeeded === null) {
-		return;
-	}
-	console.log("adding a class admin needs to reserve %s", balancesNeeded);
-	const txs = [
-		// make sure `ownerOfClass0` has sufficient balances.
-		api.tx.balances.transfer(ownerOfClass0, balancesNeeded),
-		// Add Bob as a new admin.
-		api.tx.proxy.proxy(ownerOfClass0, null, api.tx.proxy.addProxy(bob.address, 'Any', 0)),
-	];
-	const batchExtrinsic = api.tx.utility.batchAll(txs);
-	const feeInfo = await batchExtrinsic.paymentInfo(alice);
-	console.log("fee of batchExtrinsic: %s", feeInfo.partialFee / unit);
-
-	let [a, b] = waitTx(moduleMetadata);
-	await batchExtrinsic.signAndSend(alice, a);
-	await b();
-
-	process.exit();
-}
+// async function demo_add_class_admin(ws, keyring, account) {
+// 	let api = await getApi(ws);
+// 	let moduleMetadata = await getModules(api);
+// 	const alice = keyring.addFromUri("//Alice");
+// 	const bob = keyring.addFromUri(account);
+// 	const classCount = bnToBn((await api.query.ormlNft.nextClassId()).toString());
+//
+// 	const ownerOfClass0 = '62qUEaQwPx7g4vDz88bN4zMBTFmcwLPYbPsvbBhH2QiqWhfB'
+// 	const balancesNeeded = await proxyDeposit(api, 1);
+// 	if (balancesNeeded === null) {
+// 		return;
+// 	}
+// 	console.log("adding a class admin needs to reserve %s", balancesNeeded);
+// 	const txs = [
+// 		// make sure `ownerOfClass0` has sufficient balances.
+// 		api.tx.balances.transfer(ownerOfClass0, balancesNeeded),
+// 		// Add Bob as a new admin.
+// 		api.tx.proxy.proxy(ownerOfClass0, null, api.tx.proxy.addProxy(bob.address, 'Any', 0)),
+// 	];
+// 	const batchExtrinsic = api.tx.utility.batchAll(txs);
+// 	const feeInfo = await batchExtrinsic.paymentInfo(alice);
+// 	console.log("fee of batchExtrinsic: %s", feeInfo.partialFee / unit);
+//
+// 	let [a, b] = waitTx(moduleMetadata);
+// 	await batchExtrinsic.signAndSend(alice, a);
+// 	await b();
+//
+// 	process.exit();
+// }
 
 // async function demo_show_class_info(ws) {
 // 	let api = await getApi(ws);

@@ -3,6 +3,16 @@ import {Keyring} from "@polkadot/api";
 import {bnToBn} from "@polkadot/util";
 import {Command} from "commander";
 
+async function proxyDeposit(api, num_proxies) {
+	try {
+		let deposit = await api.ws.call('nftmart_addClassAdminDeposit', [num_proxies], 10000);
+		return bnToBn(deposit);
+	} catch (e) {
+		console.log(e);
+		return null;
+	}
+}
+
 async function main() {
 	const ss58Format = 50;
 	const keyring = new Keyring({type: 'sr25519', ss58Format});
@@ -11,6 +21,9 @@ async function main() {
 
 	program.command('create_class <signer>').action(async (signer) => {
 		await create_class(program.opts().ws, keyring, signer);
+	});
+	program.command('add_class_admin <admin> <classId> <newAdmin>').action(async (admin, classId, newAdmin) => {
+		await add_class_admin(program.opts().ws, keyring, admin, classId, newAdmin);
 	});
 	program.command('show_class').action(async () => {
 		await show_class(program.opts().ws);
@@ -23,6 +36,40 @@ async function main() {
 	});
 
 	await program.parseAsync(process.argv);
+}
+
+async function add_class_admin(ws, keyring, admin, classId, newAdmin) {
+	let api = await getApi(ws);
+	let moduleMetadata = await getModules(api);
+	admin = keyring.addFromUri(admin);
+	newAdmin = keyring.addFromUri(newAdmin);
+
+	let classInfo = await api.query.ormlNft.classes(classId);
+	if(classInfo.isSome) {
+		classInfo = classInfo.unwrap();
+		const ownerOfClass = classInfo.owner;
+		console.log(ownerOfClass.toString());
+		const balancesNeeded = await proxyDeposit(api, 1);
+		if (balancesNeeded === null) {
+			console.log("error: await proxyDeposit(api, 1);");
+			return;
+		}
+		console.log("adding a class admin needs to reserve %s NMT", balancesNeeded / unit);
+		const txs = [
+			// make sure `ownerOfClass` has sufficient balances.
+			api.tx.balances.transfer(ownerOfClass, balancesNeeded),
+			// Add `newAdmin` as a new admin.
+			api.tx.proxy.proxy(ownerOfClass, null, api.tx.proxy.addProxy(newAdmin.address, 'Any', 0)),
+			// api.tx.proxy.proxy(ownerOfClass, null, api.tx.proxy.removeProxy(newAdmin.address, 'Any', 0)), to remove an admin
+		];
+		const batchExtrinsic = api.tx.utility.batchAll(txs);
+		const feeInfo = await batchExtrinsic.paymentInfo(admin);
+		console.log("fee of batchExtrinsic: %s NMT", feeInfo.partialFee / unit);
+
+		let [a, b] = waitTx(moduleMetadata);
+		await batchExtrinsic.signAndSend(admin, a);
+		await b();
+	}
 }
 
 async function show_class(ws) {
