@@ -67,9 +67,9 @@ async function main() {
 	// program.command('query-nft <account>').action(async (account) => {
 	// 	await demo_query_nft(program.opts().ws, keyring, account);
 	// });
-	program.command('query-class <account>').action(async (account) => {
-		await demo_query_class(program.opts().ws, keyring, account);
-	});
+	// program.command('query-class <account>').action(async (account) => {
+	// 	await demo_query_class(program.opts().ws, keyring, account);
+	// });
 	program.command('transfer-nft <classID> <tokenID> <from> <to>').action(async (classID, tokenID, from, to) => {
 		await demo_transfer_nft(program.opts().ws, keyring, classID, tokenID, from, to);
 	});
@@ -308,27 +308,27 @@ async function demo_transfer_nft(ws, keyring, classID, tokenID, from, to) {
 	process.exit();
 }
 
-async function demo_query_class(ws, keyring, account) {
-	let api = await getApi(ws);
-	const address = keyring.addFromUri(account).address;
-	const allClasses = await api.query.ormlNft.classes.entries();
-	for (const c of allClasses) {
-		let key = c[0];
-		const len = key.length;
-		key = key.buffer.slice(len - 4, len);
-		const classID = new Uint32Array(key)[0];
-		let clazz = c[1].toJSON();
-		clazz.metadata = hexToUtf8(clazz.metadata.slice(2));
-		clazz.classID = classID;
-		clazz.adminList = await api.query.proxy.proxies(clazz.owner);
-		for (const a of clazz.adminList[0]) {
-			if (a.delegate.toString() === address) {
-				console.log("%s", JSON.stringify(clazz));
-			}
-		}
-	}
-	process.exit();
-}
+// async function demo_query_class(ws, keyring, account) {
+// 	let api = await getApi(ws);
+// 	const address = keyring.addFromUri(account).address;
+// 	const allClasses = await api.query.ormlNft.classes.entries();
+// 	for (const c of allClasses) {
+// 		let key = c[0];
+// 		const len = key.length;
+// 		key = key.buffer.slice(len - 4, len);
+// 		const classID = new Uint32Array(key)[0];
+// 		let clazz = c[1].toJSON();
+// 		clazz.metadata = hexToUtf8(clazz.metadata.slice(2));
+// 		clazz.classID = classID;
+// 		clazz.adminList = await api.query.proxy.proxies(clazz.owner);
+// 		for (const a of clazz.adminList[0]) {
+// 			if (a.delegate.toString() === address) {
+// 				console.log("%s", JSON.stringify(clazz));
+// 			}
+// 		}
+// 	}
+// 	process.exit();
+// }
 
 // function u32ToU64(tokenIDLow32, tokenIDHigh32) {
 // 	return tokenIDLow32;

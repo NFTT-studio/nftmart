@@ -53,40 +53,70 @@ async function main() {
 	const program = new Command();
 	program.option('--ws <url>', 'node ws addr', 'ws://192.168.0.2:9944');
 
-	// node nft-apis.mjs create_class //Alice
+	// node nft-apis.mjs --ws 'ws://81.70.132.13:9944' create_class //Alice
 	program.command('create_class <signer>').action(async (signer) => {
 		await create_class(program.opts().ws, keyring, signer);
 	});
-	// node nft-apis.mjs add_class_admin //Alice 0 //Bob
+	// 1. node nft-apis.mjs --ws 'ws://81.70.132.13:9944' add_class_admin //Alice 0 //Bob
+	// 2. node nft-apis.mjs --ws 'ws://81.70.132.13:9944' add_class_admin //Alice 0 63b4iSPL2bXW7Z1ByBgf65is99LMDLvePLzF4Vd7S96zPYnw
 	program.command('add_class_admin <admin> <classId> <newAdmin>').action(async (admin, classId, newAdmin) => {
 		await add_class_admin(program.opts().ws, keyring, admin, classId, newAdmin);
 	});
-	// node nft-apis.mjs show_class
+	// node nft-apis.mjs --ws 'ws://81.70.132.13:9944' show_class
 	program.command('show_class').action(async () => {
 		await show_class(program.opts().ws);
 	});
-	// node nft-apis.mjs show_whitelist
+	// node nft-apis.mjs --ws 'ws://81.70.132.13:9944' show_whitelist
 	program.command('show_whitelist').action(async () => {
 		await show_whitelist(program.opts().ws, keyring);
 	});
-	// node nft-apis.mjs add_class_admin //Alice 0 //Bob
+	// 1. node nft-apis.mjs --ws 'ws://81.70.132.13:9944' add_whitelist //Alice //Bob
+	// 2. node nft-apis.mjs --ws 'ws://81.70.132.13:9944' add_whitelist //Alice 63b4iSPL2bXW7Z1ByBgf65is99LMDLvePLzF4Vd7S96zPYnw
 	program.command('add_whitelist <sudo> <account>').action(async (sudo, account) => {
 		await add_whitelist(program.opts().ws, keyring, sudo, account);
 	});
-	// node nft-apis.mjs mint_nft //Alice 0 30
+	// node nft-apis.mjs --ws 'ws://81.70.132.13:9944' mint_nft //Alice 0 30
 	program.command('mint_nft <admin> <classID> <quantity>').action(async (admin, classID, quantity) => {
 		await mint_nft(program.opts().ws, keyring, admin, classID, quantity);
 	});
-	// 1: node nft-apis.mjs show_nfts
-	// 2: node nft-apis.mjs show_nfts 0
+	// 1: node nft-apis.mjs --ws 'ws://81.70.132.13:9944' show_nfts
+	// 2: node nft-apis.mjs --ws 'ws://81.70.132.13:9944' show_nfts 0
 	program.command('show_nft [classID]').action(async (classID) => {
 		await show_nft(program.opts().ws, classID);
 	});
-	// node nft-apis.mjs query_nft_by //Alice
+	// 1. node nft-apis.mjs --ws 'ws://81.70.132.13:9944' query_nft_by //Alice
+	// 2. node nft-apis.mjs --ws 'ws://81.70.132.13:9944' query_nft_by 65ADzWZUAKXQGZVhQ7ebqRdqEzMEftKytB8a7rknW82EASXB
 	program.command('query_nft_by <account>').action(async (account) => {
 		await query_nft_by(program.opts().ws, keyring, account);
 	});
+	// 1. node nft-apis.mjs --ws 'ws://81.70.132.13:9944' query_class_by //Alice
+	// 2. node nft-apis.mjs --ws 'ws://81.70.132.13:9944' query_class_by 65ADzWZUAKXQGZVhQ7ebqRdqEzMEftKytB8a7rknW82EASXB
+	program.command('query_class_by <account>').action(async (account) => {
+		await query_class_by(program.opts().ws, keyring, account);
+	});
 	await program.parseAsync(process.argv);
+}
+
+async function query_class_by(ws, keyring, account) {
+	let api = await getApi(ws);
+	const address = ensureAddress(keyring, account);
+	const allClasses = await api.query.ormlNft.classes.entries();
+	for (const c of allClasses) {
+		let key = c[0];
+		const len = key.length;
+		key = key.buffer.slice(len - 4, len);
+		const classID = new Uint32Array(key)[0];
+		let clazz = c[1].toJSON();
+		clazz.metadata = hexToUtf8(clazz.metadata.slice(2));
+		try{ clazz.metadata = JSON.parse(clazz.metadata); } catch(_e) {}
+		clazz.classID = classID;
+		clazz.adminList = await api.query.proxy.proxies(clazz.owner); // (Vec<ProxyDefinition>,BalanceOf)
+		for (const a of clazz.adminList[0]) {
+			if (a.delegate.toString() === address) {
+				console.log("classInfo: %s", JSON.stringify(clazz));
+			}
+		}
+	}
 }
 
 async function query_nft_by(ws, keyring, account) {
@@ -184,7 +214,7 @@ async function add_class_admin(ws, keyring, admin, classId, newAdmin) {
 	let api = await getApi(ws);
 	let moduleMetadata = await getModules(api);
 	admin = keyring.addFromUri(admin);
-	newAdmin = keyring.addFromUri(newAdmin);
+	newAdmin = ensureAddress(keyring, newAdmin);
 
 	let classInfo = await api.query.ormlNft.classes(classId);
 	if(classInfo.isSome) {
@@ -200,8 +230,8 @@ async function add_class_admin(ws, keyring, admin, classId, newAdmin) {
 			// make sure `ownerOfClass` has sufficient balances.
 			api.tx.balances.transfer(ownerOfClass, balancesNeeded),
 			// Add `newAdmin` as a new admin.
-			api.tx.proxy.proxy(ownerOfClass, null, api.tx.proxy.addProxy(newAdmin.address, 'Any', 0)),
-			// api.tx.proxy.proxy(ownerOfClass, null, api.tx.proxy.removeProxy(newAdmin.address, 'Any', 0)), to remove an admin
+			api.tx.proxy.proxy(ownerOfClass, null, api.tx.proxy.addProxy(newAdmin, 'Any', 0)),
+			// api.tx.proxy.proxy(ownerOfClass, null, api.tx.proxy.removeProxy(newAdmin, 'Any', 0)), to remove an admin
 		];
 		const batchExtrinsic = api.tx.utility.batchAll(txs);
 		const feeInfo = await batchExtrinsic.paymentInfo(admin);
