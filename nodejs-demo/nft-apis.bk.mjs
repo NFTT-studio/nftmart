@@ -76,9 +76,9 @@ async function main() {
 	// program.command('burn-nft <classID> <tokenID> <account>').action(async (classID, tokenID, account) => {
 	// 	await demo_burn_nft(program.opts().ws, keyring, classID, tokenID, account);
 	// });
-	program.command('destroy-class <classID> <account>').action(async (classID, account) => {
-		await demo_destroy_class(program.opts().ws, keyring, classID, account);
-	});
+	// program.command('destroy-class <classID> <account>').action(async (classID, account) => {
+	// 	await demo_destroy_class(program.opts().ws, keyring, classID, account);
+	// });
 	// program.command('show-create-class-deposit <metadata> <name> <description>').action(async (metadata, name, description) => {
 	// 	await demo_show_create_class_deposit(program.opts().ws, metadata, name, description);
 	// });
@@ -253,22 +253,22 @@ async function demo_create_category(ws, keyring, metadata, account) {
 // 	process.exit(0);
 // }
 
-async function demo_destroy_class(ws, keyring, classID, account) {
-	let api = await getApi(ws);
-	let moduleMetadata = await getModules(api);
-	account = keyring.addFromUri(account);
-	let classInfo = await api.query.ormlNft.classes(classID);
-	if (classInfo.isSome) {
-		classInfo = classInfo.unwrap();
-		const call = api.tx.proxy.proxy(classInfo.owner, null, api.tx.nftmart.destroyClass(classID, account.address));
-		const feeInfo = await call.paymentInfo(account);
-		console.log("The fee of the call: %s.", feeInfo.partialFee / unit);
-		let [a, b] = waitTx(moduleMetadata);
-		await call.signAndSend(account, a);
-		await b();
-	}
-	process.exit();
-}
+// async function demo_destroy_class(ws, keyring, classID, account) {
+// 	let api = await getApi(ws);
+// 	let moduleMetadata = await getModules(api);
+// 	account = keyring.addFromUri(account);
+// 	let classInfo = await api.query.ormlNft.classes(classID);
+// 	if (classInfo.isSome) {
+// 		classInfo = classInfo.unwrap();
+// 		const call = api.tx.proxy.proxy(classInfo.owner, null, api.tx.nftmart.destroyClass(classID, account.address));
+// 		const feeInfo = await call.paymentInfo(account);
+// 		console.log("The fee of the call: %s.", feeInfo.partialFee / unit);
+// 		let [a, b] = waitTx(moduleMetadata);
+// 		await call.signAndSend(account, a);
+// 		await b();
+// 	}
+// 	process.exit();
+// }
 
 // async function demo_burn_nft(ws, keyring, classID, tokenID, account) {
 // 	let api = await getApi(ws);

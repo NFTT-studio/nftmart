@@ -113,10 +113,32 @@ async function main() {
 				console.log("Invalid options, maybe the length of classIds mismatches with the length of tokenIds.");
 			}
 	});
+	// node nft-apis.mjs --ws 'ws://81.70.132.13:9944' burn_nft //Alice 0 0 20
 	program.command('burn_nft <signer> <classID> <tokenID> <quantity>').action(async (signer, classID, tokenID, quantity) => {
 		await burn_nft(program.opts().ws, keyring, signer, classID, tokenID, quantity);
 	});
+	// node nft-apis.mjs --ws 'ws://81.70.132.13:9944' destroy_class //Alice 0
+	program.command('destroy_class <signer> <classID>').action(async (signer, classID) => {
+		await destroy_class(program.opts().ws, keyring, signer, classID);
+	});
 	await program.parseAsync(process.argv);
+}
+
+async function destroy_class(ws, keyring, signer, classID) {
+	await initApi(ws);
+	await query_class_by(ws, keyring, signer);
+	const sk = keyring.addFromUri(signer);
+	let classInfo = await Global_Api.query.ormlNft.classes(classID);
+	if (classInfo.isSome) {
+		classInfo = classInfo.unwrap();
+		const call = Global_Api.tx.proxy.proxy(classInfo.owner, null, Global_Api.tx.nftmart.destroyClass(classID, sk.address));
+		const feeInfo = await call.paymentInfo(sk);
+		console.log("The fee of the call: %s.", feeInfo.partialFee / unit);
+		let [a, b] = waitTx(Global_ModuleMetadata);
+		await call.signAndSend(sk, a);
+		await b();
+	}
+	await query_class_by(ws, keyring, signer);
 }
 
 async function burn_nft(ws, keyring, signer, classID, tokenID, quantity) {

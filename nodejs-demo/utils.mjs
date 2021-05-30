@@ -40,9 +40,9 @@ export function waitTx(moduleMetadata) {
 						// console.log(data.toString());
 						for (let d of data) {
 							d = d.toJSON();
-							if (d.Err && d.Err.Module && d.Err.Module.index && d.Err.Module.error) {
-								let module = moduleMetadata[d.Err.Module.index];
-								console.log("proxy.ProxyExecuted: %s.%s", module.name, module.errors[d.Err.Module.error].name);
+							if (d.err && d.err.module && d.err.module.index && d.err.module.error) {
+								let module = moduleMetadata[d.err.module.index];
+								console.log("proxy.ProxyExecuted: %s.%s", module.name, module.errors[d.err.module.error].name);
 							} else {
 								console.log("event: " + phase.toString() + ' ' + section + '.' + method + ' ' + data.toString());
 							}
