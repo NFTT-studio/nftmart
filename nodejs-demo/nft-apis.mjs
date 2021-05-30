@@ -113,7 +113,25 @@ async function main() {
 				console.log("Invalid options, maybe the length of classIds mismatches with the length of tokenIds.");
 			}
 	});
+	program.command('burn_nft <signer> <classID> <tokenID> <quantity>').action(async (signer, classID, tokenID, quantity) => {
+		await burn_nft(program.opts().ws, keyring, signer, classID, tokenID, quantity);
+	});
 	await program.parseAsync(process.argv);
+}
+
+async function burn_nft(ws, keyring, signer, classID, tokenID, quantity) {
+	await initApi(ws);
+	await query_nft_by(ws, keyring, signer);
+	const sk = keyring.addFromUri(signer);
+
+	const call = Global_Api.tx.nftmart.burn(classID, tokenID, quantity);
+	const feeInfo = await call.paymentInfo(sk);
+	console.log("The fee of the call: %s.", feeInfo.partialFee / unit);
+	let [a, b] = waitTx(Global_ModuleMetadata);
+	await call.signAndSend(sk, a);
+	await b();
+
+	await query_nft_by(ws, keyring, signer);
 }
 
 async function transfer_nfts(ws, tokens, keyring, from_raw, to) {
