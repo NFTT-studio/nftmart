@@ -127,17 +127,17 @@ export async function getApi(dest) {
 			reserved: 'Compact<TokenId>',
 		},
 
+		CategoryData: {
+			metadata: 'NFTMetadata',
+			nftCount: 'Compact<Balance>'
+		},
+
 		// OrderData: {
 		// 	currencyId: 'Compact<CurrencyIdOf>',
 		// 	price: 'Compact<Balance>',
 		// 	deposit: 'Compact<Balance>',
 		// 	deadline: 'Compact<BlockNumberOf>',
 		// 	categoryId: 'Compact<CategoryIdOf>'
-		// },
-
-		// CategoryData: {
-		// 	metadata: 'NFTMetadata',
-		// 	nftCount: 'Compact<Balance>'
 		// },
 	};
 

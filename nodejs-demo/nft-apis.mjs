@@ -121,7 +121,42 @@ async function main() {
 	program.command('destroy_class <signer> <classID>').action(async (signer, classID) => {
 		await destroy_class(program.opts().ws, keyring, signer, classID);
 	});
+	// node nft-apis.mjs --ws 'ws://81.70.132.13:9944' create_category //Alice 'my cate'
+	program.command('create_category <signer> <metadata>').action(async (signer, metadata) => {
+		await create_category(program.opts().ws, keyring, signer, metadata);
+	});
+	// node nft-apis.mjs --ws 'ws://81.70.132.13:9944' show_category
+	program.command('show_category').action(async () => {
+		await show_category(program.opts().ws);
+	});
 	await program.parseAsync(process.argv);
+}
+
+async function show_category(ws) {
+	await initApi(ws);
+	let cateCount = 0;
+	const callCategories = await Global_Api.query.nftmartConf.categories.entries();
+	for (let category of callCategories) {
+		let key = category[0];
+		const data = category[1].unwrap();
+		const len = key.length;
+		key = key.buffer.slice(len - 8, len);
+		const cateId = u32sToU64(new Uint32Array(key));
+		console.log(cateId.toString(), data.toHuman());
+		cateCount++;
+	}
+	console.log(`cateCount is ${cateCount}.`);
+}
+
+async function create_category(ws, keyring, signer, metadata) {
+	await initApi(ws);
+	signer = keyring.addFromUri(signer);
+	const call = Global_Api.tx.sudo.sudo(Global_Api.tx.nftmartConf.createCategory(metadata));
+	const feeInfo = await call.paymentInfo(signer);
+	console.log("The fee of the call: %s.", feeInfo.partialFee / unit);
+	let [a, b] = waitTx(Global_ModuleMetadata);
+	await call.signAndSend(signer, a);
+	await b();
 }
 
 async function destroy_class(ws, keyring, signer, classID) {
