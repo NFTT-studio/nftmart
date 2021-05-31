@@ -212,10 +212,6 @@ fn transfer_should_fail() {
 		add_class(ALICE);
 		add_token(BOB, 1, None);
 		assert_noop!(
-			Nftmart::transfer(Origin::signed(BOB), ALICE, vec![(CLASS_ID, TOKEN_ID, 0)]),
-			Error::<Runtime>::InvalidQuantity
-		);
-		assert_noop!(
 			Nftmart::transfer(Origin::signed(BOB), ALICE, vec![(CLASS_ID_NOT_EXIST, TOKEN_ID, 1)]),
 			Error::<Runtime>::ClassIdNotFound
 		);
