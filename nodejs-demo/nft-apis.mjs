@@ -88,6 +88,16 @@ async function main() {
 			[0, 1, 3],
 			[0, 2, 3],
 		]);
+		await submit_offer(ws, keyring, "//Bob", [
+			[0, 0, 2],
+			[0, 1, 2],
+			[0, 2, 2],
+		]);
+		await submit_offer(ws, keyring, "//Bob", [
+			[0, 0, 3],
+			[0, 1, 3],
+			[0, 2, 3],
+		]);
 	});
 
 	// node nft-apis.mjs --ws 'ws://81.70.132.13:9944' create_class //Alice
@@ -225,7 +235,35 @@ async function main() {
 				console.log("Invalid options, maybe the length of classIds mismatches with the length of tokenIds.");
 			}
 		});
+	// node nft-apis.mjs --ws 'ws://81.70.132.13:9944' show_offer
+	program.command('show_offer').action(async () => {
+		await show_offer(program.opts().ws, keyring);
+	});
 	await program.parseAsync(process.argv);
+}
+
+async function show_offer(ws, keyring) {
+	await initApi(ws);
+	const currentBlockNumber = bnToBn(await Global_Api.query.system.number());
+	let offerCount = 0;
+	const allOffers = await Global_Api.query.nftmartOrder.offers.entries();
+	for (let offer of allOffers) {
+		let key = offer[0];
+		let keyLen = key.length;
+		const offerId = u32sToU64(new Uint32Array(key.buffer.slice(keyLen - 8, keyLen)));
+		const offerOwner = keyring.encodeAddress(new Uint8Array(key.buffer.slice(keyLen - 8 - 8 - 32, keyLen - 8 - 8)));
+
+		let data = offer[1].toHuman();
+		data.offerOwner = offerOwner;
+		data.offerId = offerId.toString();
+
+		console.log("\n\noffer: %s", JSON.stringify(data));
+		for(const item of data.items) {
+			await display_nft_by(item.classId, item.tokenId);
+		}
+		offerCount++;
+	}
+	console.log(`offer count is ${offerCount}. current block is ${currentBlockNumber}`);
 }
 
 async function submit_offer(ws, keyring, account, tokens) {
@@ -293,7 +331,7 @@ async function show_order(ws, keyring) {
 		data.orderOwner = orderOwner;
 		data.orderId = orderId.toString();
 
-		console.log("%s", JSON.stringify(data));
+		console.log("\n\norder %s", JSON.stringify(data));
 		for(const item of data.items) {
 			await display_nft_by(item.classId, item.tokenId);
 		}
