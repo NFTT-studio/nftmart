@@ -132,13 +132,28 @@ export async function getApi(dest) {
 			nftCount: 'Compact<Balance>'
 		},
 
-		// OrderData: {
-		// 	currencyId: 'Compact<CurrencyIdOf>',
-		// 	price: 'Compact<Balance>',
-		// 	deposit: 'Compact<Balance>',
-		// 	deadline: 'Compact<BlockNumberOf>',
-		// 	categoryId: 'Compact<CategoryIdOf>'
-		// },
+		OrderItem: {
+			classId: 'Compact<ClassId>',
+			tokenId: 'Compact<TokenId>',
+			quantity: 'Compact<TokenId>',
+		},
+
+		OrderOf: {
+			currencyId: 'Compact<CurrencyId>',
+			deposit: 'Compact<Balance>',
+			price: 'Compact<Balance>',
+			deadline: 'Compact<BlockNumberOf>',
+			categoryId: 'Compact<CategoryId>',
+			items: 'Vec<OrderItem>',
+		},
+
+		OfferOf: {
+			currencyId: 'Compact<CurrencyId>',
+			price: 'Compact<Balance>',
+			deadline: 'Compact<BlockNumberOf>',
+			categoryId: 'Compact<CategoryId>',
+			items: 'Vec<OrderItem>',
+		},
 	};
 
 	const api = await ApiPromise.create({provider, types});
