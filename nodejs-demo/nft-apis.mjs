@@ -201,13 +201,17 @@ async function main() {
 async function take_order(ws, keyring, account, orderId, orderOwner) {
 	await initApi(ws);
 	account = keyring.addFromUri(account);
-	orderOwner = ensureAddress(orderOwner);
+	orderOwner = ensureAddress(keyring, orderOwner);
 	const call =  Global_Api.tx.nftmartOrder.takeOrder(orderId, orderOwner);
 	const feeInfo = await call.paymentInfo(account);
 	console.log("The fee of the call: %s NMT", feeInfo.partialFee / unit);
 	let [a, b] = waitTx(Global_ModuleMetadata);
 	await call.signAndSend(account, a);
 	await b();
+	console.log("assets of order owner(%s):", orderOwner);
+	await query_nft_by(ws, keyring, orderOwner);
+	console.log("assets of signer(%s):", account.address);
+	await query_nft_by(ws, keyring, account.address);
 }
 
 async function show_order(ws, keyring) {
