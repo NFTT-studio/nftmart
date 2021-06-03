@@ -239,7 +239,43 @@ async function main() {
 	program.command('show_offer').action(async () => {
 		await show_offer(program.opts().ws, keyring);
 	});
+	// 1. node nft-apis.mjs --ws 'ws://81.70.132.13:9944' take_offer //Alice 1 //Bob
+	// 2. node nft-apis.mjs --ws 'ws://81.70.132.13:9944' take_offer //Alice 1 63b4iSPL2bXW7Z1ByBgf65is99LMDLvePLzF4Vd7S96zPYnw
+	program.command('take_offer <account> <offerId> <offerOwner>').action(async (account, offerId, offerOwner) => {
+		await take_offer(program.opts().ws, keyring, account, offerId, offerOwner);
+	});
+	// node nft-apis.mjs --ws 'ws://81.70.132.13:9944' remove_offer //Alice 1
+	program.command('remove_offer <account> <offerId>').action(async (account, offerId) => {
+		await remove_offer(program.opts().ws, keyring, account, offerId);
+	});
 	await program.parseAsync(process.argv);
+}
+
+async function remove_offer(ws, keyring, account, offerId) {
+	await initApi(ws);
+	account = keyring.addFromUri(account);
+	const call =  Global_Api.tx.nftmartOrder.removeOffer(offerId);
+	const feeInfo = await call.paymentInfo(account);
+	console.log("The fee of the call: %s NMT", feeInfo.partialFee / unit);
+	let [a, b] = waitTx(Global_ModuleMetadata);
+	await call.signAndSend(account, a);
+	await b();
+}
+
+async function take_offer(ws, keyring, account, offerId, offerOwner) {
+	await initApi(ws);
+	account = keyring.addFromUri(account);
+	offerOwner = ensureAddress(keyring, offerOwner);
+	const call =  Global_Api.tx.nftmartOrder.takeOffer(offerId, offerOwner);
+	const feeInfo = await call.paymentInfo(account);
+	console.log("The fee of the call: %s NMT", feeInfo.partialFee / unit);
+	let [a, b] = waitTx(Global_ModuleMetadata);
+	await call.signAndSend(account, a);
+	await b();
+	console.log("assets of offer owner(%s):", offerOwner);
+	await show_nft_by_account(ws, keyring, offerOwner);
+	console.log("assets of signer(%s):", account.address);
+	await show_nft_by_account(ws, keyring, account.address);
 }
 
 async function show_offer(ws, keyring) {
