@@ -1,4 +1,4 @@
-import {getApi, getModules, waitTx, hexToUtf8, unit, ensureAddress, u32sToU64} from "./utils.mjs";
+import {getApi, getModules, waitTx, hexToUtf8, unit, ensureAddress} from "./utils.mjs";
 import {Keyring} from "@polkadot/api";
 import {bnToBn} from "@polkadot/util";
 import {Command} from "commander";
@@ -286,7 +286,8 @@ async function show_offer(ws, keyring) {
 	for (let offer of allOffers) {
 		let key = offer[0];
 		let keyLen = key.length;
-		const offerId = u32sToU64(new Uint32Array(key.buffer.slice(keyLen - 8, keyLen)));
+
+		const offerId = Buffer.from(key.buffer.slice(keyLen - 8, keyLen)).readBigUInt64LE();
 		const offerOwner = keyring.encodeAddress(new Uint8Array(key.buffer.slice(keyLen - 8 - 8 - 32, keyLen - 8 - 8)));
 
 		let data = offer[1].toHuman();
@@ -360,7 +361,8 @@ async function show_order(ws, keyring) {
 	for (let order of allOrders) {
 		let key = order[0];
 		let keyLen = key.length;
-		const orderId = u32sToU64(new Uint32Array(key.buffer.slice(keyLen - 8, keyLen)));
+
+		const orderId = Buffer.from(key.buffer.slice(keyLen - 8, keyLen)).readBigUInt64LE();
 		const orderOwner = keyring.encodeAddress(new Uint8Array(key.buffer.slice(keyLen - 8 - 8 - 32, keyLen - 8 - 8)));
 
 		let data = order[1].toHuman();
@@ -409,8 +411,7 @@ async function show_category(ws) {
 		let key = category[0];
 		const data = category[1].unwrap();
 		const len = key.length;
-		key = key.buffer.slice(len - 8, len);
-		const cateId = u32sToU64(new Uint32Array(key));
+		const cateId = Buffer.from(key.buffer.slice(len - 8, len)).readBigUInt64LE();
 		console.log(cateId.toString(), data.toHuman());
 		cateCount++;
 	}
@@ -509,7 +510,7 @@ async function show_nft_by_account(ws, keyring, account) {
 		const len = clzToken.length;
 
 		const classID = new Uint32Array(clzToken.slice(len - 4 - 8, len - 8))[0];
-		const tokenID = u32sToU64(new Uint32Array(clzToken.slice(len - 8, len)));
+		const tokenID = Buffer.from(clzToken.slice(len - 8, len)).readBigUInt64LE();
 
 		let nft = await Global_Api.query.ormlNft.tokens(classID, tokenID);
 		print_nft(classID, tokenID, nft, accountToken);

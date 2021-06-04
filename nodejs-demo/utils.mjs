@@ -179,12 +179,6 @@ export function ensureAddress(keyring, account) {
 	return account;
 }
 
-export function u32sToU64(tokenIDRaw) {
-	const tokenIDLow32 =  BigInt(tokenIDRaw[0]);
-	const tokenIDHigh32 = BigInt(tokenIDRaw[1]);
-	return (tokenIDHigh32 << 32n) + tokenIDLow32;
-}
-
 export function secondsToString(seconds) {
 	let numyears = Math.floor(seconds / 31536000);
 	let numdays = Math.floor((seconds % 31536000) / 86400);
