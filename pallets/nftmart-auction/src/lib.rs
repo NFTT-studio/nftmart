@@ -138,6 +138,9 @@ pub mod module {
 		CreatedBritishAuction(T::AccountId, GlobalId),
 		/// RemovedBritishAuction \[who, auction_id\]
 		RemovedBritishAuction(T::AccountId, GlobalId),
+		RedeemedBritishAuction(T::AccountId, GlobalId),
+		BidBritishAuction(T::AccountId, GlobalId),
+		HammerBritishAuction(T::AccountId, GlobalId),
 	}
 
 	#[pallet::pallet]
@@ -191,8 +194,15 @@ pub mod module {
 	impl<T: Config> Pallet<T> {
 		/// Create an British auction.
 		///
-		/// - `currency_id`: currency id
-		/// - `hammer_price`: If somebody offer this price, the auction will be finished.
+		/// - `currency_id`: Currency Id
+		/// - `hammer_price`: If somebody offer this price, the auction will be finished. Set to zero to disable.
+		/// - `min_raise`: The next price of bid should be larger than old_price * ( 1 + min_raise )
+		/// - `deposit`: A higher deposit will be good for the display of the auction in the market.
+		/// - `init_price`: The initial price for the auction to kick off.
+		/// - `deadline`: A block number which represents the end of the auction activity.
+		/// - `allow_delay`: If ture, in some cases the deadline will be extended.
+		/// - `category_id`: Category Id
+		/// - `items`: Nft list.
 		#[pallet::weight(100_000)]
 		#[transactional]
 		pub fn submit_british_auction(
@@ -209,12 +219,14 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
+			// check and reserve `deposit`
 			ensure!(deposit >= T::ExtraConfig::get_min_order_deposit(), Error::<T>::SubmitWithInvalidDeposit);
 			<T as Config>::Currency::reserve(&who, deposit.saturated_into())?;
 
+			// check deadline
 			ensure!(frame_system::Pallet::<T>::block_number() < deadline, Error::<T>::SubmitWithInvalidDeadline);
 
-			// if we set hammer price, then
+			// check hammer price
 			if hammer_price > Zero::zero() {
 				ensure!(hammer_price > init_price, Error::<T>::InvalidHammerPrice);
 			}
@@ -243,13 +255,13 @@ pub mod module {
 			for item in items{
 				let (class_id, token_id, quantity) = item;
 
-				// check only one royalty constrains
+				// check the `only one royalty constrains`
 				if T::NFT::token_charged_royalty(class_id, token_id)? {
 					ensure!(count_of_charged_royalty == 0, Error::<T>::TooManyTokenChargedRoyalty);
 					count_of_charged_royalty += 1;
 				}
 
-				// reserve selling tokens
+				// reserve the selling tokens
 				T::NFT::reserve_tokens(&who, class_id, token_id, quantity)?;
 
 				auction.items.push(OrderItem{
@@ -259,10 +271,17 @@ pub mod module {
 				})
 			}
 
+			// add the auction to a category
 			T::ExtraConfig::inc_count_in_category(category_id)?;
+
+			// generate an auction id
 			let auction_id = T::ExtraConfig::get_then_inc_id()?;
+
+			// save auction information.
 			BritishAuctions::<T>::insert(&who, auction_id, auction);
 			BritishAuctionBids::<T>::insert(auction_id, auction_bid);
+
+			// emit event.
 			Self::deposit_event(Event::CreatedBritishAuction(who, auction_id));
 			Ok(().into())
 		}
@@ -284,16 +303,20 @@ pub mod module {
 
 			// check deadline
 			ensure!(Self::get_deadline(&auction, &auction_bid) >= frame_system::Pallet::<T>::block_number(), Error::<T>::BritishAuctionClosed);
+
+			// check hammer price
 			if !auction.hammer_price.is_zero() && price >= auction.hammer_price {
-				// make the deals with `hammer_price`. switch assets.
-				Self::delete_british_auction(&auction_owner, auction_id, true)?;
+				// delete the auction and release all assets reserved by this auction.
+				Self::delete_british_auction(&auction_owner, auction_id)?;
+				// make the deals with `hammer_price`. swap assets.
 				T::MultiCurrency::transfer(auction.currency_id, &purchaser, &auction_owner, auction.hammer_price)?;
 				for item in &auction.items {
 					T::NFT::transfer(&auction_owner, &purchaser, item.class_id, item.token_id, item.quantity)?;
 				}
+				Self::deposit_event(Event::HammerBritishAuction(purchaser, auction_id));
 				Ok(().into())
 			} else {
-				// check price offered
+				// check the new bid price.
 				let lowest_price: Balance = auction_bid.last_offer_price.saturating_add(auction.min_raise.mul_ceil(auction_bid.last_offer_price));
 				ensure!(price > lowest_price, Error::<T>::PriceTooLow);
 
@@ -306,11 +329,11 @@ pub mod module {
 
 				let mut auction_bid = auction_bid;
 				auction_bid.last_offer_price = price;
-				auction_bid.last_offer_account = Some(purchaser);
+				auction_bid.last_offer_account = Some(purchaser.clone());
 				auction_bid.last_offer_block = frame_system::Pallet::<T>::block_number();
 
 				BritishAuctionBids::<T>::insert(auction_id, auction_bid);
-
+				Self::deposit_event(Event::BidBritishAuction(purchaser, auction_id));
 				Ok(().into())
 			}
 		}
@@ -325,14 +348,15 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			let _ = ensure_signed(origin)?;
 			let auction_owner = T::Lookup::lookup(auction_owner)?;
-			let (auction,auction_bid) = Self::delete_british_auction(&auction_owner, auction_id, true)?;
+			let (auction,auction_bid) = Self::delete_british_auction(&auction_owner, auction_id)?;
 			ensure!(Self::get_deadline(&auction, &auction_bid) < frame_system::Pallet::<T>::block_number(), Error::<T>::CannotRedeemAuction);
-			if let Some(purchaser) = &auction_bid.last_offer_account {
-				T::MultiCurrency::transfer(auction.currency_id, &purchaser, &auction_owner, auction_bid.last_offer_price)?;
-				for item in &auction.items {
-					T::NFT::transfer(&auction_owner, &purchaser, item.class_id, item.token_id, item.quantity)?;
-				}
+			ensure!(auction_bid.last_offer_account.is_some(), Error::<T>::CannotRemoveAuction);
+			let purchaser = auction_bid.last_offer_account.expect("Must be Some");
+			T::MultiCurrency::transfer(auction.currency_id, &purchaser, &auction_owner, auction_bid.last_offer_price)?;
+			for item in &auction.items {
+				T::NFT::transfer(&auction_owner, &purchaser, item.class_id, item.token_id, item.quantity)?;
 			}
+			Self::deposit_event(Event::RedeemedBritishAuction(purchaser.clone(), auction_id));
 			Ok(().into())
 		}
 
@@ -344,7 +368,8 @@ pub mod module {
 			#[pallet::compact] auction_id: GlobalId,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
-			Self::delete_british_auction(&who, auction_id, false)?;
+			let (_, bid) = Self::delete_british_auction(&who, auction_id)?;
+			ensure!(bid.last_offer_account.is_none(), Error::<T>::CannotRemoveAuction);
 			Self::deposit_event(Event::RemovedBritishAuction(who, auction_id));
 			Ok(().into())
 		}
@@ -352,15 +377,9 @@ pub mod module {
 }
 
 impl<T: Config> Pallet<T> {
-	fn delete_british_auction(who: &T::AccountId, auction_id: GlobalId, deals: bool) -> Result<(BritishAuctionOf<T>, BritishAuctionBidOf<T>), DispatchError> {
+	fn delete_british_auction(who: &T::AccountId, auction_id: GlobalId) -> Result<(BritishAuctionOf<T>, BritishAuctionBidOf<T>), DispatchError> {
 		BritishAuctionBids::<T>::try_mutate_exists(auction_id, |maybe_british_auction_bid| {
 			let auction_bid: BritishAuctionBidOf<T> = maybe_british_auction_bid.as_mut().ok_or(Error::<T>::BritishAuctionBidNotFound)?.clone();
-			if deals {
-				ensure!(auction_bid.last_offer_account.is_some(), Error::<T>::CannotRemoveAuction);
-			} else {
-				ensure!(auction_bid.last_offer_account.is_none(), Error::<T>::CannotRemoveAuction);
-			}
-
 			BritishAuctions::<T>::try_mutate_exists(who, auction_id, |maybe_british_auction| {
 				let auction: BritishAuctionOf<T> = maybe_british_auction.as_mut().ok_or(Error::<T>::BritishAuctionNotFound)?.clone();
 
