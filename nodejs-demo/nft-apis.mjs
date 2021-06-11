@@ -1,4 +1,4 @@
-import {getApi, getModules, waitTx, hexToUtf8, unit, ensureAddress} from "./utils.mjs";
+import {waitTx, hexToUtf8, unit, ensureAddress, Global_Api, Global_ModuleMetadata, initApi} from "./utils.mjs";
 import {Keyring} from "@polkadot/api";
 import {bnToBn} from "@polkadot/util";
 import {Command} from "commander";
@@ -52,16 +52,6 @@ function print_nft(classID, tokenID, nft, accountToken) {
 async function display_nft_by(classID, tokenID) {
 	let nft = await Global_Api.query.ormlNft.tokens(classID, tokenID);
 	print_nft(classID, tokenID, nft);
-}
-
-let Global_Api = null;
-let Global_ModuleMetadata = null;
-
-async function initApi(ws) {
-	if (Global_Api === null || Global_ModuleMetadata === null) {
-		Global_Api = await getApi(ws);
-		Global_ModuleMetadata = await getModules(Global_Api);
-	}
 }
 
 async function main() {

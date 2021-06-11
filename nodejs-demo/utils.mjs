@@ -11,6 +11,15 @@ export function sleep(milliseconds) {
 	return new Promise(resolve => setTimeout(resolve, milliseconds))
 }
 
+export let Global_Api = null;
+export let Global_ModuleMetadata = null;
+export async function initApi(ws) {
+	if (Global_Api === null || Global_ModuleMetadata === null) {
+		Global_Api = await getApi(ws);
+		Global_ModuleMetadata = await getModules(Global_Api);
+	}
+}
+
 export function waitTx(moduleMetadata) {
 	let signal = false;
 	return [
