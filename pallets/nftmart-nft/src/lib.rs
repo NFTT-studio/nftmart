@@ -27,6 +27,7 @@ pub type ClassIdOf<T> = <T as orml_nft::Config>::ClassId;
 pub type BalanceOf<T> = <<T as module::Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 pub type CurrencyIdOf<T> = <<T as module::Config>::MultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::CurrencyId;
 pub type BlockNumberOf<T> = <T as frame_system::Config>::BlockNumber;
+pub type ResultPost<T> = sp_std::result::Result<T, sp_runtime::DispatchErrorWithPostInfo<frame_support::weights::PostDispatchInfo>>;
 
 #[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug)]
 enum Releases {
@@ -254,37 +255,9 @@ pub mod module {
 		/// - `name`: class name, with len limitation.
 		/// - `description`: class description, with len limitation.
 		#[pallet::weight(100_000)]
-		#[transactional]
 		pub fn create_class(origin: OriginFor<T>, metadata: NFTMetadata, name: Vec<u8>, description: Vec<u8>, properties: Properties) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
-			ensure!(T::ExtraConfig::is_in_whitelist(&who), Error::<T>::AccountNotInWhitelist);
-
-			ensure!(name.len() <= 20, Error::<T>::NameTooLong);// TODO: pass configurations from runtime configuration.
-			ensure!(description.len() <= 256, Error::<T>::DescriptionTooLong);// TODO: pass configurations from runtime configuration.
-
-			let next_id = orml_nft::Pallet::<T>::next_class_id();
-			let owner: T::AccountId = T::ModuleId::get().into_sub_account(next_id);
-			let (deposit, all_deposit) = Self::create_class_deposit(
-				metadata.len().saturated_into(),
-				name.len().saturated_into(),
-				description.len().saturated_into(),
-			);
-
-			<T as Config>::Currency::transfer(&who, &owner, all_deposit.saturated_into(), KeepAlive)?;
-			<T as Config>::Currency::reserve(&owner, deposit.saturated_into())?;
-			// owner add proxy delegate to origin
-			<pallet_proxy::Pallet<T>>::add_proxy_delegate(&owner, who, Default::default(), Zero::zero())?;
-
-			let data: ClassData<BlockNumberOf<T>> = ClassData {
-				deposit,
-				properties,
-				name,
-				description,
-				create_block: <frame_system::Pallet<T>>::block_number(),
-			};
-			orml_nft::Pallet::<T>::create_class(&owner, metadata, data)?;
-
-			Self::deposit_event(Event::CreatedClass(owner, next_id));
+			Self::do_create_class(who, metadata, name, description, properties)?;
 			Ok(().into())
 		}
 
@@ -468,6 +441,39 @@ pub mod module {
 }
 
 impl<T: Config> Pallet<T> {
+
+	#[transactional]
+	pub fn do_create_class(who: T::AccountId, metadata: NFTMetadata, name: Vec<u8>, description: Vec<u8>, properties: Properties) -> ResultPost<(T::AccountId, ClassIdOf<T>)> {
+		ensure!(T::ExtraConfig::is_in_whitelist(&who), Error::<T>::AccountNotInWhitelist);
+
+		ensure!(name.len() <= 20, Error::<T>::NameTooLong);// TODO: pass configurations from runtime configuration.
+		ensure!(description.len() <= 256, Error::<T>::DescriptionTooLong);// TODO: pass configurations from runtime configuration.
+
+		let next_id = orml_nft::Pallet::<T>::next_class_id();
+		let owner: T::AccountId = T::ModuleId::get().into_sub_account(next_id);
+		let (deposit, all_deposit) = Self::create_class_deposit(
+			metadata.len().saturated_into(),
+			name.len().saturated_into(),
+			description.len().saturated_into(),
+		);
+
+		<T as Config>::Currency::transfer(&who, &owner, all_deposit.saturated_into(), KeepAlive)?;
+		<T as Config>::Currency::reserve(&owner, deposit.saturated_into())?;
+		// owner add proxy delegate to origin
+		<pallet_proxy::Pallet<T>>::add_proxy_delegate(&owner, who, Default::default(), Zero::zero())?;
+
+		let data: ClassData<BlockNumberOf<T>> = ClassData {
+			deposit,
+			properties,
+			name,
+			description,
+			create_block: <frame_system::Pallet<T>>::block_number(),
+		};
+		orml_nft::Pallet::<T>::create_class(&owner, metadata, data)?;
+
+		Self::deposit_event(Event::CreatedClass(owner.clone(), next_id));
+		Ok((owner, next_id))
+	}
 
 	fn is_burnable(class_id: ClassIdOf<T>) -> Result<bool, DispatchError> {
 		let class_info = orml_nft::Pallet::<T>::classes(class_id).ok_or(Error::<T>::ClassIdNotFound)?;

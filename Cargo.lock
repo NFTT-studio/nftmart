@@ -4439,6 +4439,7 @@ dependencies = [
  "nftmart-nft",
  "nftmart-order",
  "nftmart-rpc-runtime-api",
+ "nftmart-traits",
  "node-primitives",
  "orml-currencies",
  "orml-nft",

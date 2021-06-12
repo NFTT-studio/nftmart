@@ -5,7 +5,7 @@ use sp_std::vec::Vec;
 use sp_core::constants_types::{Balance, GlobalId};
 #[cfg(feature = "std")]
 use serde::{Serialize, Deserialize};
-use enumflags2::BitFlags;
+pub use enumflags2::BitFlags;
 pub use orml_traits::nft::{TokenInfo, ClassInfo, AccountToken};
 
 pub trait NftmartConfig<AccountId, BlockNumber> {

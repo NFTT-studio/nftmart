@@ -92,6 +92,7 @@ orml-currencies = { version = "0.4.1-dev", default-features = false, path = "../
 orml-tokens = { version = "0.4.1-dev", default-features = false, path = "../../../pallets/orml-tokens" }
 orml-traits = { path = "../../../pallets/orml-traits", default-features = false }
 orml-nft = { path = "../../../pallets/orml-nft", default-features = false }
+nftmart-traits = { path = "../../../pallets/nftmart-traits", default-features = false }
 nftmart-nft = { path = "../../../pallets/nftmart-nft", default-features = false }
 nftmart-order = { path = "../../../pallets/nftmart-order", default-features = false }
 nftmart-config = { path = "../../../pallets/nftmart-config", default-features = false }
@@ -173,6 +174,7 @@ std = [
 	"orml-tokens/std",
 	"orml-traits/std",
 	"orml-nft/std",
+	"nftmart-traits/std",
 	"nftmart-nft/std",
 	"nftmart-order/std",
 	"nftmart-config/std",
