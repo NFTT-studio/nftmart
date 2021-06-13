@@ -22,6 +22,8 @@ orml-utilities = { path = "../orml-utilities", version = "0.4.1-dev", default-fe
 
 funty = { version = "=1.1.0", default-features = false } # https://github.com/bitvecto-rs/bitvec/issues/105
 
+max-encoded-len = { version = "3.0.0", default-features = false, path = "../../max-encoded-len", features = [ "derive" ] }
+
 [dev-dependencies]
 sp-core = { version = "3.0.0", path = "../../primitives/core" }
 pallet-balances = { version = "3.0.0", path = "../../frame/balances" }
@@ -37,6 +39,7 @@ std = [
 	"sp-io/std",
 	"frame-support/std",
 	"frame-system/std",
+	"max-encoded-len/std",
 	"orml-traits/std",
 	"orml-utilities/std",
 ]

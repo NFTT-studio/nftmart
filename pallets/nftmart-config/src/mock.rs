@@ -3,11 +3,7 @@
 use sp_core::constants_types::*;
 use crate as nftmart_config;
 use codec::{Decode, Encode};
-use frame_support::{
-	construct_runtime, parameter_types,
-	traits::{Filter, InstanceFilter},
-	RuntimeDebug,
-};
+use frame_support::{construct_runtime, parameter_types, traits::{Filter, InstanceFilter}, RuntimeDebug};
 use sp_core::{crypto::AccountId32, H256};
 use sp_runtime::{
 	testing::Header,
@@ -58,6 +54,8 @@ impl pallet_balances::Config for Runtime {
 	type AccountStore = frame_system::Pallet<Runtime>;
 	type MaxLocks = ();
 	type WeightInfo = ();
+	type MaxReserves = ();
+	type ReserveIdentifier = ();
 }
 impl pallet_utility::Config for Runtime {
 	type Event = Event;
@@ -72,7 +70,7 @@ parameter_types! {
 	pub const AnnouncementDepositBase: u64 = 1;
 	pub const AnnouncementDepositFactor: u64 = 1;
 }
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode, RuntimeDebug)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode, RuntimeDebug, MaxEncodedLen)]
 pub enum ProxyType {
 	Any,
 	JustTransfer,
@@ -126,6 +124,7 @@ impl nftmart_config::Config for Runtime {
 }
 
 use frame_system::Call as SystemCall;
+use frame_support::max_encoded_len::MaxEncodedLen;
 
 pub type Block = sp_runtime::generic::Block<Header, UncheckedExtrinsic>;
 pub type UncheckedExtrinsic = sp_runtime::generic::UncheckedExtrinsic<u32, Call, u32, ()>;

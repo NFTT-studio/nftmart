@@ -10,7 +10,7 @@ fn test_whitelist() {
 		assert_eq!(None, NftmartConf::account_whitelist(ALICE));
 		assert_eq!(None, NftmartConf::account_whitelist(BOB));
 		assert_ok!(NftmartConf::add_whitelist(Origin::root(), ALICE));
-		assert_eq!(last_event(), Event::nftmart_config(crate::Event::AddWhitelist(ALICE)));
+		assert_eq!(last_event(), Event::NftmartConf(crate::Event::AddWhitelist(ALICE)));
 		assert_eq!(Some(()), NftmartConf::account_whitelist(ALICE));
 		assert_noop!(
 			NftmartConf::add_whitelist(Origin::signed(BOB), BOB),
@@ -18,7 +18,7 @@ fn test_whitelist() {
 		);
 
 		assert_ok!(NftmartConf::remove_whitelist(Origin::root(), ALICE));
-		assert_eq!(last_event(), Event::nftmart_config(crate::Event::RemoveWhitelist(ALICE)));
+		assert_eq!(last_event(), Event::NftmartConf(crate::Event::RemoveWhitelist(ALICE)));
 		assert_eq!(None, NftmartConf::account_whitelist(ALICE));
 		assert_eq!(None, NftmartConf::account_whitelist(BOB));
 	});
@@ -49,7 +49,7 @@ fn create_category_should_work() {
 
 		assert_ok!(NftmartConf::create_category(Origin::root(), vec![233]));
 
-		let event = Event::nftmart_config(crate::Event::CreatedCategory(0));
+		let event = Event::NftmartConf(crate::Event::CreatedCategory(0));
 		assert_eq!(last_event(), event);
 
 		assert_eq!({ let id_expect: GlobalId = One::one(); id_expect }, NftmartConf::next_id());

@@ -36,7 +36,7 @@ fn submit_order_should_work() {
 
 		assert_eq!(
 			last_event(),
-			Event::nftmart_order(crate::Event::CreatedOrder(BOB, order_id)),
+			Event::NftmartOrder(crate::Event::CreatedOrder(BOB, order_id)),
 		);
 
 		// Some tokens should be reserved.
@@ -79,7 +79,7 @@ fn take_order_should_work() {
 
 		assert_eq!(
 			last_event(),
-			Event::nftmart_order(crate::Event::TakenOrder(ALICE, BOB, order_id)),
+			Event::NftmartOrder(crate::Event::TakenOrder(ALICE, BOB, order_id)),
 		);
 	});
 }
@@ -106,7 +106,7 @@ fn submit_offer_should_work() {
 
 		assert_eq!(
 			last_event(),
-			Event::nftmart_order(crate::Event::CreatedOffer(CHARLIE, order_id)),
+			Event::NftmartOrder(crate::Event::CreatedOffer(CHARLIE, order_id)),
 		);
 
 		assert_eq!(0, free_balance(&CHARLIE));
@@ -143,7 +143,7 @@ fn take_offer_should_work() {
 
 		assert_eq!(
 			last_event(),
-			Event::nftmart_order(crate::Event::TakenOffer(BOB, CHARLIE, order_id)),
+			Event::NftmartOrder(crate::Event::TakenOffer(BOB, CHARLIE, order_id)),
 		);
 
 		assert_eq!(0, free_balance(&CHARLIE));

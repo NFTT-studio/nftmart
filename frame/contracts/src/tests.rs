@@ -237,6 +237,8 @@ impl frame_system::Config for Test {
 }
 impl pallet_balances::Config for Test {
 	type MaxLocks = ();
+	type MaxReserves = ();
+	type ReserveIdentifier = [u8; 8];
 	type Balance = u64;
 	type Event = Event;
 	type DustRemoval = ();
@@ -366,7 +368,7 @@ fn calling_plain_account_fails() {
 			Contracts::call(Origin::signed(ALICE), BOB, 0, GAS_LIMIT, Vec::new()),
 			Err(
 				DispatchErrorWithPostInfo {
-					error: Error::<Test>::NotCallable.into(),
+					error: Error::<Test>::ContractNotFound.into(),
 					post_info: PostDispatchInfo {
 						actual_weight: Some(base_cost),
 						pays_fee: Default::default(),
@@ -396,7 +398,7 @@ fn account_removal_does_not_remove_storage() {
 				deduct_block: System::block_number(),
 				code_hash: H256::repeat_byte(1),
 				rent_allowance: 40,
-				rent_payed: 0,
+				rent_paid: 0,
 				last_write: None,
 				_reserved: None,
 			});
@@ -412,7 +414,7 @@ fn account_removal_does_not_remove_storage() {
 				deduct_block: System::block_number(),
 				code_hash: H256::repeat_byte(2),
 				rent_allowance: 40,
-				rent_payed: 0,
+				rent_paid: 0,
 				last_write: None,
 				_reserved: None,
 			});
@@ -479,50 +481,50 @@ fn instantiate_and_call_and_deposit_event() {
 			assert_eq!(System::events(), vec![
 				EventRecord {
 					phase: Phase::Initialization,
-					event: Event::frame_system(frame_system::Event::NewAccount(ALICE.clone())),
+					event: Event::System(frame_system::Event::NewAccount(ALICE.clone())),
 					topics: vec![],
 				},
 				EventRecord {
 					phase: Phase::Initialization,
-					event: Event::pallet_balances(
+					event: Event::Balances(
 						pallet_balances::Event::Endowed(ALICE, 1_000_000)
 					),
 					topics: vec![],
 				},
 				EventRecord {
 					phase: Phase::Initialization,
-					event: Event::frame_system(frame_system::Event::NewAccount(addr.clone())),
+					event: Event::System(frame_system::Event::NewAccount(addr.clone())),
 					topics: vec![],
 				},
 				EventRecord {
 					phase: Phase::Initialization,
-					event: Event::pallet_balances(
+					event: Event::Balances(
 						pallet_balances::Event::Endowed(addr.clone(), subsistence * 100)
 					),
 					topics: vec![],
 				},
 				EventRecord {
 					phase: Phase::Initialization,
-					event: Event::pallet_balances(
+					event: Event::Balances(
 						pallet_balances::Event::Transfer(ALICE, addr.clone(), subsistence * 100)
 					),
 					topics: vec![],
 				},
 				EventRecord {
 					phase: Phase::Initialization,
-					event: Event::pallet_contracts(crate::Event::CodeStored(code_hash.into())),
+					event: Event::Contracts(crate::Event::CodeStored(code_hash.into())),
 					topics: vec![],
 				},
 				EventRecord {
 					phase: Phase::Initialization,
-					event: Event::pallet_contracts(
+					event: Event::Contracts(
 						crate::Event::ContractEmitted(addr.clone(), vec![1, 2, 3, 4])
 					),
 					topics: vec![],
 				},
 				EventRecord {
 					phase: Phase::Initialization,
-					event: Event::pallet_contracts(crate::Event::Instantiated(ALICE, addr.clone())),
+					event: Event::Contracts(crate::Event::Instantiated(ALICE, addr.clone())),
 					topics: vec![],
 				},
 			]);
@@ -1088,7 +1090,7 @@ fn call_removed_contract() {
 			// Calling contract should deny access because rent cannot be paid.
 			assert_err_ignore_postinfo!(
 				Contracts::call(Origin::signed(ALICE), addr.clone(), 0, GAS_LIMIT, call::null()),
-				Error::<Test>::NotCallable
+				Error::<Test>::RentNotPaid,
 			);
 			// No event is generated because the contract is not actually removed.
 			assert_eq!(System::events(), vec![]);
@@ -1096,7 +1098,7 @@ fn call_removed_contract() {
 			// Subsequent contract calls should also fail.
 			assert_err_ignore_postinfo!(
 				Contracts::call(Origin::signed(ALICE), addr.clone(), 0, GAS_LIMIT, call::null()),
-				Error::<Test>::NotCallable
+				Error::<Test>::RentNotPaid,
 			);
 
 			// A snitch can now remove the contract
@@ -1208,45 +1210,45 @@ fn restoration(
 			let mut events = vec![
 				EventRecord {
 					phase: Phase::Initialization,
-					event: Event::frame_system(frame_system::Event::NewAccount(ALICE)),
+					event: Event::System(frame_system::Event::NewAccount(ALICE)),
 					topics: vec![],
 				},
 				EventRecord {
 					phase: Phase::Initialization,
-					event: Event::pallet_balances(
+					event: Event::Balances(
 						pallet_balances::Event::Endowed(ALICE, 1_000_000)
 					),
 					topics: vec![],
 				},
 				EventRecord {
 					phase: Phase::Initialization,
-					event: Event::frame_system(frame_system::Event::NewAccount(addr_bob.clone())),
+					event: Event::System(frame_system::Event::NewAccount(addr_bob.clone())),
 					topics: vec![],
 				},
 				EventRecord {
 					phase: Phase::Initialization,
-					event: Event::pallet_balances(
+					event: Event::Balances(
 						pallet_balances::Event::Endowed(addr_bob.clone(), 30_000)
 					),
 					topics: vec![],
 				},
 				EventRecord {
 					phase: Phase::Initialization,
-					event: Event::pallet_balances(
+					event: Event::Balances(
 						pallet_balances::Event::Transfer(ALICE, addr_bob.clone(), 30_000)
 					),
 					topics: vec![],
 				},
 				EventRecord {
 					phase: Phase::Initialization,
-					event: Event::pallet_contracts(
+					event: Event::Contracts(
 						crate::Event::CodeStored(set_rent_code_hash.into())
 					),
 					topics: vec![],
 				},
 				EventRecord {
 					phase: Phase::Initialization,
-					event: Event::pallet_contracts(
+					event: Event::Contracts(
 						crate::Event::Instantiated(ALICE, addr_bob.clone())
 					),
 					topics: vec![],
@@ -1269,26 +1271,26 @@ fn restoration(
 				events.extend([
 					EventRecord {
 						phase: Phase::Initialization,
-						event: Event::frame_system(frame_system::Event::NewAccount(addr_dummy.clone())),
+						event: Event::System(frame_system::Event::NewAccount(addr_dummy.clone())),
 						topics: vec![],
 					},
 					EventRecord {
 						phase: Phase::Initialization,
-						event: Event::pallet_balances(
+						event: Event::Balances(
 							pallet_balances::Event::Endowed(addr_dummy.clone(), 20_000)
 						),
 						topics: vec![],
 					},
 					EventRecord {
 						phase: Phase::Initialization,
-						event: Event::pallet_balances(
+						event: Event::Balances(
 							pallet_balances::Event::Transfer(ALICE, addr_dummy.clone(), 20_000)
 						),
 						topics: vec![],
 					},
 					EventRecord {
 						phase: Phase::Initialization,
-						event: Event::pallet_contracts(
+						event: Event::Contracts(
 							crate::Event::Instantiated(ALICE, addr_dummy.clone())
 						),
 						topics: vec![],
@@ -1321,7 +1323,7 @@ fn restoration(
 				Contracts::call(
 					Origin::signed(ALICE), addr_bob.clone(), 0, GAS_LIMIT, call::null()
 				),
-				Error::<Test>::NotCallable
+				Error::<Test>::RentNotPaid,
 			);
 			assert!(System::events().is_empty());
 			assert!(ContractInfoOf::<Test>::get(&addr_bob).unwrap().get_alive().is_some());
@@ -1416,46 +1418,46 @@ fn restoration(
 						assert_eq!(System::events(), vec![
 							EventRecord {
 								phase: Phase::Initialization,
-								event: Event::pallet_contracts(crate::Event::Evicted(addr_bob)),
+								event: Event::Contracts(crate::Event::Evicted(addr_bob)),
 								topics: vec![],
 							},
 							EventRecord {
 								phase: Phase::Initialization,
-								event: Event::frame_system(frame_system::Event::NewAccount(CHARLIE)),
+								event: Event::System(frame_system::Event::NewAccount(CHARLIE)),
 								topics: vec![],
 							},
 							EventRecord {
 								phase: Phase::Initialization,
-								event: Event::pallet_balances(pallet_balances::Event::Endowed(CHARLIE, 1_000_000)),
+								event: Event::Balances(pallet_balances::Event::Endowed(CHARLIE, 1_000_000)),
 								topics: vec![],
 							},
 							EventRecord {
 								phase: Phase::Initialization,
-								event: Event::frame_system(frame_system::Event::NewAccount(addr_django.clone())),
+								event: Event::System(frame_system::Event::NewAccount(addr_django.clone())),
 								topics: vec![],
 							},
 							EventRecord {
 								phase: Phase::Initialization,
-								event: Event::pallet_balances(pallet_balances::Event::Endowed(addr_django.clone(), 30_000)),
+								event: Event::Balances(pallet_balances::Event::Endowed(addr_django.clone(), 30_000)),
 								topics: vec![],
 							},
 							EventRecord {
 								phase: Phase::Initialization,
-								event: Event::pallet_balances(
+								event: Event::Balances(
 									pallet_balances::Event::Transfer(CHARLIE, addr_django.clone(), 30_000)
 								),
 								topics: vec![],
 							},
 							EventRecord {
 								phase: Phase::Initialization,
-								event: Event::pallet_contracts(
+								event: Event::Contracts(
 									crate::Event::CodeStored(restoration_code_hash)
 								),
 								topics: vec![],
 							},
 							EventRecord {
 								phase: Phase::Initialization,
-								event: Event::pallet_contracts(
+								event: Event::Contracts(
 									crate::Event::Instantiated(CHARLIE, addr_django.clone())
 								),
 								topics: vec![],
@@ -1489,17 +1491,17 @@ fn restoration(
 				assert_eq!(System::events(), vec![
 					EventRecord {
 						phase: Phase::Initialization,
-						event: Event::pallet_contracts(crate::Event::CodeRemoved(restoration_code_hash)),
+						event: Event::Contracts(crate::Event::CodeRemoved(restoration_code_hash)),
 						topics: vec![],
 					},
 					EventRecord {
 						phase: Phase::Initialization,
-						event: Event::frame_system(system::Event::KilledAccount(addr_django.clone())),
+						event: Event::System(system::Event::KilledAccount(addr_django.clone())),
 						topics: vec![],
 					},
 					EventRecord {
 						phase: Phase::Initialization,
-						event: Event::pallet_contracts(
+						event: Event::Contracts(
 							crate::Event::Restored(
 								addr_django, addr_bob, bob_contract.code_hash, 50
 							)
@@ -1727,26 +1729,26 @@ fn self_destruct_works() {
 			pretty_assertions::assert_eq!(System::events(), vec![
 				EventRecord {
 					phase: Phase::Initialization,
-					event: Event::frame_system(
+					event: Event::System(
 						frame_system::Event::KilledAccount(addr.clone())
 					),
 					topics: vec![],
 				},
 				EventRecord {
 					phase: Phase::Initialization,
-					event: Event::pallet_balances(
+					event: Event::Balances(
 						pallet_balances::Event::Transfer(addr.clone(), DJANGO, 93_086)
 					),
 					topics: vec![],
 				},
 				EventRecord {
 					phase: Phase::Initialization,
-					event: Event::pallet_contracts(crate::Event::CodeRemoved(code_hash)),
+					event: Event::Contracts(crate::Event::CodeRemoved(code_hash)),
 					topics: vec![],
 				},
 				EventRecord {
 					phase: Phase::Initialization,
-					event: Event::pallet_contracts(
+					event: Event::Contracts(
 						crate::Event::Terminated(addr.clone(), DJANGO)
 					),
 					topics: vec![],
@@ -2669,11 +2671,11 @@ fn surcharge_reward_is_capped() {
 		let balance = Balances::free_balance(&ALICE);
 		let reward = <Test as Config>::SurchargeReward::get();
 
-		// some rent should have payed due to instantiation
-		assert_ne!(contract.rent_payed, 0);
+		// some rent should have paid due to instantiation
+		assert_ne!(contract.rent_paid, 0);
 
 		// the reward should be parameterized sufficiently high to make this test useful
-		assert!(reward > contract.rent_payed);
+		assert!(reward > contract.rent_paid);
 
 		// make contract eligible for eviction
 		initialize_block(40);
@@ -2682,13 +2684,13 @@ fn surcharge_reward_is_capped() {
 		assert_ok!(Contracts::claim_surcharge(Origin::none(), addr.clone(), Some(ALICE)));
 
 		// this reward does not take into account the last rent payment collected during eviction
-		let capped_reward = reward.min(contract.rent_payed);
+		let capped_reward = reward.min(contract.rent_paid);
 
 		// this is smaller than the actual reward because it does not take into account the
 		// rent collected during eviction
 		assert!(Balances::free_balance(&ALICE) > balance + capped_reward);
 
-		// the full reward is not payed out because of the cap introduced by rent_payed
+		// the full reward is not paid out because of the cap introduced by rent_paid
 		assert!(Balances::free_balance(&ALICE) < balance + reward);
 	});
 }

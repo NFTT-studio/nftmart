@@ -15,6 +15,7 @@ frame-system = { version = "3.0.0", default-features = false, path = "../../fram
 pallet-proxy = { version = "3.0.0", default-features = false, path = "../../frame/proxy" }
 pallet-timestamp = { version = "3.0.0", default-features = false, path = "../../frame/timestamp" }
 nftmart-traits = { default-features = false, path = "../nftmart-traits" }
+max-encoded-len = { version = "3.0.0", default-features = false, path = "../../max-encoded-len", features = [ "derive" ] }
 
 [dev-dependencies]
 sp-io = { version = "3.0.0", path = "../../primitives/io" }
@@ -32,5 +33,6 @@ std = [
 	"frame-system/std",
 	"pallet-proxy/std",
 	"pallet-timestamp/std",
+	"max-encoded-len/std",
 	"nftmart-traits/std",
 ]

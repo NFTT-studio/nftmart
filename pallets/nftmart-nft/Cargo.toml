@@ -17,6 +17,7 @@ pallet-timestamp = { version = "3.0.0", default-features = false, path = "../../
 orml-traits = { version = "0.4.1-dev", default-features = false, path = "../orml-traits" }
 orml-nft = { version = "0.4.1-dev", default-features = false, path = "../orml-nft" }
 nftmart-traits = { default-features = false, path = "../nftmart-traits" }
+max-encoded-len = { version = "3.0.0", default-features = false, path = "../../max-encoded-len", features = [ "derive" ] }
 
 [dev-dependencies]
 sp-io = { version = "3.0.0", path = "../../primitives/io" }
@@ -38,6 +39,7 @@ std = [
 	"frame-system/std",
 	"pallet-proxy/std",
 	"pallet-timestamp/std",
+	"max-encoded-len/std",
 	"orml-traits/std",
 	"orml-nft/std",
 	"nftmart-traits/std",
