@@ -1,4 +1,8 @@
-import {waitTx, hexToUtf8, unit, ensureAddress, Global_Api, Global_ModuleMetadata, initApi} from "./utils.mjs";
+import {
+	waitTx, hexToUtf8, unit, ensureAddress,
+	Global_Api, Global_ModuleMetadata, initApi,
+	getRandomInt,
+} from "./utils.mjs";
 import {Keyring} from "@polkadot/api";
 import {bnToBn} from "@polkadot/util";
 import {Command} from "commander";
@@ -115,13 +119,18 @@ async function main() {
 	// 1. node nft-apis.mjs --ws 'ws://81.70.132.13:9944' mint_nft //Alice 0 30
 	// 2. node nft-apis.mjs --ws 'ws://81.70.132.13:9944' mint_nft //Alice 0 30 true
 	// 3. node nft-apis.mjs --ws 'ws://81.70.132.13:9944' mint_nft //Alice 0 30 false
-	program.command('mint_nft <admin> <classID> <quantity> [needToChargeRoyalty]').action(async (admin, classID, quantity, needToChargeRoyalty) => {
+	// 4. node nft-apis.mjs --ws 'ws://81.70.132.13:9944' mint_nft //Alice 0 30 false proxy
+	program.command('mint_nft <admin> <classID> <quantity> [needToChargeRoyalty] [proxy]').action(async (admin, classID, quantity, needToChargeRoyalty, proxy) => {
 		if (needToChargeRoyalty === undefined || needToChargeRoyalty === 'null') {
 			needToChargeRoyalty = null;
 		} else {
 			needToChargeRoyalty = needToChargeRoyalty === 'true';
 		}
-		await mint_nft(program.opts().ws, keyring, admin, classID, quantity, needToChargeRoyalty);
+		if(!!proxy) {
+			await mint_nft_by_proxy(program.opts().ws, keyring, admin, classID, quantity, needToChargeRoyalty);
+		} else {
+			await mint_nft(program.opts().ws, keyring, admin, classID, quantity, needToChargeRoyalty);
+		}
 	});
 	// 1: node nft-apis.mjs --ws 'ws://81.70.132.13:9944' show_nft_by_class
 	// 2: node nft-apis.mjs --ws 'ws://81.70.132.13:9944' show_nft_by_class 0
@@ -542,6 +551,22 @@ async function show_nft_by_class(ws, classID) {
 	} else {
 		await display_nft(classID);
 	}
+}
+
+async function mint_nft_by_proxy(ws, keyring, admin, classID, quantity, needToChargeRoyalty) {
+	await initApi(ws);
+	admin = keyring.addFromUri(admin);
+	const nftMetadata = 'demo nft metadata';
+
+	const call = Global_Api.tx.nftmart.proxyMint(admin.address, classID,
+		nftMetadata, quantity, needToChargeRoyalty);
+
+	const feeInfo = await call.paymentInfo(admin);
+	console.log("The fee of the call: %s NMT.", feeInfo.partialFee / unit);
+
+	let [a, b] = waitTx(Global_ModuleMetadata);
+	await call.signAndSend(admin, a);
+	await b();
 }
 
 async function mint_nft(ws, keyring, admin, classID, quantity, needToChargeRoyalty) {

@@ -20,6 +20,10 @@ export async function initApi(ws) {
 	}
 }
 
+export function getRandomInt(max) {
+	return Math.floor(Math.random() * max);
+}
+
 export function waitTx(moduleMetadata) {
 	let signal = false;
 	return [
