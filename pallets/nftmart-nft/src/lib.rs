@@ -256,7 +256,7 @@ pub mod module {
 		#[pallet::weight(100_000)]
 		pub fn create_class(origin: OriginFor<T>, metadata: NFTMetadata, name: Vec<u8>, description: Vec<u8>, properties: Properties) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
-			Self::do_create_class(who, metadata, name, description, properties)?;
+			Self::do_create_class(&who, metadata, name, description, properties)?;
 			Ok(().into())
 		}
 
@@ -313,7 +313,6 @@ pub mod module {
 		/// - `metadata`: external metadata
 		/// - `quantity`: token quantity
 		#[pallet::weight(100_000)]
-		#[transactional]
 		pub fn mint(
 			origin: OriginFor<T>,
 			to: <T::Lookup as StaticLookup>::Source,
@@ -446,21 +445,22 @@ impl<T: Config> Pallet<T> {
 	pub fn do_proxy_mint(
 		delegate: &T::AccountId, to: &T::AccountId, class_id: ClassIdOf<T>,
 		metadata: NFTMetadata, quantity: TokenIdOf<T>, charge_royalty: Option<bool>,
-	) -> DispatchResultWithPostInfo {
+	) -> ResultPost<(T::AccountId, T::AccountId, ClassIdOf<T>, TokenIdOf<T>, TokenIdOf<T>)> {
 		let class_info: ClassInfoOf<T> = orml_nft::Pallet::<T>::classes(class_id).ok_or(Error::<T>::ClassIdNotFound)?;
 
 		let _ = pallet_proxy::Pallet::<T>::find_proxy(&class_info.owner, delegate, None)?;
 		let deposit = Self::mint_token_deposit(metadata.len().saturated_into());
 		<T as Config>::Currency::transfer(delegate, &class_info.owner, deposit.saturated_into(), KeepAlive)?;
 
-		let _ = Self::do_mint(&class_info.owner, to, &class_info, class_id, metadata, quantity, charge_royalty)?;
-		Ok(().into())
+		Self::do_mint(&class_info.owner, to, &class_info, class_id, metadata, quantity, charge_royalty)
 	}
 
+	#[transactional]
 	fn do_mint(who: &T::AccountId, to: &T::AccountId,
 				   class_info: &ClassInfoOf<T>, class_id: ClassIdOf<T>,
 				   metadata: NFTMetadata, quantity: TokenIdOf<T>,
-				   charge_royalty: Option<bool>) -> ResultPost<()> {
+				   charge_royalty: Option<bool>
+	) -> ResultPost<(T::AccountId, T::AccountId, ClassIdOf<T>, TokenIdOf<T>, TokenIdOf<T>)> {
 		ensure!(T::ExtraConfig::is_in_whitelist(&to), Error::<T>::AccountNotInWhitelist);
 
 		ensure!(quantity >= One::one(), Error::<T>::InvalidQuantity);
@@ -479,12 +479,12 @@ impl<T: Config> Pallet<T> {
 		let token_id: TokenIdOf<T> = orml_nft::Pallet::<T>::mint(&to, class_id, metadata.clone(), data.clone(), quantity)?;
 
 		Self::deposit_event(Event::MintedToken(who.clone(), to.clone(), class_id, token_id, quantity));
-		Ok(().into())
+		Ok((who.clone(), to.clone(), class_id, token_id, quantity).into())
 	}
 
 	#[transactional]
-	pub fn do_create_class(who: T::AccountId, metadata: NFTMetadata, name: Vec<u8>, description: Vec<u8>, properties: Properties) -> ResultPost<(T::AccountId, ClassIdOf<T>)> {
-		ensure!(T::ExtraConfig::is_in_whitelist(&who), Error::<T>::AccountNotInWhitelist);
+	pub fn do_create_class(who: &T::AccountId, metadata: NFTMetadata, name: Vec<u8>, description: Vec<u8>, properties: Properties) -> ResultPost<(T::AccountId, ClassIdOf<T>)> {
+		ensure!(T::ExtraConfig::is_in_whitelist(who), Error::<T>::AccountNotInWhitelist);
 
 		ensure!(name.len() <= 20, Error::<T>::NameTooLong);// TODO: pass configurations from runtime configuration.
 		ensure!(description.len() <= 256, Error::<T>::DescriptionTooLong);// TODO: pass configurations from runtime configuration.
@@ -497,10 +497,10 @@ impl<T: Config> Pallet<T> {
 			description.len().saturated_into(),
 		);
 
-		<T as Config>::Currency::transfer(&who, &owner, all_deposit.saturated_into(), KeepAlive)?;
+		<T as Config>::Currency::transfer(who, &owner, all_deposit.saturated_into(), KeepAlive)?;
 		<T as Config>::Currency::reserve(&owner, deposit.saturated_into())?;
 		// owner add proxy delegate to origin
-		<pallet_proxy::Pallet<T>>::add_proxy_delegate(&owner, who, Default::default(), Zero::zero())?;
+		<pallet_proxy::Pallet<T>>::add_proxy_delegate(&owner, who.clone(), Default::default(), Zero::zero())?;
 
 		let data: ClassData<BlockNumberOf<T>> = ClassData {
 			deposit,

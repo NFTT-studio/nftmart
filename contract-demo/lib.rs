@@ -12,7 +12,13 @@ pub trait NFTMart {
     fn fetch_random() -> [u8; 32];
 
     #[ink(extension = 2002, returns_result = false)]
-    fn create_class(metadata: Vec<u8>, name: Vec<u8>, description: Vec<u8>, properties: u8) -> (ink_env::AccountId, u32);
+    fn create_class(metadata: Vec<u8>, name: Vec<u8>,
+                    description: Vec<u8>, properties: u8) -> (ink_env::AccountId, u32);
+
+    #[ink(extension = 2003, returns_result = false)]
+    fn proxy_mint(to: &ink_env::AccountId, class_id: u32, metadata: Vec<u8>,
+                  quantity: u64, charge_royalty: Option<bool>,
+    ) -> (ink_env::AccountId, ink_env::AccountId, u32, u64, u64);
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, scale::Encode, scale::Decode)]
@@ -82,6 +88,16 @@ mod contract_demo {
         pub fn create_class(&mut self, metadata: Vec<u8>, name: Vec<u8>, description: Vec<u8>, properties: u8) -> Result<(), NFTMartErr> {
             let (owner, class_id) = self.env().extension().create_class(metadata, name, description, properties)?;
             self.env().emit_event(CreateClassFromContract { owner, class_id });
+            Ok(())
+        }
+
+        #[ink(message)]
+        pub fn mint_nft(&mut self, class_id: u32, metadata: Vec<u8>,
+                        quantity: u64, charge_royalty: Option<bool>,
+        ) -> Result<(), NFTMartErr> {
+            let (_class_owner, _beneficiary, _class_id, _token_id, _quantity) = self.env().extension().proxy_mint(
+                &self.env().caller(), class_id, metadata, quantity, charge_royalty
+            )?;
             Ok(())
         }
 
