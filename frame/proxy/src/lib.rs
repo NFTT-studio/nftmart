@@ -717,7 +717,7 @@ impl<T: Config> Pallet<T> {
 		})
 	}
 
-	fn find_proxy(
+	pub fn find_proxy(
 		real: &T::AccountId,
 		delegate: &T::AccountId,
 		force_proxy_type: Option<T::ProxyType>,

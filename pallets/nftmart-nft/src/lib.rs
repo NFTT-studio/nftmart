@@ -20,7 +20,7 @@ mod mock;
 mod tests;
 
 pub use module::*;
-use orml_nft::TokenInfoOf;
+use orml_nft::{ClassInfoOf, TokenInfoOf};
 
 pub type TokenIdOf<T> = <T as orml_nft::Config>::TokenId;
 pub type ClassIdOf<T> = <T as orml_nft::Config>::ClassId;
@@ -116,7 +116,6 @@ pub mod migrations {
 #[frame_support::pallet]
 pub mod module {
 	use super::*;
-	use orml_nft::{ClassInfoOf};
 	use sp_runtime::{PerU16};
 
 	#[pallet::config]
@@ -325,25 +324,26 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			let to = T::Lookup::lookup(to)?;
-			ensure!(T::ExtraConfig::is_in_whitelist(&to), Error::<T>::AccountNotInWhitelist);
-
-			ensure!(quantity >= One::one(), Error::<T>::InvalidQuantity);
 			let class_info: ClassInfoOf<T> = orml_nft::Pallet::<T>::classes(class_id).ok_or(Error::<T>::ClassIdNotFound)?;
-			ensure!(who == class_info.owner, Error::<T>::NoPermission);
-			let deposit = Self::mint_token_deposit(metadata.len().saturated_into());
+			let _ = Self::do_mint(&who, &to, &class_info, class_id, metadata, quantity, charge_royalty)?;
+			Ok(().into())
+		}
 
-			<T as Config>::Currency::reserve(&class_info.owner, deposit.saturated_into())?;
-			let data: TokenData<T::AccountId, BlockNumberOf<T>> = TokenData {
-				deposit,
-				create_block: <frame_system::Pallet<T>>::block_number(),
-				royalty: charge_royalty.unwrap_or_else(|| class_info.data.properties.0.contains(ClassProperty::RoyaltiesChargeable)),
-				creator: to.clone(),
-				royalty_beneficiary: to.clone(),
-			};
-
-			let token_id: TokenIdOf<T> = orml_nft::Pallet::<T>::mint(&to, class_id, metadata.clone(), data.clone(), quantity)?;
-
-			Self::deposit_event(Event::MintedToken(who, to, class_id, token_id, quantity));
+		/// Mint NFT token by a proxy account.
+		///
+		/// - `origin`: a proxy account
+		#[pallet::weight(100_000)]
+		pub fn proxy_mint(
+			origin: OriginFor<T>,
+			to: <T::Lookup as StaticLookup>::Source,
+			#[pallet::compact] class_id: ClassIdOf<T>,
+			metadata: NFTMetadata,
+			#[pallet::compact] quantity: TokenIdOf<T>,
+			charge_royalty: Option<bool>,
+		) -> DispatchResultWithPostInfo {
+			let delegate = ensure_signed(origin)?;
+			let to = T::Lookup::lookup(to)?;
+			let _ = Self::do_proxy_mint(&delegate, &to, class_id, metadata, quantity, charge_royalty)?;
 			Ok(().into())
 		}
 
@@ -441,6 +441,46 @@ pub mod module {
 }
 
 impl<T: Config> Pallet<T> {
+
+	#[transactional]
+	pub fn do_proxy_mint(
+		delegate: &T::AccountId, to: &T::AccountId, class_id: ClassIdOf<T>,
+		metadata: NFTMetadata, quantity: TokenIdOf<T>, charge_royalty: Option<bool>,
+	) -> DispatchResultWithPostInfo {
+		let class_info: ClassInfoOf<T> = orml_nft::Pallet::<T>::classes(class_id).ok_or(Error::<T>::ClassIdNotFound)?;
+
+		let _ = pallet_proxy::Pallet::<T>::find_proxy(&class_info.owner, delegate, None)?;
+		let deposit = Self::mint_token_deposit(metadata.len().saturated_into());
+		<T as Config>::Currency::transfer(delegate, &class_info.owner, deposit.saturated_into(), KeepAlive)?;
+
+		let _ = Self::do_mint(&class_info.owner, to, &class_info, class_id, metadata, quantity, charge_royalty)?;
+		Ok(().into())
+	}
+
+	fn do_mint(who: &T::AccountId, to: &T::AccountId,
+				   class_info: &ClassInfoOf<T>, class_id: ClassIdOf<T>,
+				   metadata: NFTMetadata, quantity: TokenIdOf<T>,
+				   charge_royalty: Option<bool>) -> ResultPost<()> {
+		ensure!(T::ExtraConfig::is_in_whitelist(&to), Error::<T>::AccountNotInWhitelist);
+
+		ensure!(quantity >= One::one(), Error::<T>::InvalidQuantity);
+		ensure!(who == &class_info.owner, Error::<T>::NoPermission);
+		let deposit = Self::mint_token_deposit(metadata.len().saturated_into());
+
+		<T as Config>::Currency::reserve(&class_info.owner, deposit.saturated_into())?;
+		let data: TokenData<T::AccountId, BlockNumberOf<T>> = TokenData {
+			deposit,
+			create_block: <frame_system::Pallet<T>>::block_number(),
+			royalty: charge_royalty.unwrap_or_else(|| class_info.data.properties.0.contains(ClassProperty::RoyaltiesChargeable)),
+			creator: to.clone(),
+			royalty_beneficiary: to.clone(),
+		};
+
+		let token_id: TokenIdOf<T> = orml_nft::Pallet::<T>::mint(&to, class_id, metadata.clone(), data.clone(), quantity)?;
+
+		Self::deposit_event(Event::MintedToken(who.clone(), to.clone(), class_id, token_id, quantity));
+		Ok(().into())
+	}
 
 	#[transactional]
 	pub fn do_create_class(who: T::AccountId, metadata: NFTMetadata, name: Vec<u8>, description: Vec<u8>, properties: Properties) -> ResultPost<(T::AccountId, ClassIdOf<T>)> {
