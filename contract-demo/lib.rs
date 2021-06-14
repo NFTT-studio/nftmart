@@ -19,6 +19,9 @@ pub trait NFTMart {
     fn proxy_mint(to: &ink_env::AccountId, class_id: u32, metadata: Vec<u8>,
                   quantity: u64, charge_royalty: Option<bool>,
     ) -> (ink_env::AccountId, ink_env::AccountId, u32, u64, u64);
+
+	#[ink(extension = 2004, returns_result = false)]
+	fn transfer(to: &ink_env::AccountId, class_id: u32, token_id: u64, quantity: u64) -> ();
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, scale::Encode, scale::Decode)]
@@ -57,7 +60,7 @@ mod contract_demo {
     use super::NFTMartErr;
     use ink_prelude::vec::Vec;
 
-    #[cfg(not(feature = "ink-as-dependency"))]
+	#[cfg(not(feature = "ink-as-dependency"))]
     #[ink(storage)]
     pub struct ContractDemo {
         value: [u8; 32],
@@ -100,6 +103,20 @@ mod contract_demo {
             )?;
             Ok(())
         }
+
+		#[ink(message)]
+		pub fn transfer(&mut self, to: AccountId, class_id: u32, token_id: u64, quantity: u64) -> Result<(), NFTMartErr> {
+			self.env().extension().transfer(&to, class_id, token_id, quantity)?;
+			Ok(())
+		}
+
+		#[ink(message)]
+		pub fn transfer_all(&mut self, to: AccountId, items: Vec<(u32, u64, u64)>) -> Result<(), NFTMartErr> {
+			for (class_id, token_id, quantity) in items {
+				self.env().extension().transfer(&to, class_id, token_id, quantity)?;
+			}
+			Ok(())
+		}
 
         #[ink(message)]
         pub fn update(&mut self) -> Result<(), NFTMartErr> {

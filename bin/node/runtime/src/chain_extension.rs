@@ -73,6 +73,17 @@ impl ChainExtension<Runtime> for FetchRandomExtension {
 					.map_err(|_| DispatchError::Other("ChainExtension failed to return result from do_proxy_mint"))?;
 			}
 
+			2004 => {
+				let mut env = env.buf_in_buf_out();
+				let caller = env.ext().caller().clone();
+				let caller = to_account_id(caller.as_ref());
+				let (to, class_id, token_id, quantity) = env.read_as()?;
+				super::Nftmart::do_transfer(&caller, &to, class_id, token_id, quantity)?;
+				let r = ().encode();
+				env.write(&r, false, None)
+					.map_err(|_| DispatchError::Other("ChainExtension failed to return result from do_transfer"))?;
+			}
+
 			_ => {
 				error!("Called an unregistered `func_id`: {:}", func_id);
 				return Err(DispatchError::Other("Unimplemented func_id"))

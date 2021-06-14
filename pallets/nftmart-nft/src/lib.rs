@@ -254,6 +254,7 @@ pub mod module {
 		/// - `name`: class name, with len limitation.
 		/// - `description`: class description, with len limitation.
 		#[pallet::weight(100_000)]
+		#[transactional]
 		pub fn create_class(origin: OriginFor<T>, metadata: NFTMetadata, name: Vec<u8>, description: Vec<u8>, properties: Properties) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			Self::do_create_class(&who, metadata, name, description, properties)?;
@@ -313,6 +314,7 @@ pub mod module {
 		/// - `metadata`: external metadata
 		/// - `quantity`: token quantity
 		#[pallet::weight(100_000)]
+		#[transactional]
 		pub fn mint(
 			origin: OriginFor<T>,
 			to: <T::Lookup as StaticLookup>::Source,
@@ -332,6 +334,7 @@ pub mod module {
 		///
 		/// - `origin`: a proxy account
 		#[pallet::weight(100_000)]
+		#[transactional]
 		pub fn proxy_mint(
 			origin: OriginFor<T>,
 			to: <T::Lookup as StaticLookup>::Source,
@@ -455,7 +458,6 @@ impl<T: Config> Pallet<T> {
 		Self::do_mint(&class_info.owner, to, &class_info, class_id, metadata, quantity, charge_royalty)
 	}
 
-	#[transactional]
 	fn do_mint(who: &T::AccountId, to: &T::AccountId,
 				   class_info: &ClassInfoOf<T>, class_id: ClassIdOf<T>,
 				   metadata: NFTMetadata, quantity: TokenIdOf<T>,
@@ -527,7 +529,8 @@ impl<T: Config> Pallet<T> {
 		Ok(data.properties.0.contains(ClassProperty::Transferable))
 	}
 
-	fn do_transfer(from: &T::AccountId, to: &T::AccountId, class_id: ClassIdOf<T>, token_id: TokenIdOf<T>, quantity: TokenIdOf<T>) -> DispatchResult {
+	#[transactional]
+	pub fn do_transfer(from: &T::AccountId, to: &T::AccountId, class_id: ClassIdOf<T>, token_id: TokenIdOf<T>, quantity: TokenIdOf<T>) -> DispatchResult {
 		ensure!(Self::is_transferable(class_id)?, Error::<T>::NonTransferable);
 
 		orml_nft::Pallet::<T>::transfer(from, to, (class_id, token_id), quantity)?;
