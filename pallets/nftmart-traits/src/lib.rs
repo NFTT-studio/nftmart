@@ -2,11 +2,13 @@
 
 use frame_support::pallet_prelude::*;
 use sp_std::vec::Vec;
-use sp_core::constants_types::{Balance, GlobalId};
+use crate::constants_types::{Balance, GlobalId};
 #[cfg(feature = "std")]
 use serde::{Serialize, Deserialize};
 pub use enumflags2::BitFlags;
 pub use orml_traits::nft::{TokenInfo, ClassInfo, AccountToken};
+
+pub mod constants_types;
 
 pub trait NftmartConfig<AccountId, BlockNumber> {
 	fn auction_delay() -> BlockNumber;

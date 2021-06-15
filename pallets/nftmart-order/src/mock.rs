@@ -2,7 +2,7 @@
 
 use super::*;
 use orml_currencies::BasicCurrencyAdapter;
-use sp_core::constants_types::*;
+use nftmart_traits::constants_types::*;
 use crate as nftmart_order;
 use codec::{Decode, Encode};
 use frame_support::{
@@ -126,8 +126,8 @@ impl pallet_proxy::Config for Runtime {
 }
 
 orml_traits::parameter_type_with_key! {
-	pub ExistentialDeposits: |currency_id: sp_core::constants_types::CurrencyId| -> Balance {
-		if currency_id == &sp_core::constants_types::NATIVE_CURRENCY_ID {
+	pub ExistentialDeposits: |currency_id: nftmart_traits::constants_types::CurrencyId| -> Balance {
+		if currency_id == &nftmart_traits::constants_types::NATIVE_CURRENCY_ID {
 			ExistentialDeposit::get()
 		} else  {
 			Default::default()
@@ -146,10 +146,10 @@ impl orml_tokens::Config for Runtime {
 }
 
 parameter_types! {
-	pub const GetNativeCurrencyId: sp_core::constants_types::CurrencyId = sp_core::constants_types::NATIVE_CURRENCY_ID;
+	pub const GetNativeCurrencyId: nftmart_traits::constants_types::CurrencyId = nftmart_traits::constants_types::NATIVE_CURRENCY_ID;
 }
 
-pub type AdaptedBasicCurrency = BasicCurrencyAdapter<Runtime, Balances, sp_core::constants_types::Amount, sp_core::constants_types::Moment>;
+pub type AdaptedBasicCurrency = BasicCurrencyAdapter<Runtime, Balances, nftmart_traits::constants_types::Amount, nftmart_traits::constants_types::Moment>;
 
 impl orml_currencies::Config for Runtime {
 	type Event = Event;
@@ -160,8 +160,8 @@ impl orml_currencies::Config for Runtime {
 }
 
 impl orml_nft::Config for Runtime {
-	type ClassId = sp_core::constants_types::ClassId;
-	type TokenId = sp_core::constants_types::TokenId;
+	type ClassId = nftmart_traits::constants_types::ClassId;
+	type TokenId = nftmart_traits::constants_types::TokenId;
 	type ClassData = nftmart_nft::ClassData<BlockNumberOf<Self>>;
 	type TokenData = nftmart_nft::TokenData<<Self as frame_system::Config>::AccountId, BlockNumberOf<Self>>;
 }
@@ -192,8 +192,8 @@ impl nftmart_order::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
 	type Currency = Balances;
-	type ClassId = sp_core::constants_types::ClassId;
-	type TokenId = sp_core::constants_types::TokenId;
+	type ClassId = nftmart_traits::constants_types::ClassId;
+	type TokenId = nftmart_traits::constants_types::TokenId;
 	type NFT = Nftmart;
 	type ExtraConfig = NftmartConf;
 }

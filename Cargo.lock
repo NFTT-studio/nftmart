@@ -4224,6 +4224,7 @@ name = "nftmart-rpc-runtime-api"
 version = "3.0.0"
 dependencies = [
  "nftmart-nft",
+ "nftmart-traits",
  "sp-api",
  "sp-core",
  "sp-std",
@@ -4322,6 +4323,7 @@ dependencies = [
  "hex-literal",
  "libp2p-wasm-ext",
  "log",
+ "nftmart-traits",
  "nix",
  "node-executor",
  "node-inspect",
@@ -4450,6 +4452,7 @@ name = "node-primitives"
 version = "2.0.0"
 dependencies = [
  "frame-system",
+ "nftmart-traits",
  "parity-scale-codec",
  "pretty_assertions 0.6.1",
  "sp-application-crypto",

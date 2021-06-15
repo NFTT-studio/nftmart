@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use sp_core::constants_types::*;
+use nftmart_traits::constants_types::*;
 use crate as nftmart_config;
 use codec::{Decode, Encode};
 use frame_support::{construct_runtime, parameter_types, traits::{Filter, InstanceFilter}, RuntimeDebug};

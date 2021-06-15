@@ -374,7 +374,7 @@ impl pallet_indices::Config for Runtime {
 }
 
 parameter_types! {
-	pub const ExistentialDeposit: Balance = sp_core::constants_types::ACCURACY;
+	pub const ExistentialDeposit: Balance = nftmart_traits::constants_types::ACCURACY;
 	// For weight estimation, we assume that the most locks on an individual account will be 50.
 	// This number may need to be adjusted in the future if this assumption no longer holds true.
 	pub const MaxLocks: u32 = 50;
@@ -1131,8 +1131,8 @@ impl pallet_transaction_storage::Config for Runtime {
 }
 
 orml_traits::parameter_type_with_key! {
-	pub ExistentialDeposits: |currency_id: sp_core::constants_types::CurrencyId| -> Balance {
-		if currency_id == &sp_core::constants_types::NATIVE_CURRENCY_ID {
+	pub ExistentialDeposits: |currency_id: nftmart_traits::constants_types::CurrencyId| -> Balance {
+		if currency_id == &nftmart_traits::constants_types::NATIVE_CURRENCY_ID {
 			ExistentialDeposit::get()
 		} else  {
 			Default::default()
@@ -1143,18 +1143,18 @@ orml_traits::parameter_type_with_key! {
 impl orml_tokens::Config for Runtime {
 	type Event = Event;
 	type Balance = Balance;
-	type Amount = sp_core::constants_types::Amount;
-	type CurrencyId = sp_core::constants_types::CurrencyId;
+	type Amount = nftmart_traits::constants_types::Amount;
+	type CurrencyId = nftmart_traits::constants_types::CurrencyId;
 	type WeightInfo = ();
 	type ExistentialDeposits = ExistentialDeposits;
 	type OnDust = ();
 }
 
 parameter_types! {
-	pub const GetNativeCurrencyId: sp_core::constants_types::CurrencyId = sp_core::constants_types::NATIVE_CURRENCY_ID;
+	pub const GetNativeCurrencyId: nftmart_traits::constants_types::CurrencyId = nftmart_traits::constants_types::NATIVE_CURRENCY_ID;
 }
 
-pub type AdaptedBasicCurrency = orml_currencies::BasicCurrencyAdapter<Runtime, Balances, sp_core::constants_types::Amount, sp_core::constants_types::Moment>;
+pub type AdaptedBasicCurrency = orml_currencies::BasicCurrencyAdapter<Runtime, Balances, nftmart_traits::constants_types::Amount, nftmart_traits::constants_types::Moment>;
 
 impl orml_currencies::Config for Runtime {
 	type Event = Event;
@@ -1165,8 +1165,8 @@ impl orml_currencies::Config for Runtime {
 }
 
 impl orml_nft::Config for Runtime {
-	type ClassId = sp_core::constants_types::ClassId;
-	type TokenId = sp_core::constants_types::TokenId;
+	type ClassId = nftmart_traits::constants_types::ClassId;
+	type TokenId = nftmart_traits::constants_types::TokenId;
 	type ClassData = nftmart_nft::ClassData<BlockNumber>;
 	type TokenData = nftmart_nft::TokenData<AccountId, BlockNumber>;
 }
@@ -1197,8 +1197,8 @@ impl nftmart_order::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
 	type Currency = Balances;
-	type ClassId = sp_core::constants_types::ClassId;
-	type TokenId = sp_core::constants_types::TokenId;
+	type ClassId = nftmart_traits::constants_types::ClassId;
+	type TokenId = nftmart_traits::constants_types::TokenId;
 	type NFT = Nftmart;
 	type ExtraConfig = NftmartConf;
 }

@@ -11,7 +11,7 @@ mod mock;
 mod tests;
 
 pub use module::*;
-use sp_core::constants_types::{GlobalId, Balance, ACCURACY};
+use nftmart_traits::constants_types::{GlobalId, Balance, ACCURACY};
 use sp_runtime::{traits::{Zero, One}, PerU16};
 use nftmart_traits::{CategoryData, NFTMetadata, NftmartConfig};
 

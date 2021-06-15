@@ -20,7 +20,7 @@
 /// Money matters.
 pub mod currency {
 	use node_primitives::Balance;
-	use sp_core::constants_types::ACCURACY;
+	use nftmart_traits::constants_types::ACCURACY;
 
 	pub const MILLICENTS: Balance = ACCURACY / 1000;
 	pub const CENTS: Balance = ACCURACY;    // assume this is worth about a cent.

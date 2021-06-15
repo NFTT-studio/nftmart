@@ -1,6 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-pub use sp_core::constants_types::Balance;
+pub use nftmart_traits::constants_types::Balance;
 pub use sp_std::vec::Vec;
 pub use nftmart_nft::NFTMetadata;
 

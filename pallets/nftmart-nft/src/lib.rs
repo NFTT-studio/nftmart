@@ -8,7 +8,7 @@ use frame_support::{
 use sp_std::vec::Vec;
 use frame_system::pallet_prelude::*;
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
-pub use sp_core::constants_types::{Balance, ACCURACY, NATIVE_CURRENCY_ID};
+pub use nftmart_traits::constants_types::{Balance, ACCURACY, NATIVE_CURRENCY_ID};
 use sp_runtime::{
 	traits::{Bounded, AccountIdConversion, StaticLookup, Zero, One, AtLeast32BitUnsigned},
 	RuntimeDebug, SaturatedConversion,

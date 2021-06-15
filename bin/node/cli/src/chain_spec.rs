@@ -299,9 +299,9 @@ pub fn testnet_genesis(
 			endowed_accounts: endowed_accounts.iter()
 				.flat_map(|x|{
 					vec![
-						(x.clone(), 2, 100 * sp_core::constants_types::ACCURACY),
-						(x.clone(), 3, 100 * sp_core::constants_types::ACCURACY),
-						(x.clone(), 4, 100 * sp_core::constants_types::ACCURACY),
+						(x.clone(), 2, 100 * nftmart_traits::constants_types::ACCURACY),
+						(x.clone(), 3, 100 * nftmart_traits::constants_types::ACCURACY),
+						(x.clone(), 4, 100 * nftmart_traits::constants_types::ACCURACY),
 					]
 				}).collect(),
 		},
