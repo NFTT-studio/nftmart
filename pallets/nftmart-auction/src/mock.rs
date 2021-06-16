@@ -331,6 +331,18 @@ pub fn free_balance(who: &AccountId) -> Balance {
 	<Runtime as Config>::Currency::free_balance(who)
 }
 
-// pub fn reserved_balance(who: &AccountId) -> Balance {
-// 	<Runtime as Config>::Currency::reserved_balance(who)
-// }
+pub fn reserved_balance(who: &AccountId) -> Balance {
+	<Runtime as Config>::Currency::reserved_balance(who)
+}
+
+pub fn categories(cate_id: GlobalId) -> nftmart_traits::CategoryData {
+	nftmart_config::Pallet::<Runtime>::categories(cate_id).unwrap()
+}
+
+pub fn get_bid(auction_id: GlobalId) -> Option<BritishAuctionBidOf<Runtime>> {
+	NftmartAuction::british_auction_bids(auction_id)
+}
+
+pub fn get_auction(who: &AccountId, auction_id: GlobalId) -> Option<BritishAuctionOf<Runtime>> {
+	NftmartAuction::british_auctions(who, auction_id)
+}
