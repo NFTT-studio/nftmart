@@ -248,7 +248,7 @@ impl ExtBuilder {
 			balances: vec![
 				(ALICE, 200),
 				(BOB, 100),
-				(CHARLIE, 100),
+				(CHARLIE, 600),
 				(DAVE, 100),
 			],
 		}.assimilate_storage(&mut t).unwrap();
@@ -270,7 +270,6 @@ impl ExtBuilder {
 	}
 }
 
-#[allow(dead_code)]
 pub fn last_event() -> Event {
 	frame_system::Pallet::<Runtime>::events()
 		.pop()
