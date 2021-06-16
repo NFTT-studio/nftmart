@@ -316,13 +316,16 @@ pub mod module {
 				Self::deposit_event(Event::HammerBritishAuction(purchaser, auction_id));
 				Ok(().into())
 			} else {
-				// check the new bid price.
-				let lowest_price: Balance = auction_bid.last_offer_price.saturating_add(auction.min_raise.mul_ceil(auction_bid.last_offer_price));
-				ensure!(price > lowest_price, Error::<T>::PriceTooLow);
-
 				if let Some(account) = &auction_bid.last_offer_account {
+					// check the new bid price.
+					let lowest_price: Balance = auction_bid.last_offer_price.saturating_add(auction.min_raise.mul_ceil(auction_bid.last_offer_price));
+					ensure!(price > lowest_price, Error::<T>::PriceTooLow);
+
 					ensure!(&purchaser != account, Error::<T>::DuplicatedBid);
 					let _ = T::MultiCurrency::unreserve(auction.currency_id, account, auction_bid.last_offer_price);
+				} else {
+					// check the new bid price.
+					ensure!(price >= auction.init_price, Error::<T>::PriceTooLow);
 				}
 
 				T::MultiCurrency::reserve(auction.currency_id, &purchaser, price)?;
