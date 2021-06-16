@@ -128,6 +128,8 @@ pub mod module {
 		PriceTooLow,
 		CannotRemoveAuction,
 		CannotRedeemAuction,
+		CannotRedeemAuctionNoBid,
+		CannotRedeemAuctionUntilDeadline,
 		DuplicatedBid,
 	}
 
@@ -352,8 +354,8 @@ pub mod module {
 			let _ = ensure_signed(origin)?;
 			let auction_owner = T::Lookup::lookup(auction_owner)?;
 			let (auction,auction_bid) = Self::delete_british_auction(&auction_owner, auction_id)?;
-			ensure!(Self::get_deadline(&auction, &auction_bid) < frame_system::Pallet::<T>::block_number(), Error::<T>::CannotRedeemAuction);
-			ensure!(auction_bid.last_offer_account.is_some(), Error::<T>::CannotRemoveAuction);
+			ensure!(Self::get_deadline(&auction, &auction_bid) < frame_system::Pallet::<T>::block_number(), Error::<T>::CannotRedeemAuctionUntilDeadline);
+			ensure!(auction_bid.last_offer_account.is_some(), Error::<T>::CannotRedeemAuctionNoBid);
 			let purchaser = auction_bid.last_offer_account.expect("Must be Some");
 			T::MultiCurrency::transfer(auction.currency_id, &purchaser, &auction_owner, auction_bid.last_offer_price)?;
 			for item in &auction.items {

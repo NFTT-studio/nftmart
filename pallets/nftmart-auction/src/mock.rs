@@ -225,10 +225,13 @@ construct_runtime!(
 );
 
 pub const ALICE: AccountId = AccountId::new([1u8; 32]);
+pub const ALICE_INIT: BalanceOf<Runtime> = 200;
 pub const BOB: AccountId = AccountId::new([2u8; 32]);
+pub const BOB_INIT: BalanceOf<Runtime> = 100;
 pub const CHARLIE: AccountId = AccountId::new([3u8; 32]);
-pub const CHARLIE_INIT: BalanceOf<Runtime> = 600;
+pub const CHARLIE_INIT: BalanceOf<Runtime> = 60000;
 pub const DAVE: AccountId = AccountId::new([4u8; 32]);
+pub const DAVE_INIT: BalanceOf<Runtime> = 60000;
 pub const CLASS_ID0: <Runtime as orml_nft::Config>::ClassId = 0;
 pub const TOKEN_ID0: <Runtime as orml_nft::Config>::TokenId = 0;
 pub const TOKEN_ID1: <Runtime as orml_nft::Config>::TokenId = 1;
@@ -247,10 +250,10 @@ impl ExtBuilder {
 
 		pallet_balances::GenesisConfig::<Runtime> {
 			balances: vec![
-				(ALICE, 200),
-				(BOB, 100),
+				(ALICE, ALICE_INIT),
+				(BOB, BOB_INIT),
 				(CHARLIE, CHARLIE_INIT),
-				(DAVE, 100),
+				(DAVE, DAVE_INIT),
 			],
 		}.assimilate_storage(&mut t).unwrap();
 
