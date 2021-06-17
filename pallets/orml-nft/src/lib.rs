@@ -119,6 +119,12 @@ pub mod module {
 	pub type TokensByOwner<T: Config> =
 		StorageDoubleMap<_, Twox64Concat, T::AccountId, Twox64Concat, (T::ClassId, T::TokenId), AccountToken<<T as Config>::TokenId>>;
 
+	/// An index to query owners by token
+	#[pallet::storage]
+	#[pallet::getter(fn owners_by_token)]
+	pub type OwnersByToken<T: Config> =
+		StorageDoubleMap<_, Twox64Concat, (T::ClassId, T::TokenId), Twox64Concat, T::AccountId, ()>;
+
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
 		pub tokens: Vec<GenesisTokens<T>>,
@@ -196,6 +202,7 @@ impl<T: Config> Pallet<T> {
 					}
 					None => {
 						*maybe_to_count = Some(AccountToken::new(quantity));
+						OwnersByToken::<T>::insert(token, to, ());
 					}
 				}
 				Ok(())
@@ -203,6 +210,7 @@ impl<T: Config> Pallet<T> {
 
 			if from_count.is_zero() {
 				*maybe_from_count = None;
+				OwnersByToken::<T>::remove(token, from);
 			} else {
 				*maybe_from_count = Some(from_count);
 			}
@@ -235,7 +243,7 @@ impl<T: Config> Pallet<T> {
 			};
 			Tokens::<T>::insert(class_id, token_id, token_info);
 			TokensByOwner::<T>::insert(owner, (class_id, token_id), AccountToken::new(quantity));
-
+			OwnersByToken::<T>::insert((class_id, token_id), owner, ());
 			Ok(token_id)
 		})
 	}
@@ -268,6 +276,7 @@ impl<T: Config> Pallet<T> {
 			owner_count.quantity = owner_count.quantity.checked_sub(&quantity).ok_or(Error::<T>::NumOverflow)?;
 			if owner_count.is_zero() {
 				*maybe_owner_count = None;
+				OwnersByToken::<T>::remove(token, owner);
 			} else {
 				*maybe_owner_count = Some(owner_count);
 			}
