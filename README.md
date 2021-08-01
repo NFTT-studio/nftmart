@@ -1,4 +1,7 @@
-# NFTMART
+# DEPRECATED
+
+⛔️ DEPRECATED The new substitute repository is <https://github.com/NFTT-studio/NFTMart-Node>
+
 
 ## Architecture overview
 ![architecture overview](docs/nftmart-architecture-overview.jpeg)
