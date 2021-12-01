@@ -2869,11 +2869,11 @@ dependencies = [
 
 [[package]]
 name = "jsonrpsee-proc-macros"
-version = "0.2.0-alpha.2"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3cb3f732ccbeafd15cefb59c7c7b5ac6c553c2653613b63e5e7feb7f06a219e9"
+checksum = "04a98c47e0307750253e2e62d0dc2b42e581e427804e617eb5fec254ea385c20"
 dependencies = [
- "Inflector",
+ "proc-macro-crate 1.0.0",
  "proc-macro2",
  "quote",
  "syn",
